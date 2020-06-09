@@ -7,6 +7,7 @@ import torch
 from lz4.frame import compress, decompress
 from more_itertools import unzip
 from torch.nn.utils.rnn import pad_sequence
+from transformers import BertTokenizer
 
 
 @contextmanager
@@ -97,6 +98,10 @@ class ChengyuDataset(TxtTokLmdb):
         self.config = opts
         txt_lens, self.ids = self.get_ids_and_lens()
         self.lens = [tl for tl, id_ in zip(txt_lens, self.ids)]
+        self.tokenizer = BertTokenizer(vocab_file='/pretrain/wwm_ext/vocab.txt')
+
+    def __len__(self):
+        return len(self.ids)
 
     def get_ids_and_lens(self):
         lens = []
@@ -111,79 +116,32 @@ class ChengyuDataset(TxtTokLmdb):
         [[txt, img1],
          [txt, img2]]
         """
-        example = super().__getitem__(i)
-        target = example[self.config.target]
+        id_ = self.ids[i]
+        example = self.db[id_]
+        position = example['position']
+        options = example['options']
+        target = example['target']
 
         # text input
-        input_ids = [self.txt_db.cls_] + example['input_2_ids'] + [self.txt_db.sep]
+        input_ids = [self.tokenizer.cls_token_id] + example['input_ids'] + [self.tokenizer.sep_token_id]
         input_ids = torch.tensor(input_ids)
 
-        attn_masks = [1] * input_ids.size(0)
-        attn_masks = torch.tensor(attn_masks)
-
-        return (input_ids, input_concreteness,
-                img_feat, img_pos_feat, img_depth_feat,
-                region_masks, attn_masks,
-                target, decode_ids, decode_attn_masks, target_ids)
+        attention_mask = [1] * input_ids.size(0)
+        attention_mask = torch.tensor(attention_mask)
+        return input_ids, attention_mask, position, options, target
 
 
 def chengyu_collate(inputs):
-    (input_ids, input_concreteness,
-     img_feats, img_pos_feats, img_depth_feats,
-     region_masks, attn_masks,
-     targets, decode_ids, decode_attn_masks, target_ids) = map(list, unzip(inputs))
+    (input_ids, attention_mask, positions, options, targets) = map(list, unzip(inputs))
 
-    txt_lens = [i.size(0) for i in input_ids]
     input_ids = pad_sequence(input_ids, batch_first=True, padding_value=0)
-    position_ids = torch.arange(0, input_ids.size(1), dtype=torch.long
-                                ).unsqueeze(0).expand_as(input_ids).clone()
-
-    if all([item is not None for item in decode_ids]):
-        decode_ids = pad_sequence(decode_ids, batch_first=True, padding_value=0)
-        decode_position_ids = torch.arange(0, decode_ids.size(1), dtype=torch.long
-                                           ).unsqueeze(0).expand_as(decode_ids).clone()
-        decode_attn_masks = pad_sequence(decode_attn_masks, batch_first=True, padding_value=0)
-        target_ids = pad_sequence(target_ids, batch_first=True, padding_value=-100)
-    else:
-        decode_ids, decode_position_ids, decode_attn_masks, target_ids = None, None, None, None
-
-    # image batches
-    num_bbs = [f.size(0) for f in img_feats]
-    img_feat = pad_tensors(img_feats, num_bbs)
-    img_pos_feat = pad_tensors(img_pos_feats, num_bbs)
-
-    if all([item is not None for item in input_concreteness]):
-        # inputs_concreteness = pad_tensors(input_concreteness, txt_lens)
-        inputs_concreteness = pad_sequence(input_concreteness, batch_first=True, padding_value=0)
-    else:
-        inputs_concreteness = None
-
-    bs, max_tl = input_ids.size()
-
-    region_masks = pad_sequence(region_masks, batch_first=True, padding_value=0)
-    attn_masks = pad_sequence(attn_masks, batch_first=True, padding_value=0)
-    out_size = attn_masks.size(1)
-
-    if max_tl < out_size:
-        gather_index = get_gather_index(txt_lens, num_bbs, bs, max_tl, out_size)
-    else:
-        gather_index = None
+    attn_masks = pad_sequence(attention_mask, batch_first=True, padding_value=0)
 
     batch = {'input_ids': input_ids,
-             'position_ids': position_ids,
-             'decode_ids': decode_ids,
-             'decode_position_ids': decode_position_ids,
-             'decode_attn_masks': decode_attn_masks,
-             'target_ids': target_ids,
-             'img_feat': img_feat,
-             'img_pos_feat': img_pos_feat,
-             'region_masks': region_masks,
-             'attn_masks': attn_masks,
-             'gather_index': gather_index,
-             'img_type_ids': None,
-             'inputs_concreteness': inputs_concreteness,
+             'positions': torch.tensor(options).long(),
+             'option_ids': torch.tensor(options).long(),
+             'attention_mask': attn_masks,
              'targets': torch.tensor(targets).long()}
-    batch = default_none_dict(batch)
     return batch
 
 

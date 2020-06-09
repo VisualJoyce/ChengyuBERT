@@ -52,12 +52,12 @@ class ChengyuBert(BertPreTrainedModel):
                                                  self.idiom_embedding.weight.half() if self.use_fp16 else self.idiom_embedding.weight])  # (b, 256, 10)
         return c_mo_logits
 
-    def forward(self, input_ids, attention_mask, segment_ids, extra_ids, positions, option_ids):
+    def forward(self, input_ids, attention_mask, positions, option_ids,
+                token_type_ids=None, compute_loss=False, targets=None):
         batch_size, sequence_num, length = input_ids.shape
-        extra_ids = {k: extra_ids[k].view(-1, length) for k in extra_ids}
         encoded_outputs = self.bert(input_ids.view(-1, length),
-                                    token_type_ids=segment_ids.view(-1, length),
-                                    attention_mask=attention_mask.view(-1, length))
+                                    token_type_ids=token_type_ids,
+                                    attention_mask=attention_mask)
         encoded_layer = encoded_outputs[0]
         blank_states = encoded_layer[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
         cls_states = encoded_layer[:, 0]
@@ -71,17 +71,14 @@ class ChengyuBert(BertPreTrainedModel):
         over_logits = self.vocab(sentiment_states)
         cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
 
-        extra_logits = {}
-        for k in self.used_paras:
-            extra_logits[k] = getattr(self, 'idiom_{}'.format(k))(sentiment_states)
-
-        if self.use_sequence:
-            encoded_context = encoded_layer
-            mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
-            logits, _ = torch.max(mo_logits, dim=1)
-            return logits + cond_logits, over_logits, cond_logits, None, extra_logits
+        if compute_loss:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(cond_logits, targets)
+            target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
+            over_loss = loss_fct(over_logits, target.squeeze(1))
+            return loss + over_loss
         else:
-            return cond_logits, over_logits, cond_logits, None, extra_logits
+            return cond_logits
 
 
 class BertForClozeChoice(BertPreTrainedModel):
