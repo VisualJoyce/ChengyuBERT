@@ -206,7 +206,6 @@ def validate(opts, model, val_loader, split, out_file):
     tot_score = 0
     n_ex = 0
     st = time()
-    labels_list = ['contradiction', 'neutral', 'entailment']
     results = []
     with tqdm(range(len(val_loader.dataset))) as tq:
         for i, batch in enumerate(val_loader):
@@ -220,7 +219,7 @@ def validate(opts, model, val_loader, split, out_file):
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
             max_prob, max_idx = scores.max(dim=-1, keepdim=False)
-            answers = [labels_list[i] for i in max_idx.cpu().tolist()]
+            answers = [batch['option_ids'][i] for i in max_idx.cpu().tolist()]
             results.extend(zip(qids, answers,
                                scores[:, 0].cpu().tolist(), scores[:, 1].cpu().tolist(), scores[:, 2].cpu().tolist()))
             n_ex += len(qids)
