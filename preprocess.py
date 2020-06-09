@@ -164,7 +164,9 @@ class ChidOfficialParser(object):
                         random.shuffle(candidates)
                         data['candidates'] = [candidates]
                     else:
-                        assert len(data['candidates']) == 7
+                        if len(data['candidates']) != 7:
+                            print(data)
+                            assert "Candidates number not correct"
 
                     for i, (tag, label, options) in enumerate(
                             zip(re.finditer("#idiom#", context), data['groundTruth'], data['candidates'])):
