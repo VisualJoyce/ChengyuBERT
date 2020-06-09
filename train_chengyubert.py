@@ -232,7 +232,7 @@ def validate(opts, model, val_loader, split, out_file):
     val_acc = tot_score / n_ex
 
     with open(out_file, 'w') as f:
-        for id_, ans, _, _, _ in results:
+        for id_, ans in results:
             f.write(f'{id_},{ans}\n')
 
     val_log = {f'{split}/loss': val_loss,
