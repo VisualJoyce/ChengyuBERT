@@ -277,11 +277,6 @@ def process_chid(opts, db, tokenizer):
 def main(opts):
     print(opts)
     # train_db_dir = os.path.join(os.path.dirname(opts.output), f'{source}_{split}.db')
-    if not os.path.isdir(opts.output):
-        os.makedirs(opts.output)
-    else:
-        raise ValueError('Found existing DB. Please explicitly remove '
-                         'for re-processing')
     meta = vars(opts)
     meta['tokenizer'] = opts.toker
     tokenizer = BertTokenizer(vocab_file='/pretrain/wwm_ext/vocab.txt')
