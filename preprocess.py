@@ -46,10 +46,10 @@ def chengyu_process():
     :return:
     """
     # load ChID idioms to first 3848
-    chengyu_vocab = {each: i for i, each in enumerate(eval(open('idiomList.txt').readline()))}
+    chengyu_vocab = {each: i for i, each in enumerate(eval(open('/txt/idiomList.txt').readline()))}
 
     # load Xinhua idioms
-    chengyu_pretrain = pda.read_csv("idioms_pretrain.json", sep='\t')
+    chengyu_pretrain = pda.read_csv("/txt/idioms_pretrain.json", sep='\t')
     chengyu_pretrain.fillna('', inplace=True)
 
     # read explanation for each idiom
@@ -75,8 +75,8 @@ def create_cct_dataset(candidates_num):
     :param candidates_num: Candidate set size
     :return:
     """
-    df = pda.read_csv('/data/ChID/chengyu/chengyu_sentence.txt', header=None, names=['ground_truth', 'context'])
-    with open('/data/ChID/chengyu/chengyu_sentence.txt') as g:
+    df = pda.read_csv('/txt/chengyu/chengyu_sentence.txt', header=None, names=['ground_truth', 'context'])
+    with open('/txt/chengyu/chengyu_sentence.txt') as g:
         with open(self.data_file, 'w') as f:
             for l in g:
                 item = l.strip().split(',')
@@ -123,8 +123,9 @@ class ChidOfficialParser(object):
 
     # splits = ['chengyu', 'chengyu4']
 
-    def __init__(self, split):
+    def __init__(self, split, vocab):
         self.split = split
+        self.vocab = vocab
         self.data_dir = '/txt/official'
 
     @property
@@ -145,12 +146,7 @@ class ChidOfficialParser(object):
             return os.path.join(self.data_dir, 'chengyu.txt')
 
     def read_examples(self):
-        if self.split == 'chengyu':
-            self.load_chengyu(7)
-        elif self.split == 'chengyu4':
-            self.load_chengyu(4)
-
-        idioms = list(self.idiom_vocab.keys())
+        idioms = list(self.vocab.keys())
 
         with tqdm(total=os.path.getsize(self.data_file), desc=self.split,
                   bar_format="{desc}: {percentage:.3f}%|{bar}| {n:.2f}/{total_fmt} [{elapsed}<{remaining}]") as pbar:
@@ -183,7 +179,7 @@ class ChidOfficialParser(object):
                             tag=tag_str,
                             context=tmp_context,
                             options=options,
-                            label=options.index(label)
+                            label=ind
                         )
 
 
@@ -242,12 +238,14 @@ class ChidCompetitionDataset(object):
 def process_chid(opts, db, tokenizer):
     source, split = opts.annotation.split('_')
 
+    vocab = chengyu_process()
+
     if source == 'official':
         assert split in ['pretrain', 'train', 'dev', 'test', 'ran', 'sim', 'out', 'chengyu', 'chengyu4']
-        parser = ChidOfficialParser(split)
+        parser = ChidOfficialParser(split, vocab)
     else:
         assert split in ['train', 'dev', 'test', 'out']
-        parser = ChidCompetitionDataset(split)
+        parser = ChidCompetitionDataset(split, vocab)
 
     def parse_example(example):
         input_ids, position = tokenize(tokenizer, example)
