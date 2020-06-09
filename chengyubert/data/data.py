@@ -124,6 +124,8 @@ class ChengyuDataset(TxtTokLmdb):
 
         # text input
         input_ids = [self.tokenizer.cls_token_id] + example['input_ids'] + [self.tokenizer.sep_token_id]
+        position = input_ids.index(self.tokenizer.mask_token_id)
+
         input_ids = torch.tensor(input_ids)
 
         attention_mask = [1] * input_ids.size(0)

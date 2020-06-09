@@ -256,7 +256,7 @@ def process_chid(opts, db, tokenizer):
             'input_ids': input_ids,
             'position': position,
             'target': example.label,
-            'options': example.options
+            'options': [vocab[o] for o in example.options]
         }
 
     id2len = {}

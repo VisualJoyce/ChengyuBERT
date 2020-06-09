@@ -49,7 +49,7 @@ class ChengyuBert(BertPreTrainedModel):
 
     def vocab(self, over_states):
         c_mo_logits = torch.einsum('bd,nd->bn', [self.over_linear(over_states),
-                                                 self.idiom_embedding.weight.half() if self.use_fp16 else self.idiom_embedding.weight])  # (b, 256, 10)
+                                                 self.idiom_embedding.weight])  # (b, 256, 10)
         return c_mo_logits
 
     def forward(self, input_ids, attention_mask, positions, option_ids,
@@ -71,14 +71,19 @@ class ChengyuBert(BertPreTrainedModel):
         over_logits = self.vocab(sentiment_states)
         cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
 
+        encoded_context = encoded_layer
+        mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
+        logits, _ = torch.max(mo_logits, dim=1)
+
+        logits = logits + cond_logits
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(cond_logits, targets)
+            loss = loss_fct(logits, targets)
             target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
             over_loss = loss_fct(over_logits, target.squeeze(1))
             return loss + over_loss
         else:
-            return cond_logits
+            return logits
 
 
 class BertForClozeChoice(BertPreTrainedModel):
