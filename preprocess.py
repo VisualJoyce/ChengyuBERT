@@ -250,7 +250,7 @@ def process_chid(opts, db, tokenizer):
     def parse_example(example):
         input_ids, position = tokenize(tokenizer, example)
 
-        id_ = example.idx
+        id_ = example.tag
         id2len[id_] = len(input_ids)
         db[id_] = {
             'input_ids': input_ids,
