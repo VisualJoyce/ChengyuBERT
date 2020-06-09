@@ -99,7 +99,7 @@ class ChengyuDataset(TxtTokLmdb):
         self.config = opts
         txt_lens, self.ids = self.get_ids_and_lens()
         self.lens = [tl for tl, id_ in zip(txt_lens, self.ids)]
-        self.tokenizer = BertTokenizer(vocab_file='/pretrain/wwm_ext/vocab.txt')
+        self.tokenizer = BertTokenizer(vocab_file='/pretrain/wwm_ext')
 
     def __len__(self):
         return len(self.ids)
