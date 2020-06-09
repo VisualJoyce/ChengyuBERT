@@ -85,7 +85,7 @@ class ChengyuDataset(TxtTokLmdb):
     def __init__(self, db_dir, max_txt_len, opts):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
-        txt_lens, self.ids = self.get_ids_and_lens()
+        self.lens, self.ids = self.get_ids_and_lens()
         self.tokenizer = BertTokenizer.from_pretrained('/pretrain/wwm_ext')
 
     def __len__(self):
