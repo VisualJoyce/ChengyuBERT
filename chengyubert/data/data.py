@@ -140,7 +140,7 @@ def chengyu_collate(inputs):
     attn_masks = pad_sequence(attention_mask, batch_first=True, padding_value=0)
 
     batch = {'input_ids': input_ids,
-             'positions': torch.tensor(options).long(),
+             'positions': torch.tensor(positions).long(),
              'option_ids': torch.tensor(options).long(),
              'attention_mask': attn_masks,
              'targets': torch.tensor(targets).long()}
