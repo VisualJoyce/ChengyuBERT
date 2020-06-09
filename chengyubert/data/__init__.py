@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
 
-from chengyubert.data.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate
+from chengyubert.data.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, open_lmdb
 from chengyubert.data.loader import PrefetchLoader
 from chengyubert.data.sampler import DistributedTokenBucketSampler
 from chengyubert.utils.const import BUCKET_SIZE
