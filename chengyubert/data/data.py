@@ -69,21 +69,9 @@ def _check_distributed():
     return False
 
 
-def id2len_func(max_txt_len, id2len):
-    if max_txt_len == -1:
-        return id2len
-    else:
-        return {
-            id_: len_
-            for id_, len_ in id2len.items()
-            if len_ <= max_txt_len
-        }
-
-
 class TxtTokLmdb(object):
     def __init__(self, db_dir, max_txt_len=60):
-        id2len = json.load(open(f'{db_dir}/id2len.json'))
-        self.id2len = id2len_func(max_txt_len, id2len)
+        self.id2len = json.load(open(f'{db_dir}/id2len.json'))
         self.max_txt_len = max_txt_len
         self.db_dir = db_dir
         self.db = TxtLmdb(db_dir, readonly=True)
@@ -98,7 +86,6 @@ class ChengyuDataset(TxtTokLmdb):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
         txt_lens, self.ids = self.get_ids_and_lens()
-        self.lens = [tl for tl, id_ in zip(txt_lens, self.ids)]
         self.tokenizer = BertTokenizer.from_pretrained('/pretrain/wwm_ext')
 
     def __len__(self):

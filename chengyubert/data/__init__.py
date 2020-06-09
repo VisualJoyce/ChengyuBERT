@@ -8,7 +8,7 @@ from chengyubert.utils.const import BUCKET_SIZE
 
 def create_dataloader(txt_path, batch_size, is_train,
                       dset_cls, collate_fn, opts):
-    dset = dset_cls(txt_path, opts.max_txt_len if is_train else -1, opts)
+    dset = dset_cls(txt_path, opts.max_txt_len, opts)
     sampler = DistributedTokenBucketSampler(
         opts.size, opts.rank, dset.lens,
         bucket_size=BUCKET_SIZE, batch_size=batch_size, droplast=is_train)
