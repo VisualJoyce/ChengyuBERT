@@ -84,6 +84,7 @@ class TxtTokLmdb(object):
     def __init__(self, db_dir, max_txt_len=60):
         id2len = json.load(open(f'{db_dir}/id2len.json'))
         self.id2len = id2len_func(max_txt_len, id2len)
+        self.max_txt_len = max_txt_len
         self.db_dir = db_dir
         self.db = TxtLmdb(db_dir, readonly=True)
 
@@ -121,9 +122,14 @@ class ChengyuDataset(TxtTokLmdb):
         position = example['position']
         options = example['options']
         target = example['target']
+        input_ids = example['input_ids']
+
+        if len(input_ids) > self.max_txt_len:
+            l, r = position - self.max_txt_len // 2, position + self.max_txt_len // 2
+            input_ids = input_ids[max(0, l), r]
 
         # text input
-        input_ids = [self.tokenizer.cls_token_id] + example['input_ids'] + [self.tokenizer.sep_token_id]
+        input_ids = [self.tokenizer.cls_token_id] + input_ids + [self.tokenizer.sep_token_id]
         position = input_ids.index(self.tokenizer.mask_token_id)
 
         input_ids = torch.tensor(input_ids)

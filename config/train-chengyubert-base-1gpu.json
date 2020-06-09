@@ -7,7 +7,7 @@
     "model": "chengyubert",
     "output_dir": "/storage/chengyubert",
     "len_idiom_vocab": 33237,
-    "max_txt_len": 60,
+    "max_txt_len": 128,
     "conf_th": 0.2,
     "max_bb": 100,
     "min_bb": 10,
