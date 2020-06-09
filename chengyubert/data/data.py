@@ -126,7 +126,7 @@ class ChengyuDataset(TxtTokLmdb):
 
         if len(input_ids) > self.max_txt_len:
             l, r = position - self.max_txt_len // 2, position + self.max_txt_len // 2
-            input_ids = input_ids[max(0, l), r]
+            input_ids = input_ids[max(0, l): r]
 
         # text input
         input_ids = [self.tokenizer.cls_token_id] + input_ids + [self.tokenizer.sep_token_id]
