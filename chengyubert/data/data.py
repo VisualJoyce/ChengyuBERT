@@ -129,7 +129,7 @@ class ChengyuDataset(TxtTokLmdb):
                                                   add_special_tokens=True,
                                                   return_tensors='pt',
                                                   truncation_strategy='do_not_truncate')
-        input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
+        input_ids, token_type_ids = inputs["input_ids"][0], inputs["token_type_ids"][0]
         attention_mask = [1] * input_ids.size(0)
         attention_mask = torch.tensor(attention_mask)
         return input_ids, token_type_ids, attention_mask, position, options, target
@@ -144,9 +144,9 @@ def chengyu_collate(inputs):
 
     batch = {'input_ids': input_ids,
              'token_type_ids': token_type_ids,
+             'attention_mask': attn_masks,
              'positions': torch.tensor(positions).long(),
              'option_ids': torch.tensor(options).long(),
-             'attention_mask': attn_masks,
              'targets': torch.tensor(targets).long()}
     return batch
 
