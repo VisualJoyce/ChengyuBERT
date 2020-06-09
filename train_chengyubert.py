@@ -219,9 +219,8 @@ def validate(opts, model, val_loader, split, out_file):
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
             max_prob, max_idx = scores.max(dim=-1, keepdim=False)
-            answers = [batch['option_ids'][i] for i in max_idx.cpu().tolist()]
-            results.extend(zip(qids, answers,
-                               scores[:, 0].cpu().tolist(), scores[:, 1].cpu().tolist(), scores[:, 2].cpu().tolist()))
+            answers = max_idx.cpu().tolist()
+            results.extend(zip(qids, answers))
             n_ex += len(qids)
             tq.update(len(qids))
 
@@ -231,28 +230,6 @@ def validate(opts, model, val_loader, split, out_file):
     tot_time = time() - st
     val_loss /= n_ex
     val_acc = tot_score / n_ex
-
-    if split == 'bison':
-        with open('/txt/bison_annotations.cocoval2014.json') as fd:
-            anno_results = json.load(fd)
-        anno_results = {res['bison_id']: res for res in anno_results['data']}
-
-        predictions = {}
-        for qid, ans, c_score, n_score, e_score in results:
-            bison_id, option_id = list(map(int, qid.split('_')))
-            predictions.setdefault(bison_id, [None] * 2)
-            predictions[bison_id][option_id] = [c_score, e_score]
-
-        label_dict = {0: 1, 1: 0, 2: 0, 3: 1}
-        count = 0
-        for bison_id, scores in predictions.items():
-            # image_id = val_loader.dataset.txt_db.txt2img[qid]
-            idx = np.stack(scores).argmax()
-            entry = anno_results[bison_id]
-            predicted_image_id = entry['image_candidates'][label_dict[idx]]['image_id']
-            if predicted_image_id == entry['true_image_id']:
-                count += 1
-        LOGGER.info(f"bison score: {count / len(anno_results) * 100:.2f}")
 
     with open(out_file, 'w') as f:
         for id_, ans, _, _, _ in results:
