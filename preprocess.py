@@ -267,7 +267,7 @@ def process_chid(opts, db, tokenizer):
 
     assert len(id2len) == len(ans_dict)
 
-    with open(parser.answer_file, 'w') as f:
+    with open(f'/output/answer.csv', 'w') as f:
         for k, v in ans_dict.items():
             f.write('{},{}\n'.format(k, v))
 
