@@ -101,7 +101,7 @@ class ChengyuDataset(TxtTokLmdb):
     def get_ids_and_lens(self):
         lens = []
         ids = []
-        for id_, len_ in self.db.id2len.items():
+        for id_, len_ in self.id2len.items():
             lens.append(len_)
             ids.append(id_)
         return lens, ids
