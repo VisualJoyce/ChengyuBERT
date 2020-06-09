@@ -277,8 +277,8 @@ def process_chid(opts, db, tokenizer):
 def main(opts):
     print(opts)
     # train_db_dir = os.path.join(os.path.dirname(opts.output), f'{source}_{split}.db')
-    meta = vars(opts)
-    meta['tokenizer'] = opts.toker
+    # meta = vars(opts)
+    # meta['tokenizer'] = opts.toker
     tokenizer = BertTokenizer(vocab_file='/pretrain/wwm_ext/vocab.txt')
 
     open_db = curry(open_lmdb, '/output', readonly=False)
