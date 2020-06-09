@@ -279,7 +279,7 @@ def main(opts):
     # train_db_dir = os.path.join(os.path.dirname(opts.output), f'{source}_{split}.db')
     # meta = vars(opts)
     # meta['tokenizer'] = opts.toker
-    tokenizer = BertTokenizer('/pretrain/wwm_ext')
+    tokenizer = BertTokenizer.from_pretrained('/pretrain/wwm_ext')
 
     open_db = curry(open_lmdb, '/output', readonly=False)
     with open_db() as db:
