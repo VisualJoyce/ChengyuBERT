@@ -54,8 +54,8 @@ class ChengyuBert(BertPreTrainedModel):
 
     def forward(self, input_ids, attention_mask, positions, option_ids,
                 token_type_ids=None, compute_loss=False, targets=None):
-        batch_size, sequence_num, length = input_ids.shape
-        encoded_outputs = self.bert(input_ids.view(-1, length),
+        # batch_size, sequence_num, length = input_ids.shape
+        encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
                                     attention_mask=attention_mask)
         encoded_layer = encoded_outputs[0]
