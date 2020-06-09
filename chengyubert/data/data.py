@@ -111,28 +111,38 @@ class ChengyuDataset(TxtTokLmdb):
         target = example['target']
         input_ids = example['input_ids']
 
-        if len(input_ids) > self.max_txt_len:
-            l, r = position - self.max_txt_len // 2, position + self.max_txt_len // 2
-            input_ids = input_ids[max(0, l): r]
+        half_length = self.max_txt_len // 2
+        if position < half_length:  # cut at tail
+            st = 0
+            ed = min(len(input_ids), self.max_txt_len - 2)
+        elif len(input_ids) - position < half_length:  # cut at head
+            ed = len(input_ids)
+            st = max(0, ed - (self.max_txt_len - 2))
+        else:  # cut at both sides
+            st = position + 2 - half_length
+            ed = position + half_length
 
-        # text input
-        input_ids = [self.tokenizer.cls_token_id] + input_ids + [self.tokenizer.sep_token_id]
-        position = input_ids.index(self.tokenizer.mask_token_id)
-
-        input_ids = torch.tensor(input_ids)
-
+        position = input_ids[st:ed + 1].index(self.tokenizer.mask_token_id) + 1
+        inputs = self.tokenizer.prepare_for_model(input_ids[st: ed + 1],
+                                                  pair_ids=None,
+                                                  max_length=self.max_txt_len,
+                                                  add_special_tokens=True,
+                                                  truncation_strategy='only_second')
+        input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
         attention_mask = [1] * input_ids.size(0)
         attention_mask = torch.tensor(attention_mask)
-        return input_ids, attention_mask, position, options, target
+        return input_ids, token_type_ids, attention_mask, position, options, target
 
 
 def chengyu_collate(inputs):
-    (input_ids, attention_mask, positions, options, targets) = map(list, unzip(inputs))
+    (input_ids, token_type_ids, attention_mask, positions, options, targets) = map(list, unzip(inputs))
 
     input_ids = pad_sequence(input_ids, batch_first=True, padding_value=0)
+    token_type_ids = pad_sequence(token_type_ids, batch_first=True, padding_value=0)
     attn_masks = pad_sequence(attention_mask, batch_first=True, padding_value=0)
 
     batch = {'input_ids': input_ids,
+             'token_type_ids': token_type_ids,
              'positions': torch.tensor(positions).long(),
              'option_ids': torch.tensor(options).long(),
              'attention_mask': attn_masks,
