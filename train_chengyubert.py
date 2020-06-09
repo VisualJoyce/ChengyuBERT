@@ -63,7 +63,7 @@ def main(opts):
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
 
     # Prepare model
-    bert_config = BertConfig.from_json_file(args.bert_config_file)
+    bert_config = BertConfig.from_json_file(args.model_config)
     model = ModelCls.from_pretrained(opts.checkpoint,
                                      config=bert_config,
                                      len_idiom_vocab=opts.len_idiom_vocab, model_name=opts.model)
