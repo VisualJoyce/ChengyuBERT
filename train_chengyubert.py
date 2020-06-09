@@ -224,7 +224,7 @@ def judge(pred_file, answer_file):
         if ans_dict[key] == pred_dict[key]:
             acc += 1
 
-    return acc / cnt * 100
+    return acc / cnt
 
 
 @torch.no_grad()
