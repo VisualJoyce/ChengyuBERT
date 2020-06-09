@@ -96,7 +96,7 @@ class ChengyuDataset(TxtTokLmdb):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
         txt_lens, self.ids = self.get_ids_and_lens()
-        self.lens = [tl[1] for tl, id_ in zip(txt_lens, self.ids)]
+        self.lens = [tl for tl, id_ in zip(txt_lens, self.ids)]
 
     def get_ids_and_lens(self):
         lens = []
