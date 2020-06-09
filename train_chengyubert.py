@@ -108,18 +108,10 @@ def main(opts):
     optimizer.step()
     while True:
         for step, batch in enumerate(dataloaders['train']):
-            teacher_scores = None
-            if opts.use_distill:
-                with torch.no_grad():
-                    teacher_scores = model(**batch, compute_loss=False)
-
             targets = batch['targets']
             n_examples += targets.size(0)
 
             loss = model(**batch,
-                         teacher_scores=teacher_scores,
-                         teacher_params={'alpha': opts.distill_alpha,
-                                         'temperature': opts.distill_temp},
                          compute_loss=True)
             loss = loss.mean()
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
