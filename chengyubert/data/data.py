@@ -128,7 +128,7 @@ class ChengyuDataset(TxtTokLmdb):
                                                   max_length=self.max_txt_len,
                                                   add_special_tokens=True,
                                                   return_tensors='pt',
-                                                  truncation_strategy='only_second')
+                                                  truncation_strategy='do_not_truncate')
         input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
         attention_mask = [1] * input_ids.size(0)
         attention_mask = torch.tensor(attention_mask)
