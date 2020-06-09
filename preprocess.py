@@ -163,6 +163,8 @@ class ChidOfficialParser(object):
                         candidates = random.sample(idioms, 6) + [k_i]
                         random.shuffle(candidates)
                         data['candidates'] = [candidates]
+                    else:
+                        assert len(data['candidates']) == 7
 
                     for i, (tag, label, options) in enumerate(
                             zip(re.finditer("#idiom#", context), data['groundTruth'], data['candidates'])):
