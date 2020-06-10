@@ -261,7 +261,9 @@ def validate(opts, model, val_loader, split, out_file):
     with open(out_file, 'w') as f:
         for id_, ans in results:
             f.write(f'{id_},{ans}\n')
-    val_acc = judge(out_file, f'{opts.val_txt_db}/answer.csv')
+
+    txt_db = getattr(opts, f'{split}_txt_db')
+    val_acc = judge(out_file, f'{txt_db}/answer.csv')
 
     val_log = {f'{split}/loss': val_loss,
                f'{split}/acc': val_acc,
