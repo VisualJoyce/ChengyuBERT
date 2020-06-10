@@ -1,3 +1,5 @@
+import os
+
 import json
 from contextlib import contextmanager
 
@@ -86,7 +88,7 @@ class ChengyuDataset(TxtTokLmdb):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
         self.lens, self.ids = self.get_ids_and_lens()
-        self.tokenizer = BertTokenizer.from_pretrained('/pretrain/wwm_ext')
+        self.tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
 
     def __len__(self):
         return len(self.ids)
