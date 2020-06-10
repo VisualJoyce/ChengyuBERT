@@ -53,11 +53,12 @@ class ChengyuBert(BertPreTrainedModel):
         return c_mo_logits
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
-                compute_loss=False, targets=None):
+                inputs_embeds=None, compute_loss=False, targets=None):
         # batch_size, sequence_num, length = input_ids.shape
         encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
-                                    attention_mask=attention_mask)
+                                    attention_mask=attention_mask,
+                                    inputs_embeds=inputs_embeds)
         encoded_layer = encoded_outputs[0]
         blank_states = encoded_layer[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
         cls_states = encoded_layer[:, 0]

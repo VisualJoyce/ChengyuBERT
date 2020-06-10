@@ -165,7 +165,7 @@ def main(opts):
                     log = evaluation(model, model_saver,
                                      dict(filter(lambda x: x[0].startswith('val'), dataloaders.items())),
                                      opts,
-                                     rank, global_step, save_model=global_step > 6000)
+                                     rank, global_step, save_model=global_step > opts.num_train_steps // 2)
                     if log['val/acc'] > best_eval:
                         best_ckpt = global_step
                         best_eval = log['val/acc']
