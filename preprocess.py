@@ -300,5 +300,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--annotation', required=True,
                         help='annotation JSON')
+    parser.add_argument('--config', help='JSON config files')
     args = parse_with_config(parser)
     main(args)
