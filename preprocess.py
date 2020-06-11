@@ -11,6 +11,7 @@ from tqdm import tqdm
 from transformers import BertTokenizer
 
 from chengyubert.data import open_lmdb
+from chengyubert.utils.misc import parse_with_config
 
 
 class Example(object):
@@ -299,5 +300,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--annotation', required=True,
                         help='annotation JSON')
-    args = parser.parse_args()
+    args = parse_with_config(parser)
     main(args)
