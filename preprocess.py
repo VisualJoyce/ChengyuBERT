@@ -40,16 +40,16 @@ class Example(object):
         return s
 
 
-def chengyu_process():
+def chengyu_process(annotation_dir='/annotation'):
     """
     Load Chengyu to vocab with explanation
     :return:
     """
     # load ChID idioms to first 3848
-    chengyu_vocab = {each: i for i, each in enumerate(eval(open('/txt/idiomList.txt').readline()))}
+    chengyu_vocab = {each: i for i, each in enumerate(eval(open(f'{annotation_dir}/idiomList.txt').readline()))}
 
     # load Xinhua idioms
-    chengyu_pretrain = pda.read_csv("/txt/idioms_pretrain.json", sep='\t')
+    chengyu_pretrain = pda.read_csv(f"{annotation_dir}/idioms_pretrain.json", sep='\t')
     chengyu_pretrain.fillna('', inplace=True)
 
     # read explanation for each idiom
