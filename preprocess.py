@@ -123,10 +123,11 @@ class ChidOfficialParser(object):
 
     # splits = ['chengyu', 'chengyu4']
 
-    def __init__(self, split, vocab):
+    def __init__(self, split, vocab, annotation_dir='/annotation'):
         self.split = split
         self.vocab = vocab
-        self.data_dir = '/txt/official'
+        self.annotation_dir = annotation_dir
+        self.data_dir = f'/{self.annotation_dir}/official'
 
     @property
     def answer_file(self):
@@ -196,9 +197,11 @@ class ChidCompetitionDataset(object):
     """
     splits = ['train', 'dev', 'test', 'out']
 
-    def __init__(self, split, tokenizer, config):
+    def __init__(self, split, vocab, annotation_dir='/annotation'):
         self.split = split
-        self.data_dir = '/txt/competition'
+        self.vocab = vocab
+        self.annotation_dir = annotation_dir
+        self.data_dir = f'/{self.annotation_dir}/official'
 
     @property
     def answer_file(self):
@@ -282,7 +285,7 @@ def main(opts):
     # train_db_dir = os.path.join(os.path.dirname(opts.output), f'{source}_{split}.db')
     # meta = vars(opts)
     # meta['tokenizer'] = opts.toker
-    tokenizer = BertTokenizer.from_pretrained('/pretrain/wwm_ext')
+    tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
 
     open_db = curry(open_lmdb, '/output', readonly=False)
     with open_db() as db:
