@@ -6,7 +6,7 @@
     "model_config": "/pretrain/wwm_ext/config.json",
     "model": "bertdual",
     "output_dir": "/storage",
-    "len_idiom_vocab": 33237,
+    "len_idiom_vocab": 3848,
     "max_txt_len": 128,
     "conf_th": 0.2,
     "max_bb": 100,

@@ -88,14 +88,15 @@ class ChengyuBert(BertPreTrainedModel):
 
 
 class BertForClozeDual(BertPreTrainedModel):
-    def __init__(self, config, args):
+    def __init__(self, config, len_idiom_vocab, model_name='bertdual'):
         super().__init__(config)
+        self.model_name = model_name
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         emb_hidden_size = config.hidden_size
-        self.idiom_facial_embedding = nn.Embedding(args.len_idiom_vocab, emb_hidden_size)
-        self.idiom_meaning_embedding = nn.Embedding(args.len_idiom_vocab, emb_hidden_size)
+        self.idiom_facial_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.idiom_meaning_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
 
         self.init_weights()
 
