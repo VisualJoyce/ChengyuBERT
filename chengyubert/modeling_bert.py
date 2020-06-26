@@ -103,7 +103,7 @@ class BertForClozeDual(BertPreTrainedModel):
     def vocab(self, blank_states):
         c_fo_logits = torch.einsum('bd,nd->bn', [blank_states, self.idiom_facial_embedding.weight])  # (b, 256, 10)
         c_mo_logits = torch.einsum('bd,nd->bn', [blank_states, self.idiom_meaning_embedding.weight])  # (b, 256, 10)
-        return torch.max(c_mo_logits, c_fo_logits)
+        return c_mo_logits + c_fo_logits
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
                 inputs_embeds=None, compute_loss=False, targets=None):
@@ -122,14 +122,14 @@ class BertForClozeDual(BertPreTrainedModel):
         meaning_state = self.idiom_meaning_embedding(option_ids)  # (b, 10, 768)
 
         over_logits = self.vocab(blank_states)
-        cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
+        # cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
 
         mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, meaning_state])  # (b, 256, 10)
         c_mo_logits, _ = torch.max(mo_logits, dim=1)
         # over_states = cls_states
 
         c_fo_logits = torch.einsum('bd,bnd->bn', [blank_states, facial_state])  # (b, 10)
-        logits = torch.max(c_mo_logits, c_fo_logits) + cond_logits
+        logits = c_mo_logits + c_fo_logits
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss()
