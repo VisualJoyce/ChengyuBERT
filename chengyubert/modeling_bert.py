@@ -82,7 +82,7 @@ class ChengyuBert(BertPreTrainedModel):
             loss = loss_fct(logits, targets)
             target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
             over_loss = loss_fct(over_logits, target.squeeze(1))
-            return loss + over_loss
+            return loss, over_loss
         else:
             return logits, over_logits
 
@@ -152,7 +152,7 @@ class BertForClozeChid(BertPreTrainedModel):
             loss = loss_fct(reshaped_logits, targets)
             target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
             over_loss = loss_fct(over_logits, target.squeeze(1))
-            return loss + over_loss
+            return loss, over_loss
         else:
             return reshaped_logits, over_logits
 
@@ -201,7 +201,7 @@ class BertForClozeSingle(BertPreTrainedModel):
             loss = loss_fct(logits, targets)
             target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
             over_loss = loss_fct(over_logits, target.squeeze(1))
-            return loss + over_loss
+            return loss, over_loss
         else:
             return logits, over_logits
 
@@ -255,7 +255,7 @@ class BertForClozeDual(BertPreTrainedModel):
             loss = loss_fct(logits, targets)
             target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
             over_loss = loss_fct(over_logits, target.squeeze(1))
-            return loss + over_loss
+            return loss, over_loss
         else:
             return logits, over_logits
 

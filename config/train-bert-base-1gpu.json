@@ -4,7 +4,7 @@
     "test_txt_db": "/txt/official_test.db",
     "checkpoint": "/pretrain/wwm_ext/pytorch_model.bin",
     "model_config": "/pretrain/wwm_ext/config.json",
-    "model": "bertchid",
+    "model": "bert",
     "output_dir": "/storage",
     "len_idiom_vocab": 3848,
     "max_txt_len": 128,

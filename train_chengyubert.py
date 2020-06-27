@@ -54,14 +54,19 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model == 'bertsingle':
+    if opts.model.startswith('bert-single'):
         ModelCls = BertForClozeSingle
-    elif opts.model == 'bertdual':
+    elif opts.model.startswith('bert-dual'):
         ModelCls = BertForClozeDual
-    elif opts.model == 'bertchid':
+    elif opts.model.startswith('bert-chid'):
         ModelCls = BertForClozeChid
-    else:
+    elif opts.model.startswith('chengyubert'):
         ModelCls = ChengyuBert
+    else:
+        raise ValueError(f"No such model [{opts.model}] supported!")
+
+    if 'vocab' in opts.model:
+        opts.use_vocab = True
 
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
@@ -115,9 +120,12 @@ def main(opts):
             targets = batch['targets']
             n_examples += targets.size(0)
 
-            loss = model(**batch,
-                         compute_loss=True)
+            loss, vocab_loss = model(**batch, compute_loss=True)
+            if opts.use_vocab:
+                loss += vocab_loss
+
             loss = loss.mean()
+
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
             with amp.scale_loss(loss, optimizer, delay_unscale=delay_unscale
                                 ) as scaled_loss:
