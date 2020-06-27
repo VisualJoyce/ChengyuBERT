@@ -65,8 +65,7 @@ def main(opts):
     else:
         raise ValueError(f"No such model [{opts.model}] supported!")
 
-    if 'vocab' in opts.model:
-        opts.use_vocab = True
+    opts.use_vocab = True if 'vocab' in opts.model else False
 
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
