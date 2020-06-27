@@ -21,7 +21,7 @@ from transformers import BertConfig
 
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
-from chengyubert.modeling_bert import ChengyuBert, BertForClozeDual
+from chengyubert.modeling_bert import ChengyuBert, BertForClozeSingle, BertForClozeDual
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -55,7 +55,9 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model == 'bertdual':
+    if opts.model == 'bertsingle':
+        ModelCls = BertForClozeSingle
+    elif opts.model == 'bertdual':
         ModelCls = BertForClozeDual
     else:
         ModelCls = ChengyuBert
@@ -235,6 +237,7 @@ def validate(opts, model, val_loader, split, out_file):
     val_loss = 0
     tot_score = 0
     n_ex = 0
+    val_mrr = 0
     st = time()
     results = []
     with tqdm(range(len(val_loader.dataset))) as tq:
@@ -244,12 +247,19 @@ def validate(opts, model, val_loader, split, out_file):
             del batch['targets']
             del batch['qids']
 
-            scores = model(**batch, targets=None, compute_loss=False)
+            scores, over_logits = model(**batch, targets=None, compute_loss=False)
             loss = F.cross_entropy(scores, targets, reduction='sum')
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
             max_prob, max_idx = scores.max(dim=-1, keepdim=False)
             answers = max_idx.cpu().tolist()
+
+            target = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1))
+            for j, qid in enumerate(qids):
+                g = over_logits[j]
+                top_k = np.argsort(-g)
+                val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
+
             results.extend(zip(qids, answers))
             n_ex += len(qids)
             tq.update(len(qids))
@@ -259,7 +269,7 @@ def validate(opts, model, val_loader, split, out_file):
     n_ex = sum(all_gather_list(n_ex))
     tot_time = time() - st
     val_loss /= n_ex
-    val_acc = tot_score / n_ex
+    val_mrr = val_mrr / n_ex
 
     with open(out_file, 'w') as f:
         for id_, ans in results:
@@ -270,6 +280,7 @@ def validate(opts, model, val_loader, split, out_file):
 
     val_log = {f'{split}/loss': val_loss,
                f'{split}/acc': val_acc,
+               f'{split}/mrr': val_mrr,
                f'{split}/ex_per_s': n_ex / tot_time}
     LOGGER.info(f"validation finished in {int(tot_time)} seconds, "
                 f"score: {val_acc * 100:.2f}")

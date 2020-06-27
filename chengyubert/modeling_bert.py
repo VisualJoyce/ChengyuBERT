@@ -84,6 +84,55 @@ class ChengyuBert(BertPreTrainedModel):
             over_loss = loss_fct(over_logits, target.squeeze(1))
             return loss + over_loss
         else:
+            return logits, over_logits
+
+
+class BertForClozeSingle(BertPreTrainedModel):
+    def __init__(self, config, len_idiom_vocab, model_name='bertsingle'):
+        super().__init__(config)
+        self.model_name = model_name
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        emb_hidden_size = config.hidden_size
+        self.idiom_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+
+        self.init_weights()
+
+    def vocab(self, blank_states):
+        return torch.einsum('bd,nd->bn', [blank_states, self.idiom_embedding.weight])  # (b, 256, 10)
+
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
+                inputs_embeds=None, compute_loss=False, targets=None):
+        # batch_size, sequence_num, length = input_ids.shape
+        encoded_outputs = self.bert(input_ids,
+                                    token_type_ids=token_type_ids,
+                                    attention_mask=attention_mask,
+                                    inputs_embeds=inputs_embeds)
+        encoded_layer = encoded_outputs[0]
+
+        encoded_context = encoded_layer
+        blank_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+        # cls_states = encoded_layer[:, 0]
+
+        idiom_state = self.idiom_embedding(option_ids)  # (b, 10, 768)
+
+        over_logits = self.vocab(blank_states)
+        # cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
+
+        mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, idiom_state])  # (b, 256, 10)
+        c_mo_logits, _ = torch.max(mo_logits, dim=1)
+        # over_states = cls_states
+
+        logits = c_mo_logits
+
+        if compute_loss:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits, targets)
+            target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
+            over_loss = loss_fct(over_logits, target.squeeze(1))
+            return loss + over_loss
+        else:
             return logits
 
 
