@@ -283,7 +283,8 @@ def validate(opts, model, val_loader, split, out_file):
                f'{split}/mrr': val_mrr,
                f'{split}/ex_per_s': n_ex / tot_time}
     LOGGER.info(f"validation finished in {int(tot_time)} seconds, "
-                f"score: {val_acc * 100:.2f}")
+                f"score: {val_acc * 100:.2f}"
+                f"score: {val_mrr:.3f}")
     return val_log
 
 
