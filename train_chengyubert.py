@@ -254,8 +254,8 @@ def validate(opts, model, val_loader, split, out_file):
             max_prob, max_idx = scores.max(dim=-1, keepdim=False)
             answers = max_idx.cpu().tolist()
 
-            target = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1))
-            for j, qid in enumerate(qids):
+            targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
+            for j, (qid, target) in enumerate(qids, targets):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
