@@ -7,7 +7,6 @@ UNITER finetuning for NLVR2
 from os.path import exists, join
 
 import argparse
-import json
 import numpy as np
 import os
 import torch
@@ -21,7 +20,7 @@ from transformers import BertConfig
 
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
-from chengyubert.modeling_bert import ChengyuBert, BertForClozeSingle, BertForClozeDual
+from chengyubert.modeling_bert import ChengyuBert, BertForClozeChid, BertForClozeSingle, BertForClozeDual
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -59,6 +58,8 @@ def main(opts):
         ModelCls = BertForClozeSingle
     elif opts.model == 'bertdual':
         ModelCls = BertForClozeDual
+    elif opts.model == 'bertchid':
+        ModelCls = BertForClozeChid
     else:
         ModelCls = ChengyuBert
 
