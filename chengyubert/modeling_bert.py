@@ -133,7 +133,7 @@ class BertForClozeSingle(BertPreTrainedModel):
             over_loss = loss_fct(over_logits, target.squeeze(1))
             return loss + over_loss
         else:
-            return logits
+            return logits, over_logits
 
 
 class BertForClozeDual(BertPreTrainedModel):
@@ -187,7 +187,7 @@ class BertForClozeDual(BertPreTrainedModel):
             over_loss = loss_fct(over_logits, target.squeeze(1))
             return loss + over_loss
         else:
-            return logits
+            return logits, over_logits
 
 
 class BertForClozeChoice(BertPreTrainedModel):
