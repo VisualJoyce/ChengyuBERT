@@ -2,6 +2,7 @@
 Copyright (c) Visual Joyce.
 Licensed under the MIT license.
 """
+import json
 from os.path import exists, join
 
 import argparse
@@ -221,8 +222,7 @@ def optimize_answer(example_logits):
         cost_matrix = np.array(costs)
         row_ind, col_ind = linear_sum_assignment(-cost_matrix)
         for tag, ind in zip(tags, col_ind):
-            new_tag = eid * 20 + tag
-            yield "#idiom%06d#" % new_tag, ind
+            yield tag, ind
 
 
 @torch.no_grad()
@@ -233,6 +233,9 @@ def validate(opts, model, val_loader, split, out_file):
     val_mrr = 0
     st = time()
     example_logits = {}
+    with open(f'{val_loader.dataset.db_dir}/id2eid.json', 'r') as f:
+        id2eid = json.load(f)
+
     with tqdm(range(len(val_loader.dataset))) as tq:
         for i, batch in enumerate(val_loader):
             qids = batch['qids']
@@ -251,10 +254,9 @@ def validate(opts, model, val_loader, split, out_file):
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
 
-                qid = int(re.search(r"#idiom(?P<eid>\d+)#", qid).group('eid'))
-                eid, tag = qid // 20, qid % 20
+                eid = id2eid
                 example_logits.setdefault(eid, {})
-                example_logits[eid][tag] = score.cpu().numpy()
+                example_logits[eid][qid] = score.cpu().numpy()
 
             n_ex += len(qids)
             tq.update(len(qids))
