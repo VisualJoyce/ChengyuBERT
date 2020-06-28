@@ -202,7 +202,7 @@ class ChidCompetitionDataset(object):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
-        self.data_dir = f'/{self.annotation_dir}/official'
+        self.data_dir = f'/{self.annotation_dir}/competition'
 
     @property
     def answer_file(self):
