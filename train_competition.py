@@ -244,19 +244,17 @@ def validate(opts, model, val_loader, split, out_file):
             loss = F.cross_entropy(scores, targets, reduction='sum')
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
-            max_prob, max_idx = scores.max(dim=-1, keepdim=False)
-            answers = max_idx.cpu().tolist()
 
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
-            for j, (qid, target, answer) in enumerate(zip(qids, targets, answers)):
-                g = over_logits[j].cpu().numpy()
+            for j, (qid, target, score, over_logit) in enumerate(zip(qids, targets, scores, over_logits)):
+                g = over_logit.cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
 
                 qid = int(re.search(r"#idiom(?P<eid>\d+)#", qid).group('eid'))
                 eid, tag = qid // 20, qid % 20
                 example_logits.setdefault(eid, {})
-                example_logits[eid][tag] = answer
+                example_logits[eid][tag] = score.cpu().numpy()
 
             n_ex += len(qids)
             tq.update(len(qids))
