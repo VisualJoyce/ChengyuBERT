@@ -244,9 +244,11 @@ def validate(opts, model, val_loader, split, out_file):
             loss = F.cross_entropy(scores, targets, reduction='sum')
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
+            max_prob, max_idx = scores.max(dim=-1, keepdim=False)
+            answers = max_idx.cpu().tolist()
 
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
-            for j, (qid, target) in enumerate(zip(qids, targets)):
+            for j, (qid, target, answer) in enumerate(zip(qids, targets, answers)):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
@@ -254,7 +256,7 @@ def validate(opts, model, val_loader, split, out_file):
                 qid = int(re.search(r"#idiom(?P<eid>\d+)#", qid).group('eid'))
                 eid, tag = qid // 20, qid % 20
                 example_logits.setdefault(eid, {})
-                example_logits[eid][tag] = g
+                example_logits[eid][tag] = answer
 
             n_ex += len(qids)
             tq.update(len(qids))
@@ -415,15 +417,10 @@ if __name__ == "__main__":
     parser.add_argument('--config', help='JSON config files')
 
     args = parse_with_config(parser)
-    if args.use_distill:
-        distill = f'distill_temp-{args.distill_temp}_alpha-{args.distill_alpha}_step-{args.teacher_checkpoint}_'
-        args.teacher_model_config = os.path.join(args.teacher_model_path, 'log', 'model.json')
-        args.teacher_model_pt = os.path.join(args.teacher_model_path, 'ckpt',
-                                             f'model_step_{args.teacher_checkpoint}.pt')
-    else:
-        distill = ''
 
-    args.output_dir = os.path.join(args.output_dir, args.model, f'{distill}{args.num_train_steps}_{args.learning_rate}')
+    args.output_dir = os.path.join(args.output_dir,
+                                   args.model,
+                                   f'competition_{args.num_train_steps}_{args.learning_rate}')
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/results'):
         raise ValueError("Output directory ({}) already exists and is not "
                          "empty.".format(args.output_dir))

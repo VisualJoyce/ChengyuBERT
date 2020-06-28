@@ -400,15 +400,10 @@ if __name__ == "__main__":
     parser.add_argument('--config', help='JSON config files')
 
     args = parse_with_config(parser)
-    if args.use_distill:
-        distill = f'distill_temp-{args.distill_temp}_alpha-{args.distill_alpha}_step-{args.teacher_checkpoint}_'
-        args.teacher_model_config = os.path.join(args.teacher_model_path, 'log', 'model.json')
-        args.teacher_model_pt = os.path.join(args.teacher_model_path, 'ckpt',
-                                             f'model_step_{args.teacher_checkpoint}.pt')
-    else:
-        distill = ''
 
-    args.output_dir = os.path.join(args.output_dir, args.model, f'{distill}{args.num_train_steps}_{args.learning_rate}')
+    args.output_dir = os.path.join(args.output_dir,
+                                   args.model,
+                                   f'official_{args.num_train_steps}_{args.learning_rate}')
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/results'):
         raise ValueError("Output directory ({}) already exists and is not "
                          "empty.".format(args.output_dir))
