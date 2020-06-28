@@ -254,7 +254,7 @@ def validate(opts, model, val_loader, split, out_file):
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
 
-                eid = id2eid
+                eid = id2eid[qid]
                 example_logits.setdefault(eid, {})
                 example_logits[eid][qid] = score.cpu().numpy()
 
