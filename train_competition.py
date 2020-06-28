@@ -1,17 +1,17 @@
 """
-Copyright (c) Microsoft Corporation.
+Copyright (c) Visual Joyce.
 Licensed under the MIT license.
-
-UNITER finetuning for NLVR2
 """
 from os.path import exists, join
 
 import argparse
 import numpy as np
 import os
+import re
 import torch
 from apex import amp
 from horovod import torch as hvd
+from scipy.optimize import linear_sum_assignment
 from time import time
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
@@ -20,6 +20,7 @@ from transformers import BertConfig
 
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
+from chengyubert.data.data import judge
 from chengyubert.modeling_bert import ChengyuBert, BertForClozeChid, BertForClozeSingle, BertForClozeDual
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
@@ -210,33 +211,18 @@ def evaluation(model, model_saver, data_loaders: dict, opts, rank, global_step, 
     return log
 
 
-def judge(pred_file, answer_file):
-    if isinstance(pred_file, str):
-        pred = open(pred_file).readlines()
-    else:
-        pred = pred_file.readlines()
-
-    ans = open(answer_file).readlines()
-    assert len(pred) == len(ans)
-
-    ans_dict = {}
-    pred_dict = {}
-    for line in ans:
-        line = line.strip().split(',')
-        ans_dict[line[0]] = int(line[1])
-    for line in pred:
-        line = line.strip().split(',')
-        pred_dict[line[0]] = int(line[1])
-
-    cnt = 0
-    acc = 0
-    for key in ans_dict:
-        assert key in pred_dict
-        cnt += 1
-        if ans_dict[key] == pred_dict[key]:
-            acc += 1
-
-    return acc / cnt
+def optimize_answer(example_logits):
+    for eid in example_logits:
+        tags = []
+        costs = []
+        for tag, logits in example_logits[eid].items():
+            tags.append(tag)
+            costs.append(logits)
+        cost_matrix = np.array(costs)
+        row_ind, col_ind = linear_sum_assignment(-cost_matrix)
+        for tag, ind in zip(tags, col_ind):
+            new_tag = eid * 20 + tag
+            yield "#idiom%06d#" % new_tag, ind
 
 
 @torch.no_grad()
@@ -246,7 +232,7 @@ def validate(opts, model, val_loader, split, out_file):
     n_ex = 0
     val_mrr = 0
     st = time()
-    results = []
+    example_logits = {}
     with tqdm(range(len(val_loader.dataset))) as tq:
         for i, batch in enumerate(val_loader):
             qids = batch['qids']
@@ -258,8 +244,6 @@ def validate(opts, model, val_loader, split, out_file):
             loss = F.cross_entropy(scores, targets, reduction='sum')
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
-            max_prob, max_idx = scores.max(dim=-1, keepdim=False)
-            answers = max_idx.cpu().tolist()
 
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
             for j, (qid, target) in enumerate(zip(qids, targets)):
@@ -267,19 +251,22 @@ def validate(opts, model, val_loader, split, out_file):
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
 
-            results.extend(zip(qids, answers))
+                qid = int(re.search(r"#idiom(?P<eid>\d+)#", qid).group('eid'))
+                eid, tag = qid // 20, qid % 20
+                example_logits.setdefault(eid, {})
+                example_logits[eid][tag] = g
+
             n_ex += len(qids)
             tq.update(len(qids))
 
     val_loss = sum(all_gather_list(val_loss))
-    tot_score = sum(all_gather_list(tot_score))
     n_ex = sum(all_gather_list(n_ex))
     tot_time = time() - st
     val_loss /= n_ex
     val_mrr = val_mrr / n_ex
 
     with open(out_file, 'w') as f:
-        for id_, ans in results:
+        for id_, ans in optimize_answer(example_logits):
             f.write(f'{id_},{ans}\n')
 
     txt_db = getattr(opts, f'{split}_txt_db')

@@ -1,10 +1,9 @@
-import os
-
-import json
 from contextlib import contextmanager
 
+import json
 import lmdb
 import msgpack
+import os
 import torch
 from lz4.frame import compress, decompress
 from more_itertools import unzip
@@ -168,3 +167,33 @@ def chengyu_eval_collate(inputs):
     batch = chengyu_collate(batch)
     batch['qids'] = qids
     return batch
+
+
+def judge(pred_file, answer_file):
+    if isinstance(pred_file, str):
+        pred = open(pred_file).readlines()
+    else:
+        pred = pred_file.readlines()
+
+    ans = open(answer_file).readlines()
+    assert len(pred) == len(ans)
+
+    ans_dict = {}
+    for line in ans:
+        line = line.strip().split(',')
+        ans_dict[line[0]] = int(line[1])
+
+    pred_dict = {}
+    for line in pred:
+        line = line.strip().split(',')
+        pred_dict[line[0]] = int(line[1])
+
+    cnt = 0
+    acc = 0
+    for key in ans_dict:
+        assert key in pred_dict
+        cnt += 1
+        if ans_dict[key] == pred_dict[key]:
+            acc += 1
+
+    return acc / cnt
