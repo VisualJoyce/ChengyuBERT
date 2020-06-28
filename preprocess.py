@@ -268,15 +268,20 @@ def process_chid(opts, db, tokenizer):
 
     id2len = {}
     ans_dict = {}
+    id2eid = {}
     for ex in parser.read_examples():
         parse_example(ex)
         ans_dict[ex.tag] = ex.label
+        id2eid[ex.tag] = ex.idx
 
     assert len(id2len) == len(ans_dict)
 
     with open(f'/output/answer.csv', 'w') as f:
         for k, v in ans_dict.items():
             f.write('{},{}\n'.format(k, v))
+
+    with open(f'/output/id2eid.json', 'w') as f:
+        json.dump(id2eid, f)
 
     return id2len
 
