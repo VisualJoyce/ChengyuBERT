@@ -402,9 +402,11 @@ if __name__ == "__main__":
                                    args.model,
                                    checkpoint,
                                    f'official_{args.num_train_steps}_{args.learning_rate}')
+
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/results'):
-        raise ValueError("Output directory ({}) already exists and is not "
-                         "empty.".format(args.output_dir))
+        if args.mode == 'train':
+            raise ValueError("Output directory ({}) already exists and is not "
+                             "empty.".format(args.output_dir))
 
     if args.conf_th == -1:
         assert args.max_bb + args.max_txt_len + 2 <= 512
