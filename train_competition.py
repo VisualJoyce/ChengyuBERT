@@ -179,10 +179,11 @@ def main(opts):
                 if global_step % opts.valid_steps == 0:
                     log = evaluation(model, model_saver,
                                      dict(filter(lambda x: x[0].startswith('val'), dataloaders.items())),
-                                     opts, rank, global_step, save_model=True)
+                                     opts, global_step)
                     if log['val/acc'] > best_eval:
                         best_ckpt = global_step
                         best_eval = log['val/acc']
+                    model_saver.save(model, global_step)
             if global_step >= opts.num_train_steps:
                 break
         if global_step >= opts.num_train_steps:
@@ -197,17 +198,15 @@ def main(opts):
                opts, rank, best_ckpt, save_model=False)
 
 
-def evaluation(model, model_saver, data_loaders: dict, opts, rank, global_step, save_model):
+def evaluation(model, data_loaders: dict, opts, global_step):
     model.eval()
     log = {}
     for split, loader in data_loaders.items():
         LOGGER.info(f"Step {global_step}: start running "
                     f"validation on {split} split...")
-        out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{rank}.csv'
+        out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{opts.rank}.csv'
         log.update(validate(opts, model, loader, split, out_file))
     TB_LOGGER.log_scaler_dict(log)
-    if save_model:
-        model_saver.save(model, global_step)
     model.train()
     return log
 
