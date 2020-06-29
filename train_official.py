@@ -285,7 +285,7 @@ def main(opts):
     if opts.mode == 'train':
         best_ckpt = train(model, dataloaders, opts)
     else:
-        best_ckpt = get_best_ckpt(dataloaders['val'].dataset.data_dir, opts)
+        best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
 
     best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
     model.load_state_dict(torch.load(best_pt), strict=False)
