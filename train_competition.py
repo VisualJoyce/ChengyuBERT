@@ -177,7 +177,7 @@ def main(opts):
                                          ex_per_sec, global_step)
 
                 if global_step % opts.valid_steps == 0:
-                    log = evaluation(model, model_saver,
+                    log = evaluation(model,
                                      dict(filter(lambda x: x[0].startswith('val'), dataloaders.items())),
                                      opts, global_step)
                     if log['val/acc'] > best_eval:
@@ -193,9 +193,9 @@ def main(opts):
 
     best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
     model.load_state_dict(torch.load(best_pt), strict=False)
-    evaluation(model, model_saver,
+    evaluation(model,
                dict(filter(lambda x: x[0] != 'train', dataloaders.items())),
-               opts, rank, best_ckpt, save_model=False)
+               opts, best_ckpt)
 
 
 def evaluation(model, data_loaders: dict, opts, global_step):
