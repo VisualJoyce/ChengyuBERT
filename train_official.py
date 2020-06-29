@@ -4,11 +4,14 @@ Licensed under the MIT license.
 
 UNITER finetuning for NLVR2
 """
+import glob
+from collections import Counter
 from os.path import exists, join
 
 import argparse
 import numpy as np
 import os
+import re
 import torch
 from apex import amp
 from horovod import torch as hvd
@@ -31,52 +34,7 @@ from chengyubert.utils.misc import NoOp, parse_with_config, set_dropout, set_ran
 from chengyubert.utils.save import ModelSaver, save_training_meta
 
 
-def main(opts):
-    hvd.init()
-    n_gpu = hvd.size()
-    device = torch.device("cuda", hvd.local_rank())
-    torch.cuda.set_device(hvd.local_rank())
-    rank = hvd.rank()
-    opts.rank = rank
-    opts.size = hvd.size()
-    LOGGER.info("device: {} n_gpu: {}, rank: {}, "
-                "16-bits training: {}".format(
-        device, n_gpu, hvd.rank(), opts.fp16))
-
-    if opts.gradient_accumulation_steps < 1:
-        raise ValueError("Invalid gradient_accumulation_steps parameter: {}, "
-                         "should be >= 1".format(
-            opts.gradient_accumulation_steps))
-
-    set_random_seed(opts.seed)
-
-    DatasetCls = ChengyuDataset
-    EvalDatasetCls = ChengyuEvalDataset
-    collate_fn = chengyu_collate
-    eval_collate_fn = chengyu_eval_collate
-
-    if opts.model.startswith('bert-single'):
-        ModelCls = BertForClozeSingle
-    elif opts.model.startswith('bert-dual'):
-        ModelCls = BertForClozeDual
-    elif opts.model.startswith('bert-chid'):
-        ModelCls = BertForClozeChid
-    elif opts.model.startswith('chengyubert'):
-        ModelCls = ChengyuBert
-    else:
-        raise ValueError(f"No such model [{opts.model}] supported!")
-
-    opts.use_vocab = True if 'vocab' in opts.model else False
-
-    # data loaders
-    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
-
-    # Prepare model
-    bert_config = BertConfig.from_json_file(args.model_config)
-    model = ModelCls.from_pretrained(opts.checkpoint,
-                                     config=bert_config,
-                                     len_idiom_vocab=opts.len_idiom_vocab, model_name=opts.model)
-    model.to(device)
+def train(model, dataloaders, opts):
     # make sure every process has same model parameters in the beginning
     broadcast_tensors([p.data for p in model.parameters()], 0)
     set_dropout(model, opts.dropout)
@@ -87,7 +45,7 @@ def main(opts):
                                       enabled=opts.fp16, opt_level='O2')
 
     global_step = 0
-    if rank == 0:
+    if opts.rank == 0:
         save_training_meta(opts)
         TB_LOGGER.create(join(opts.output_dir, 'log'))
         pbar = tqdm(total=opts.num_train_steps, desc=opts.model)
@@ -99,7 +57,7 @@ def main(opts):
         pbar = NoOp()
         model_saver = NoOp()
 
-    LOGGER.info(f"***** Running training with {n_gpu} GPUs *****")
+    LOGGER.info(f"***** Running training with {opts.n_gpu} GPUs *****")
     LOGGER.info("  Num examples = %d", len(dataloaders['train'].dataset))
     LOGGER.info("  Batch size = %d", opts.train_batch_size)
     LOGGER.info("  Accumulate steps = %d", opts.gradient_accumulation_steps)
@@ -176,39 +134,20 @@ def main(opts):
                                          ex_per_sec, global_step)
 
                 if global_step % opts.valid_steps == 0:
-                    log = evaluation(model, model_saver,
+                    log = evaluation(model,
                                      dict(filter(lambda x: x[0].startswith('val'), dataloaders.items())),
-                                     opts, rank, global_step, save_model=True)
+                                     opts, global_step)
                     if log['val/acc'] > best_eval:
                         best_ckpt = global_step
                         best_eval = log['val/acc']
+                    model_saver.save(model, global_step)
             if global_step >= opts.num_train_steps:
                 break
         if global_step >= opts.num_train_steps:
             break
         n_epoch += 1
         LOGGER.info(f"Step {global_step}: finished {n_epoch} epochs")
-
-    best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
-    model.load_state_dict(torch.load(best_pt), strict=False)
-    evaluation(model, model_saver,
-               dict(filter(lambda x: x[0] != 'train', dataloaders.items())),
-               opts, rank, best_ckpt, save_model=False)
-
-
-def evaluation(model, model_saver, data_loaders: dict, opts, rank, global_step, save_model):
-    model.eval()
-    log = {}
-    for split, loader in data_loaders.items():
-        LOGGER.info(f"Step {global_step}: start running "
-                    f"validation on {split} split...")
-        out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{rank}.csv'
-        log.update(validate(opts, model, loader, split, out_file))
-    TB_LOGGER.log_scaler_dict(log)
-    if save_model:
-        model_saver.save(model, global_step)
-    model.train()
-    return log
+    return best_ckpt
 
 
 @torch.no_grad()
@@ -267,28 +206,96 @@ def validate(opts, model, val_loader, split, out_file):
     return val_log
 
 
+def evaluation(model, data_loaders: dict, opts, global_step):
+    model.eval()
+    log = {}
+    for split, loader in data_loaders.items():
+        LOGGER.info(f"Step {global_step}: start running "
+                    f"validation on {split} split...")
+        out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{opts.rank}.csv'
+        log.update(validate(opts, model, loader, split, out_file))
+    TB_LOGGER.log_scaler_dict(log)
+    model.train()
+    return log
+
+
+def get_best_ckpt(val_data_dir, opts):
+    pat = re.compile(r'val_results_(?P<step>\d+)_rank0.csv')
+    prediction_files = glob.glob('{}/val_results_*_rank0.csv'.format(opts.output_dir))
+
+    top_files = Counter()
+    for f in prediction_files:
+        acc = judge(f, os.path.join(val_data_dir, 'answer.csv'))
+        top_files.update({f: acc})
+
+    for f, acc in top_files.most_common(1):
+        m = pat.match(os.path.basename(f))
+        best_epoch = int(m.group('step'))
+    return best_epoch
+
+
+def main(opts):
+    hvd.init()
+    n_gpu = hvd.size()
+    device = torch.device("cuda", hvd.local_rank())
+    torch.cuda.set_device(hvd.local_rank())
+    rank = hvd.rank()
+    opts.n_gpu = n_gpu
+    opts.rank = rank
+    opts.size = hvd.size()
+    LOGGER.info("device: {} n_gpu: {}, rank: {}, "
+                "16-bits training: {}".format(
+        device, n_gpu, hvd.rank(), opts.fp16))
+
+    if opts.gradient_accumulation_steps < 1:
+        raise ValueError("Invalid gradient_accumulation_steps parameter: {}, "
+                         "should be >= 1".format(
+            opts.gradient_accumulation_steps))
+
+    set_random_seed(opts.seed)
+
+    DatasetCls = ChengyuDataset
+    EvalDatasetCls = ChengyuEvalDataset
+    collate_fn = chengyu_collate
+    eval_collate_fn = chengyu_eval_collate
+
+    if opts.model.startswith('bert-single'):
+        ModelCls = BertForClozeSingle
+    elif opts.model.startswith('bert-dual'):
+        ModelCls = BertForClozeDual
+    elif opts.model.startswith('bert-chid'):
+        ModelCls = BertForClozeChid
+    elif opts.model.startswith('chengyubert'):
+        ModelCls = ChengyuBert
+    else:
+        raise ValueError(f"No such model [{opts.model}] supported!")
+
+    opts.use_vocab = True if 'vocab' in opts.model else False
+
+    # data loaders
+    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
+
+    # Prepare model
+    bert_config = BertConfig.from_json_file(args.model_config)
+    model = ModelCls.from_pretrained(opts.checkpoint,
+                                     config=bert_config,
+                                     len_idiom_vocab=opts.len_idiom_vocab, model_name=opts.model)
+    model.to(device)
+
+    if opts.mode == 'train':
+        best_ckpt = train(model, dataloaders, opts)
+    else:
+        best_ckpt = get_best_ckpt(dataloaders['val'].dataset.data_dir, opts)
+
+    best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
+    model.load_state_dict(torch.load(best_pt), strict=False)
+    evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Required parameters
-    parser.add_argument("--train_txt_db",
-                        default=None, type=str,
-                        help="The input train corpus. (LMDB)")
-    parser.add_argument("--train_img_dir",
-                        default=None, type=str,
-                        help="The input train images.")
-    parser.add_argument("--val_txt_db",
-                        default=None, type=str,
-                        help="The input validation corpus. (LMDB)")
-    parser.add_argument("--val_img_dir",
-                        default=None, type=str,
-                        help="The input validation images.")
-    parser.add_argument("--test_txt_db",
-                        default=None, type=str,
-                        help="The input test corpus. (LMDB)")
-    parser.add_argument("--test_img_dir",
-                        default=None, type=str,
-                        help="The input test images.")
     parser.add_argument('--compressed_db', action='store_true',
                         help='use compressed LMDB')
     parser.add_argument("--model_config",
@@ -300,25 +307,13 @@ if __name__ == "__main__":
     parser.add_argument("--model", default='paired',
                         choices=['snlive'],
                         help="choose from 2 model architecture")
-    parser.add_argument('--use_img_type', action='store_true',
-                        help="expand the type embedding for 2 image types")
+    parser.add_argument("--mode", default='train',
+                        choices=['train', 'infer'],
+                        help="choose from 2 mode")
 
     parser.add_argument("--output_dir", default=None, type=str,
                         help="The output directory where the model checkpoints will be "
                              "written.")
-
-    parser.add_argument('--use_distill', action='store_true',
-                        help="expand the type embedding for 2 image types")
-    parser.add_argument('--distill_temp', type=float, default=None,
-                        help="expand the type embedding for 2 image types")
-    parser.add_argument('--distill_alpha', type=float, default=None,
-                        help="expand the type embedding for 2 image types")
-    parser.add_argument("--teacher_model_path",
-                        default=None, type=str,
-                        help="json file for model architecture")
-    parser.add_argument("--teacher_checkpoint",
-                        default=None, type=str,
-                        help="pretrained model")
 
     # Prepro parameters
     parser.add_argument('--max_txt_len', type=int, default=60,
