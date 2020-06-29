@@ -236,7 +236,7 @@ def validate(opts, model, val_loader, split, out_file):
     with open(f'{val_loader.dataset.db_dir}/id2eid.json', 'r') as f:
         id2eid = json.load(f)
 
-    with tqdm(range(len(val_loader.dataset))) as tq:
+    with tqdm(range(len(val_loader.dataset)), desc=split) as tq:
         for i, batch in enumerate(val_loader):
             qids = batch['qids']
             targets = batch['targets']

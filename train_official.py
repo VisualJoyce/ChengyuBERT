@@ -158,7 +158,7 @@ def validate(opts, model, val_loader, split, out_file):
     val_mrr = 0
     st = time()
     results = []
-    with tqdm(range(len(val_loader.dataset))) as tq:
+    with tqdm(range(len(val_loader.dataset)), desc=split) as tq:
         for i, batch in enumerate(val_loader):
             qids = batch['qids']
             targets = batch['targets']
