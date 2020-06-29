@@ -228,10 +228,12 @@ def get_best_ckpt(val_data_dir, opts):
         acc = judge(f, os.path.join(val_data_dir, 'answer.csv'))
         top_files.update({f: acc})
 
+    print(top_files)
+
     for f, acc in top_files.most_common(1):
         m = pat.match(os.path.basename(f))
         best_epoch = int(m.group('step'))
-    return best_epoch
+        return best_epoch
 
 
 def main(opts):
