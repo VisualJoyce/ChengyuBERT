@@ -53,7 +53,7 @@ class ChengyuBert(BertPreTrainedModel):
         return c_mo_logits
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
-                inputs_embeds=None, compute_loss=False, targets=None):
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
         # batch_size, sequence_num, length = input_ids.shape
         encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
@@ -62,7 +62,13 @@ class ChengyuBert(BertPreTrainedModel):
         encoded_layer = encoded_outputs[0]
         blank_states = encoded_layer[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
         cls_states = encoded_layer[:, 0]
-        encoded_options = self.idiom_embedding(option_ids)
+
+        if option_ids is None and options_embeds is None:
+            raise ValueError('Either option_ids or options_embeds should be given.')
+        elif options_embeds is not None:
+            encoded_options = options_embeds
+        else:
+            encoded_options = self.idiom_embedding(option_ids)
 
         sentiment_states = torch.cat([blank_states,
                                       cls_states,
@@ -129,7 +135,7 @@ class BertForClozeChid(BertPreTrainedModel):
         return torch.einsum('bd,nd->bn', [blank_states, self.idiom_embedding.weight])  # (b, 256, 10)
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
-                inputs_embeds=None, compute_loss=False, targets=None):
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
 
         encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
@@ -138,7 +144,13 @@ class BertForClozeChid(BertPreTrainedModel):
         encoded_layer = encoded_outputs[0]
         blank_states = encoded_layer[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
 
-        encoded_options = self.idiom_embedding(option_ids)
+        if option_ids is None and options_embeds is None:
+            raise ValueError('Either option_ids or options_embeds should be given.')
+        elif options_embeds is not None:
+            encoded_options = options_embeds
+        else:
+            encoded_options = self.idiom_embedding(option_ids)
+
         multiply_result = torch.einsum('abc,ac->abc', encoded_options, blank_states)
 
         over_logits = self.vocab(blank_states)
@@ -173,7 +185,7 @@ class BertForClozeSingle(BertPreTrainedModel):
         return torch.einsum('bd,nd->bn', [blank_states, self.idiom_embedding.weight])  # (b, 256, 10)
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
-                inputs_embeds=None, compute_loss=False, targets=None):
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
         # batch_size, sequence_num, length = input_ids.shape
         encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
@@ -185,12 +197,17 @@ class BertForClozeSingle(BertPreTrainedModel):
         blank_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
         # cls_states = encoded_layer[:, 0]
 
-        idiom_state = self.idiom_embedding(option_ids)  # (b, 10, 768)
+        if option_ids is None and options_embeds is None:
+            raise ValueError('Either option_ids or options_embeds should be given.')
+        elif options_embeds is not None:
+            encoded_options = options_embeds
+        else:
+            encoded_options = self.idiom_embedding(option_ids)  # (b, 10, 768)
 
         over_logits = self.vocab(blank_states)
         # cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
 
-        mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, idiom_state])  # (b, 256, 10)
+        mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
         c_mo_logits, _ = torch.max(mo_logits, dim=1)
         # over_states = cls_states
 
@@ -225,7 +242,7 @@ class BertForClozeDual(BertPreTrainedModel):
         return c_mo_logits + c_fo_logits
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
-                inputs_embeds=None, compute_loss=False, targets=None):
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
         # batch_size, sequence_num, length = input_ids.shape
         encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
@@ -237,8 +254,13 @@ class BertForClozeDual(BertPreTrainedModel):
         blank_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
         # cls_states = encoded_layer[:, 0]
 
-        facial_state = self.idiom_facial_embedding(option_ids)  # (b, 10, 768)
-        meaning_state = self.idiom_meaning_embedding(option_ids)  # (b, 10, 768)
+        if option_ids is None and options_embeds is None:
+            raise ValueError('Either option_ids or options_embeds should be given.')
+        elif options_embeds is not None:
+            facial_state, meaning_state = options_embeds
+        else:
+            facial_state = self.idiom_facial_embedding(option_ids)  # (b, 10, 768)
+            meaning_state = self.idiom_meaning_embedding(option_ids)  # (b, 10, 768)
 
         over_logits = self.vocab(blank_states)
         # cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
