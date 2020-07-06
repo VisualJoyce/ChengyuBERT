@@ -84,16 +84,18 @@ class ChengyuBert(BertPreTrainedModel):
             logits = torch.mean(mo_logits, dim=1)
         elif self.model_name.startswith('chengyubert-window'):
             window_size = int(self.model_name.split('-')[-1])
-            assert window_size % 2 == 0
-            half_window_size = window_size // 2
-            half_window_size = min(length // 2, half_window_size)
-            new_logits = []
-            for i, p in enumerate(positions):
-                if p >= half_window_size:
-                    new_logits.append(mo_logits[i, (p - half_window_size): (p + half_window_size)])
-                elif p < half_window_size:
-                    new_logits.append(mo_logits[i, 0: 2 * half_window_size])
-            logits, _ = torch.max(torch.stack(new_logits, dim=0), dim=1)
+            if window_size > length:
+                logits, _ = torch.max(mo_logits, dim=1)
+            else:
+                assert window_size % 2 == 0
+                half_window_size = window_size // 2
+                new_logits = []
+                for i, p in enumerate(positions):
+                    if p >= half_window_size:
+                            new_logits.append(mo_logits[i, (p - half_window_size): (p + half_window_size)])
+                    elif p < half_window_size:
+                        new_logits.append(mo_logits[i, 0: 2 * half_window_size])
+                logits, _ = torch.max(torch.stack(new_logits, dim=0), dim=1)
         else:
             logits, _ = torch.max(mo_logits, dim=1)
 
