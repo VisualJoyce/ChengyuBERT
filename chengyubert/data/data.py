@@ -10,7 +10,7 @@ from more_itertools import unzip
 from torch.nn.utils.rnn import pad_sequence
 from transformers import BertTokenizer
 
-os.environ['TOKENIZERS_PARALLELISM'] = False
+os.environ['TOKENIZERS_PARALLELISM'] = "false"
 
 
 @contextmanager
