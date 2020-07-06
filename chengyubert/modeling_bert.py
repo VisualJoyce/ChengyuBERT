@@ -80,7 +80,10 @@ class ChengyuBert(BertPreTrainedModel):
 
         encoded_context = encoded_layer
         mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
-        logits, _ = torch.max(mo_logits, dim=1)
+        if self.model_name == 'chengyubert-mean':
+            logits = torch.mean(mo_logits, dim=1)
+        else:
+            logits, _ = torch.max(mo_logits, dim=1)
 
         logits = logits + cond_logits
         if compute_loss:
