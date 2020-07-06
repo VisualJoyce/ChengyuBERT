@@ -54,7 +54,7 @@ class ChengyuBert(BertPreTrainedModel):
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-        # batch_size, sequence_num, length = input_ids.shape
+        batch_size, length = input_ids.size()
         encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
                                     attention_mask=attention_mask,
@@ -82,6 +82,17 @@ class ChengyuBert(BertPreTrainedModel):
         mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
         if self.model_name == 'chengyubert-mean':
             logits = torch.mean(mo_logits, dim=1)
+        elif self.model_name.startswith('chengyubert-window'):
+            half_window_size = int(self.model_name.split('-')[-1]) // 2
+            assert half_window_size % 2 == 0
+            half_window_size = min(length // 2, half_window_size)
+            indices = []
+            for i, p in enumerate(positions):
+                if p >= half_window_size:
+                    indices.append(list(range(p - half_window_size, p + half_window_size)))
+                elif p < half_window_size:
+                    indices.append(list(range(0, 2 * half_window_size)))
+            logits, _ = torch.max(mo_logits.gather(dim=1, index=torch.tensor(indices).type_as(input_ids)), dim=1)
         else:
             logits, _ = torch.max(mo_logits, dim=1)
 
