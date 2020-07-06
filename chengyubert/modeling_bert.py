@@ -93,7 +93,9 @@ class ChengyuBert(BertPreTrainedModel):
                     indices.append(list(range(p - half_window_size, p + half_window_size)))
                 elif p < half_window_size:
                     indices.append(list(range(0, 2 * half_window_size)))
-            logits, _ = torch.max(mo_logits.index_select(dim=1, index=torch.tensor(indices).type_as(input_ids)), dim=1)
+            logits, _ = torch.max(torch.index_select(mo_logits,
+                                                     dim=1, index=torch.tensor(indices).type_as(input_ids)),
+                                  dim=1)
         else:
             logits, _ = torch.max(mo_logits, dim=1)
 
