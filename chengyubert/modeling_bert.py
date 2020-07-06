@@ -91,8 +91,10 @@ class ChengyuBert(BertPreTrainedModel):
                 half_window_size = window_size // 2
                 new_logits = []
                 for i, p in enumerate(positions):
-                    if p >= half_window_size:
-                            new_logits.append(mo_logits[i, (p - half_window_size): (p + half_window_size)])
+                    if p >= half_window_size and p + half_window_size >= length:
+                        new_logits.append(mo_logits[i, (length - window_size):])
+                    elif p >= half_window_size and p + half_window_size < length:
+                        new_logits.append(mo_logits[i, (p - half_window_size): (p + half_window_size)])
                     elif p < half_window_size:
                         new_logits.append(mo_logits[i, 0: 2 * half_window_size])
                 logits, _ = torch.max(torch.stack(new_logits, dim=0), dim=1)
