@@ -87,15 +87,13 @@ class ChengyuBert(BertPreTrainedModel):
             assert window_size % 2 == 0
             half_window_size = window_size // 2
             half_window_size = min(length // 2, half_window_size)
-            indices = []
+            new_logits = []
             for i, p in enumerate(positions):
                 if p >= half_window_size:
-                    indices.append(list(range(p - half_window_size, p + half_window_size)))
+                    new_logits.append(mo_logits[i, (p - half_window_size): (p + half_window_size)])
                 elif p < half_window_size:
-                    indices.append(list(range(0, 2 * half_window_size)))
-            logits, _ = torch.max(torch.index_select(mo_logits,
-                                                     dim=1, index=torch.tensor(indices).type_as(input_ids)),
-                                  dim=1)
+                    new_logits.append(mo_logits[i, 0: 2 * half_window_size])
+            logits, _ = torch.max(torch.stack(new_logits), dim=0)
         else:
             logits, _ = torch.max(mo_logits, dim=1)
 
