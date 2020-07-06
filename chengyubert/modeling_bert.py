@@ -93,7 +93,7 @@ class ChengyuBert(BertPreTrainedModel):
                     new_logits.append(mo_logits[i, (p - half_window_size): (p + half_window_size)])
                 elif p < half_window_size:
                     new_logits.append(mo_logits[i, 0: 2 * half_window_size])
-            logits, _ = torch.max(torch.stack(new_logits), dim=0)
+            logits, _ = torch.max(torch.cat(new_logits, dim=0), dim=1)
         else:
             logits, _ = torch.max(mo_logits, dim=1)
 
