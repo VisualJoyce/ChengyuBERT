@@ -19,7 +19,7 @@
     "val_batch_size": 50000,
     "gradient_accumulation_steps": 12,
     "learning_rate": 5e-05,
-    "valid_steps": 1000,
+    "valid_steps": 500,
     "num_train_steps": 4000,
     "optim": "adamw",
     "betas": [
