@@ -83,8 +83,9 @@ class ChengyuBert(BertPreTrainedModel):
         if self.model_name == 'chengyubert-mean':
             logits = torch.mean(mo_logits, dim=1)
         elif self.model_name.startswith('chengyubert-window'):
-            half_window_size = int(self.model_name.split('-')[-1]) // 2
-            assert half_window_size % 2 == 0
+            window_size = int(self.model_name.split('-')[-1])
+            assert window_size % 2 == 0
+            half_window_size = window_size // 2
             half_window_size = min(length // 2, half_window_size)
             indices = []
             for i, p in enumerate(positions):
