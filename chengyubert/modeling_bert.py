@@ -86,6 +86,11 @@ class ChengyuBert(BertPreTrainedModel):
             window_size = int(self.model_name.split('-')[-1])
             if window_size > length:
                 logits, _ = torch.max(mo_logits, dim=1)
+            elif window_size == 1:
+                new_logits = []
+                for i, p in enumerate(positions):
+                    new_logits.append(mo_logits[i, p])
+                logits = torch.stack(new_logits, dim=0)
             else:
                 assert window_size % 2 == 0
                 half_window_size = window_size // 2
