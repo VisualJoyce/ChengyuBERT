@@ -5,6 +5,7 @@ Licensed under the MIT license.
 UNITER finetuning for NLVR2
 """
 import glob
+import shutil
 from collections import Counter
 from os.path import exists, join
 
@@ -151,7 +152,7 @@ def train(model, dataloaders, opts):
 
 
 @torch.no_grad()
-def validate(opts, model, val_loader, split, out_file):
+def validate(opts, model, val_loader, split, global_step):
     val_loss = 0
     tot_score = 0
     n_ex = 0
@@ -182,19 +183,24 @@ def validate(opts, model, val_loader, split, out_file):
             n_ex += len(qids)
             tq.update(len(qids))
 
+    out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{opts.rank}.csv'
+    with open(out_file, 'w') as f:
+        for id_, ans in results:
+            f.write(f'{id_},{ans}\n')
+
     val_loss = sum(all_gather_list(val_loss))
     val_mrr = sum(all_gather_list(val_mrr))
-    tot_score = sum(all_gather_list(tot_score))
-    results = sum(all_gather_list(results))
+    # tot_score = sum(all_gather_list(tot_score))
     n_ex = sum(all_gather_list(n_ex))
     tot_time = time() - st
 
     val_loss /= n_ex
     val_mrr = val_mrr / n_ex
 
-    with open(out_file, 'w') as f:
-        for id_, ans in results:
-            f.write(f'{id_},{ans}\n')
+    out_file = f'{opts.output_dir}/results/{split}_results_{global_step}.csv'
+    with open(out_file, 'w') as g:
+        for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
+            shutil.copyfileobj(open(f, 'rb'), g)
 
     txt_db = getattr(opts, f'{split}_txt_db')
     val_acc = judge(out_file, f'{txt_db}/answer.csv')
@@ -215,8 +221,7 @@ def evaluation(model, data_loaders: dict, opts, global_step):
     for split, loader in data_loaders.items():
         LOGGER.info(f"Step {global_step}: start running "
                     f"validation on {split} split...")
-        out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{opts.rank}.csv'
-        log.update(validate(opts, model, loader, split, out_file))
+        log.update(validate(opts, model, loader, split, global_step))
     TB_LOGGER.log_scaler_dict(log)
     model.train()
     return log
