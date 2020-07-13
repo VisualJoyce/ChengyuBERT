@@ -301,7 +301,7 @@ def process_chid(opts, db, tokenizer):
     if source == 'official':
         assert split in ['train', 'dev', 'test', 'ran', 'sim', 'out']
         parser = ChidOfficialParser(split, vocab)
-    elif source == 'official':
+    elif source == 'external':
         assert split in ['pretrain', 'cct7', 'cct4']
         parser = ChidExternalParser(split, vocab)
     else:
