@@ -1,11 +1,11 @@
+import random
+
 import argparse
 import json
-import math
 import os
-import random
-import re
-
 import pandas as pda
+import re
+from abc import abstractmethod
 from cytoolz import curry
 from tqdm import tqdm
 from transformers import BertTokenizer
@@ -112,7 +112,7 @@ def tokenize(tokenizer, example):
     return input_ids, position
 
 
-class ChidOfficialParser(object):
+class ChidParser(object):
     """Dataset wrapping tensors.
 
     Each sample will be retrieved by indexing tensors along the first dimension.
@@ -120,32 +120,25 @@ class ChidOfficialParser(object):
     Arguments:
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
-    splits = ['pretrain', 'train', 'dev', 'test', 'ran', 'sim', 'out', 'chengyu', 'chengyu4']
-
-    # splits = ['chengyu', 'chengyu4']
 
     def __init__(self, split, vocab, annotation_dir='/annotation'):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
-        self.data_dir = f'/{self.annotation_dir}/official'
+
+    @property
+    @abstractmethod
+    def data_dir(self):
+        pass
+
+    @property
+    @abstractmethod
+    def data_file(self):
+        pass
 
     @property
     def answer_file(self):
         return os.path.join(self.data_dir, '{}_answer.csv'.format(self.split))
-
-    @property
-    def data_file(self):
-        if self.split in ['pretrain', 'train', 'dev', 'test']:
-            return os.path.join(self.data_dir, '{}_data.txt'.format(self.split))
-        elif self.split == 'out':
-            return os.path.join(self.data_dir, 'test_out_data.txt')
-        elif self.split == 'sim':
-            return os.path.join(self.data_dir, 'test_data_sim.txt')
-        elif self.split == 'ran':
-            return os.path.join(self.data_dir, 'test_data_ord.txt')
-        elif self.split in ['chengyu', 'chengyu4']:
-            return os.path.join(self.data_dir, 'chengyu.txt')
 
     def read_examples(self):
         idioms = list(self.vocab.keys())
@@ -186,6 +179,64 @@ class ChidOfficialParser(object):
                             options=options,
                             label=ind
                         )
+
+
+class ChidExternalParser(ChidParser):
+    """Dataset wrapping tensors.
+
+    Each sample will be retrieved by indexing tensors along the first dimension.
+
+    Arguments:
+        *tensors (Tensor): tensors that have the same size of the first dimension.
+    """
+    splits = ['pretrain', 'cct7', 'cct4']
+
+    def __init__(self, split, vocab, annotation_dir='/annotation'):
+        self.split = split
+        self.vocab = vocab
+        self.annotation_dir = annotation_dir
+
+    @property
+    def data_dir(self):
+        return f'/{self.annotation_dir}/external'
+
+    @property
+    def data_file(self):
+        if self.split in ['pretrain']:
+            return os.path.join(self.data_dir, '{}_data.txt'.format(self.split))
+        elif self.split in ['cct7', 'cct4']:
+            return os.path.join(self.data_dir, 'chengyu.txt')
+
+
+class ChidOfficialParser(ChidParser):
+    """Dataset wrapping tensors.
+
+    Each sample will be retrieved by indexing tensors along the first dimension.
+
+    Arguments:
+        *tensors (Tensor): tensors that have the same size of the first dimension.
+    """
+    splits = ['train', 'dev', 'test', 'ran', 'sim', 'out']
+
+    def __init__(self, split, vocab, annotation_dir='/annotation'):
+        self.split = split
+        self.vocab = vocab
+        self.annotation_dir = annotation_dir
+
+    @property
+    def data_dir(self):
+        return f'/{self.annotation_dir}/official'
+
+    @property
+    def data_file(self):
+        if self.split in ['train', 'dev', 'test']:
+            return os.path.join(self.data_dir, '{}_data.txt'.format(self.split))
+        elif self.split == 'out':
+            return os.path.join(self.data_dir, 'test_out_data.txt')
+        elif self.split == 'sim':
+            return os.path.join(self.data_dir, 'test_data_sim.txt')
+        elif self.split == 'ran':
+            return os.path.join(self.data_dir, 'test_data_ord.txt')
 
 
 class ChidCompetitionDataset(object):
@@ -248,8 +299,11 @@ def process_chid(opts, db, tokenizer):
     vocab = chengyu_process()
 
     if source == 'official':
-        assert split in ['pretrain', 'train', 'dev', 'test', 'ran', 'sim', 'out', 'chengyu', 'chengyu4']
+        assert split in ['train', 'dev', 'test', 'ran', 'sim', 'out']
         parser = ChidOfficialParser(split, vocab)
+    elif source == 'official':
+        assert split in ['pretrain', 'cct7', 'cct4']
+        parser = ChidExternalParser(split, vocab)
     else:
         assert split in ['train', 'dev', 'test', 'out']
         parser = ChidCompetitionDataset(split, vocab)
