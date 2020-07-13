@@ -183,9 +183,12 @@ def validate(opts, model, val_loader, split, out_file):
             tq.update(len(qids))
 
     val_loss = sum(all_gather_list(val_loss))
+    val_mrr = sum(all_gather_list(val_mrr))
     tot_score = sum(all_gather_list(tot_score))
+    results = sum(all_gather_list(results))
     n_ex = sum(all_gather_list(n_ex))
     tot_time = time() - st
+
     val_loss /= n_ex
     val_mrr = val_mrr / n_ex
 
