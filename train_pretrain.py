@@ -5,6 +5,7 @@ Licensed under the MIT license.
 UNITER finetuning for NLVR2
 """
 import glob
+import shutil
 from collections import Counter
 from os.path import exists, join
 
@@ -24,7 +25,7 @@ from transformers import BertConfig
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.modeling_bert import ChengyuBert, BertForClozeChid, BertForClozeSingle, BertForClozeDual
+from chengyubert.modeling_bert import ChengyuBertForPretrain
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -78,10 +79,7 @@ def train(model, dataloaders, opts):
             targets = batch['targets']
             n_examples += targets.size(0)
 
-            loss, vocab_loss = model(**batch, compute_loss=True)
-            if opts.use_vocab:
-                loss += vocab_loss
-
+            loss = model(**batch, compute_loss=True)
             loss = loss.mean()
 
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
@@ -151,14 +149,14 @@ def train(model, dataloaders, opts):
 
 
 @torch.no_grad()
-def validate(opts, model, val_loader, split, out_file):
+def validate(opts, model, val_loader, split, global_step):
     val_loss = 0
     tot_score = 0
     n_ex = 0
     val_mrr = 0
     st = time()
     results = []
-    with tqdm(range(len(val_loader.dataset)), desc=split) as tq:
+    with tqdm(range(len(val_loader.dataset)), desc=f'{split}-{opts.rank}') as tq:
         for i, batch in enumerate(val_loader):
             qids = batch['qids']
             targets = batch['targets']
@@ -182,20 +180,30 @@ def validate(opts, model, val_loader, split, out_file):
             n_ex += len(qids)
             tq.update(len(qids))
 
-    val_loss = sum(all_gather_list(val_loss))
-    tot_score = sum(all_gather_list(tot_score))
-    n_ex = sum(all_gather_list(n_ex))
-    tot_time = time() - st
-    val_loss /= n_ex
-    val_mrr = val_mrr / n_ex
-
+    out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{opts.rank}.csv'
     with open(out_file, 'w') as f:
         for id_, ans in results:
             f.write(f'{id_},{ans}\n')
 
+    val_loss = sum(all_gather_list(val_loss))
+    val_mrr = sum(all_gather_list(val_mrr))
+    # tot_score = sum(all_gather_list(tot_score))
+    n_ex = sum(all_gather_list(n_ex))
+    tot_time = time() - st
+
+    val_loss /= n_ex
+    val_mrr = val_mrr / n_ex
+
+    out_file = f'{opts.output_dir}/results/{split}_results_{global_step}.csv'
+    if not os.path.isfile(out_file):
+        with open(out_file, 'wb') as g:
+            for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
+                shutil.copyfileobj(open(f, 'rb'), g)
+
+    sum(all_gather_list(opts.rank))
+
     txt_db = getattr(opts, f'{split}_txt_db')
     val_acc = judge(out_file, f'{txt_db}/answer.csv')
-
     val_log = {f'{split}/loss': val_loss,
                f'{split}/acc': val_acc,
                f'{split}/mrr': val_mrr,
@@ -212,8 +220,7 @@ def evaluation(model, data_loaders: dict, opts, global_step):
     for split, loader in data_loaders.items():
         LOGGER.info(f"Step {global_step}: start running "
                     f"validation on {split} split...")
-        out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{opts.rank}.csv'
-        log.update(validate(opts, model, loader, split, out_file))
+        log.update(validate(opts, model, loader, split, global_step))
     TB_LOGGER.log_scaler_dict(log)
     model.train()
     return log
@@ -261,18 +268,7 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model.startswith('bert-single'):
-        ModelCls = BertForClozeSingle
-    elif opts.model.startswith('bert-dual'):
-        ModelCls = BertForClozeDual
-    elif opts.model.startswith('bert-chid'):
-        ModelCls = BertForClozeChid
-    elif opts.model.startswith('chengyubert'):
-        ModelCls = ChengyuBert
-    else:
-        raise ValueError(f"No such model [{opts.model}] supported!")
-
-    opts.use_vocab = True if 'vocab' in opts.model else False
+    ModelCls = ChengyuBertForPretrain
 
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)

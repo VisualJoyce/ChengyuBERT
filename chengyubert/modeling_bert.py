@@ -520,3 +520,46 @@ class IdiomEmbeddingEmotion(BertPreTrainedModel):
         for k in self.used_paras:
             extra_logits[k] = getattr(self, 'idiom_{}'.format(k))(cls_states)
         return extra_logits
+
+
+class ChengyuBertForPretrain(BertPreTrainedModel):
+    def __init__(self, config, len_idiom_vocab, model_name='chengyubert'):
+        super().__init__(config)
+        self.model_name = model_name
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        self.over_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
+        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.init_weights()
+
+    def vocab(self, over_states):
+        c_mo_logits = torch.einsum('bd,nd->bn', [self.over_linear(over_states),
+                                                 self.idiom_embedding.weight])  # (b, 256, 10)
+        return c_mo_logits
+
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
+        encoded_outputs = self.bert(input_ids,
+                                    token_type_ids=token_type_ids,
+                                    attention_mask=attention_mask,
+                                    inputs_embeds=inputs_embeds)
+        encoded_layer = encoded_outputs[0]
+        blank_states = encoded_layer[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+        cls_states = encoded_layer[:, 0]
+
+        sentiment_states = torch.cat([blank_states,
+                                      cls_states,
+                                      blank_states * cls_states,
+                                      blank_states - cls_states], dim=-1)
+
+        over_logits = self.vocab(sentiment_states)
+
+        if compute_loss:
+            loss_fct = nn.CrossEntropyLoss()
+            target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
+            over_loss = loss_fct(over_logits, target.squeeze(1))
+            return over_loss
+        else:
+            cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
+            return cond_logits, over_logits
