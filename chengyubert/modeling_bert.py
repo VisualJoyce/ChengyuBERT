@@ -548,12 +548,12 @@ class ChengyuBertForPretrain(BertPreTrainedModel):
         blank_states = encoded_layer[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
         cls_states = encoded_layer[:, 0]
 
-        sentiment_states = torch.cat([blank_states,
-                                      cls_states,
-                                      blank_states * cls_states,
-                                      blank_states - cls_states], dim=-1)
+        mask_states = torch.cat([blank_states,
+                                 cls_states,
+                                 blank_states * cls_states,
+                                 blank_states - cls_states], dim=-1)
 
-        over_logits = self.vocab(sentiment_states)
+        over_logits = self.vocab(mask_states)
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss()
