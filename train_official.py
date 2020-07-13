@@ -203,7 +203,7 @@ def validate(opts, model, val_loader, split, global_step):
             for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
                 shutil.copyfileobj(open(f, 'rb'), g)
 
-    sum(all_gather_list(out_file))
+    sum(all_gather_list(opts.rank))
 
     txt_db = getattr(opts, f'{split}_txt_db')
     val_acc = judge(out_file, f'{txt_db}/answer.csv')
