@@ -197,15 +197,16 @@ def validate(opts, model, val_loader, split, global_step):
     val_loss /= n_ex
     val_mrr = val_mrr / n_ex
 
-    if opts.rank == 0:
-        out_file = f'{opts.output_dir}/results/{split}_results_{global_step}.csv'
+    out_file = f'{opts.output_dir}/results/{split}_results_{global_step}.csv'
+    if not os.path.isfile(out_file):
         with open(out_file, 'wb') as g:
             for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
                 shutil.copyfileobj(open(f, 'rb'), g)
 
+    sum(all_gather_list(out_file))
+
     txt_db = getattr(opts, f'{split}_txt_db')
     val_acc = judge(out_file, f'{txt_db}/answer.csv')
-
     val_log = {f'{split}/loss': val_loss,
                f'{split}/acc': val_acc,
                f'{split}/mrr': val_mrr,
