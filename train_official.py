@@ -159,7 +159,7 @@ def validate(opts, model, val_loader, split, global_step):
     val_mrr = 0
     st = time()
     results = []
-    with tqdm(range(len(val_loader.dataset)), desc=split) as tq:
+    with tqdm(range(len(val_loader.dataset)), desc=f'{split}-{opts.rank}') as tq:
         for i, batch in enumerate(val_loader):
             qids = batch['qids']
             targets = batch['targets']
@@ -197,10 +197,11 @@ def validate(opts, model, val_loader, split, global_step):
     val_loss /= n_ex
     val_mrr = val_mrr / n_ex
 
-    out_file = f'{opts.output_dir}/results/{split}_results_{global_step}.csv'
-    with open(out_file, 'w') as g:
-        for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
-            shutil.copyfileobj(open(f, 'rb'), g)
+    if opts.rank == 0:
+        out_file = f'{opts.output_dir}/results/{split}_results_{global_step}.csv'
+        with open(out_file, 'wb') as g:
+            for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
+                shutil.copyfileobj(open(f, 'rb'), g)
 
     txt_db = getattr(opts, f'{split}_txt_db')
     val_acc = judge(out_file, f'{txt_db}/answer.csv')
