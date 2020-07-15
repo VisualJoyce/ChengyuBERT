@@ -249,7 +249,7 @@ class ChengyuBertDual(BertPreTrainedModel):
         c_mo_logits, _ = torch.max(mo_logits, dim=1)
         # over_states = cls_states
 
-        c_fo_logits = torch.einsum('bd,bnd->bn', [blank_states, facial_state])  # (b, 10)
+        c_fo_logits = torch.einsum('bd,bnd->bn', [over_states, facial_state])  # (b, 10)
         logits = c_mo_logits + c_fo_logits
 
         if compute_loss:
