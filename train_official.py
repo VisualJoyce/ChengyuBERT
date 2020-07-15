@@ -25,7 +25,8 @@ from transformers import BertConfig
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.modeling_bert import ChengyuBert, BertForClozeChid, BertForClozeSingle, BertForClozeDual
+from chengyubert.modeling_bert import ChengyuBert, BertForClozeChid, BertForClozeSingle, BertForClozeDual, \
+    ChengyuBertDual
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -279,6 +280,8 @@ def main(opts):
         ModelCls = BertForClozeChid
     elif opts.model.startswith('chengyubert'):
         ModelCls = ChengyuBert
+    elif opts.model.startswith('chengyubert-dual'):
+        ModelCls = ChengyuBertDual
     else:
         raise ValueError(f"No such model [{opts.model}] supported!")
 

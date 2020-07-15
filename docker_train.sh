@@ -16,9 +16,11 @@ fi
 if [ -z "$CUDA_VISIBLE_DEVICES" ]; then
   CUDA_VISIBLE_DEVICES='all'
   N_GPU=1
+  HOROVOD_PARA=""
 else
   N_GPU=`echo ${CUDA_VISIBLE_DEVICES} | tr -cd , | wc -c`
   N_GPU=$((N_GPU+1))
+  HOROVOD_PARA="horovodrun -np $N_GPU  -H localhost:$N_GPU"
 fi
 
 echo "Training using ${N_GPU} GPUs: ${CUDA_VISIBLE_DEVICES}!"
@@ -38,5 +40,5 @@ docker run --gpus '"'device=$CUDA_VISIBLE_DEVICES'"' --ipc=host --rm -it \
   --mount src="$TXT_DB",dst=/txt,type=bind \
   -e NVIDIA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
   -w /src vimos/uniter_ve:latest \
-  bash -c " PYTHONPATH=/src ${MODEL_PARA} horovodrun -np $N_GPU  -H localhost:$N_GPU \\
+  bash -c " PYTHONPATH=/src ${MODEL_PARA} ${HOROVOD_PARA} \\
     python train_${SUB_PROJECT}.py --config=$CONFIG_DIR/$CONFIG_FILE"
