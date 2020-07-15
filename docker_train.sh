@@ -16,10 +16,14 @@ fi
 if [ -z "$CUDA_VISIBLE_DEVICES" ]; then
   CUDA_VISIBLE_DEVICES='all'
   N_GPU=1
-  HOROVOD_PARA=""
 else
   N_GPU=`echo ${CUDA_VISIBLE_DEVICES} | tr -cd , | wc -c`
   N_GPU=$((N_GPU+1))
+fi
+
+HOROVOD_PARA=""
+if [ $N_GPU -gt 1 ];
+then
   HOROVOD_PARA="horovodrun -np $N_GPU  -H localhost:$N_GPU"
 fi
 
