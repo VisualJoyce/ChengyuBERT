@@ -108,7 +108,7 @@ class ChengyuDataset(TxtTokLmdb):
                 ed = min(len(input_ids), self.max_txt_len - 2)
             elif len(input_ids) - position < half_length:  # cut at head
                 ed = len(input_ids)
-                st = max(0, ed - (self.max_txt_len - 2))
+                st = max(0, ed - (self.max_txt_len - 2) + 1)
             else:  # cut at both sides
                 st = position + 2 - half_length
                 ed = position + half_length
