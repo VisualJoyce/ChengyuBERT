@@ -105,13 +105,15 @@ class ChengyuDataset(TxtTokLmdb):
             half_length = self.max_txt_len // 2
             if position < half_length:  # cut at tail
                 st = 0
-                ed = min(len(input_ids), self.max_txt_len - 2)
+                ed = min(len(input_ids) + 1, self.max_txt_len - 1)
             elif len(input_ids) - position < half_length:  # cut at head
-                ed = len(input_ids)
-                st = max(0, ed - (self.max_txt_len - 2) + 1)
+                ed = len(input_ids) + 1
+                st = max(0, ed - (self.max_txt_len - 2))
             else:  # cut at both sides
-                st = position + 2 - half_length + 1
+                st = position - half_length + 1
                 ed = position + half_length
+
+            assert ed - st <= self.max_txt_len - 1
             st_ed.append((st, ed))
             lens.append(ed - st + 3)
             ids.append(id_)
@@ -128,7 +130,7 @@ class ChengyuDataset(TxtTokLmdb):
         options = example['options']
         target = example['target']
 
-        input_ids = [self.tokenizer.cls_token_id] + example['input_ids'][st: ed + 1] + [self.tokenizer.sep_token_id]
+        input_ids = [self.tokenizer.cls_token_id] + example['input_ids'][st: ed] + [self.tokenizer.sep_token_id]
         assert len(input_ids) <= self.max_txt_len
 
         position = input_ids.index(self.tokenizer.mask_token_id)
