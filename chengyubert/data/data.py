@@ -98,7 +98,7 @@ class ChengyuDataset(TxtTokLmdb):
         lens = []
         ids = []
         for id_, len_ in self.id2len.items():
-            lens.append(min(len_, self.config.max_txt_len))
+            lens.append(min(len_ + 2, self.config.max_txt_len))
             ids.append(id_)
         return lens, ids
 
