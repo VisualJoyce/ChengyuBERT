@@ -127,17 +127,16 @@ class ChengyuDataset(TxtTokLmdb):
         example = self.db[id_]
         options = example['options']
         target = example['target']
-        input_ids = example['input_ids']
 
-        position = input_ids[st:ed + 1].index(self.tokenizer.mask_token_id) + 1
-        inputs = self.tokenizer.prepare_for_model(input_ids[st: ed + 1],
-                                                  pair_ids=None,
-                                                  max_length=self.max_txt_len,
-                                                  add_special_tokens=True,
-                                                  return_tensors='pt',
-                                                  truncation='longest_first')
-        input_ids, token_type_ids = inputs["input_ids"][0], inputs["token_type_ids"][0]
+        input_ids = [self.tokenizer.cls_token_id] + example['input_ids'][st: ed + 1] + [self.tokenizer.sep_token_id]
+        assert len(input_ids) <= self.max_txt_len
+
+        position = input_ids.index(self.tokenizer.mask_token_id)
+        token_type_ids = [0] * len(input_ids)
         attention_mask = [1] * input_ids.size(0)
+
+        input_ids = torch.tensor(input_ids)
+        token_type_ids = torch.tensor(token_type_ids)
         attention_mask = torch.tensor(attention_mask)
         return input_ids, token_type_ids, attention_mask, position, options, target
 
