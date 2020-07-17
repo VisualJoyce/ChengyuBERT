@@ -130,7 +130,7 @@ class ChengyuDataset(TxtTokLmdb):
         input_ids = example['input_ids']
 
         position = input_ids[st:ed + 1].index(self.tokenizer.mask_token_id) + 1
-        inputs = self.tokenizer.prepare_for_model(input_ids[st: ed],
+        inputs = self.tokenizer.prepare_for_model(input_ids[st: ed + 1],
                                                   pair_ids=None,
                                                   max_length=self.max_txt_len,
                                                   add_special_tokens=True,
