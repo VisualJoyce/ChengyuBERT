@@ -88,7 +88,7 @@ class ChengyuDataset(TxtTokLmdb):
     def __init__(self, db_dir, max_txt_len, opts):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
-        self.lens, self.ids = self.get_ids_and_lens()
+        self.lens, self.ids, self.st_ed = self.get_ids_and_lens()
         self.tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
 
     def __len__(self):
@@ -97,10 +97,25 @@ class ChengyuDataset(TxtTokLmdb):
     def get_ids_and_lens(self):
         lens = []
         ids = []
+        st_ed = []
         for id_, len_ in self.id2len.items():
-            lens.append(min(len_ + 2, self.config.max_txt_len))
+            example = self.db[id_]
+            position = example['position']
+            input_ids = example['input_ids']
+            half_length = self.max_txt_len // 2
+            if position < half_length:  # cut at tail
+                st = 0
+                ed = min(len(input_ids), self.max_txt_len - 2)
+            elif len(input_ids) - position < half_length:  # cut at head
+                ed = len(input_ids)
+                st = max(0, ed - (self.max_txt_len - 2))
+            else:  # cut at both sides
+                st = position + 2 - half_length
+                ed = position + half_length
+            st_ed.append((st, ed))
+            lens.append(ed - st + 3)
             ids.append(id_)
-        return lens, ids
+        return lens, ids, st_ed
 
     def __getitem__(self, i):
         """
@@ -108,22 +123,11 @@ class ChengyuDataset(TxtTokLmdb):
          [txt, img2]]
         """
         id_ = self.ids[i]
+        st, ed = self.st_ed[i]
         example = self.db[id_]
-        position = example['position']
         options = example['options']
         target = example['target']
         input_ids = example['input_ids']
-
-        half_length = self.max_txt_len // 2
-        if position < half_length:  # cut at tail
-            st = 0
-            ed = min(len(input_ids), self.max_txt_len - 2)
-        elif len(input_ids) - position < half_length:  # cut at head
-            ed = len(input_ids)
-            st = max(0, ed - (self.max_txt_len - 2))
-        else:  # cut at both sides
-            st = position + 2 - half_length
-            ed = position + half_length
 
         position = input_ids[st:ed + 1].index(self.tokenizer.mask_token_id) + 1
         inputs = self.tokenizer.prepare_for_model(input_ids[st: ed],
