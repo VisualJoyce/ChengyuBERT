@@ -42,6 +42,8 @@ def parse_with_config(parser):
                 new_v = os.getenv(k.upper())
                 if isinstance(v, int):
                     new_v = int(new_v)
+                if isinstance(v, float):
+                    new_v = float(new_v)
                 if isinstance(v, bool):
                     new_v = bool(new_v)
                 setattr(args, k, new_v)
