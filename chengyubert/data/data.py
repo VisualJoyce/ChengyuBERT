@@ -133,7 +133,7 @@ class ChengyuDataset(TxtTokLmdb):
 
         position = input_ids.index(self.tokenizer.mask_token_id)
         token_type_ids = [0] * len(input_ids)
-        attention_mask = [1] * input_ids.size(0)
+        attention_mask = [1] * len(input_ids)
 
         input_ids = torch.tensor(input_ids)
         token_type_ids = torch.tensor(token_type_ids)
