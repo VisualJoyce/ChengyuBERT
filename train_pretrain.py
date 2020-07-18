@@ -405,7 +405,7 @@ if __name__ == "__main__":
     args.output_dir = os.path.join(args.output_dir,
                                    args.model,
                                    checkpoint,
-                                   f'official_{args.num_train_steps}_{args.learning_rate}')
+                                   f'pretrain_{args.num_train_steps}_{args.learning_rate}')
 
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/results'):
         if args.mode == 'train':
