@@ -25,7 +25,7 @@ from transformers import BertConfig
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.modeling_bert import ChengyuBertForPretrain
+from chengyubert.modeling_bert import ChengyuBertForPretrain, BertForPretrain
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -268,7 +268,12 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    ModelCls = ChengyuBertForPretrain
+    if opts.model.startswith('chengyubert'):
+        ModelCls = ChengyuBertForPretrain
+    elif opts.model.startswith('bert'):
+        ModelCls = BertForPretrain
+    else:
+        raise ValueError('No such model for pretrain!')
 
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
