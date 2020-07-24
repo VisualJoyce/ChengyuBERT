@@ -24,13 +24,14 @@ def convert_to_one_hot(indices, num_classes):
 
 
 def masked_softmax(logits, mask=None):
-    eps = 1e-20
-    probs = torch.softmax(logits, dim=1)
-    if mask is not None:
-        mask = mask.float()
-        probs = probs * mask + eps
-        probs = probs / probs.sum(1, keepdim=True)
-    return probs
+    # eps = 1e-20
+    # probs = torch.softmax(logits, dim=1)
+    # if mask is not None:
+    #     mask = mask.float()
+    #     probs = probs * mask + eps
+    #     probs = probs / probs.sum(1, keepdim=True)
+    logits += (1.0 - mask.type_as(logits)) * -10000.0
+    return logits.softmax(dim=-1)
 
 
 def greedy_select(logits, mask=None):
@@ -62,7 +63,7 @@ def st_gumbel_softmax(logits, temperature=1.0, mask=None):
         y: The sampled output, which has the property explained above.
     """
 
-    eps = 1e-20
+    eps = 1e-10
     u = logits.data.new(*logits.size()).uniform_()
     gumbel_noise = -torch.log(-torch.log(u + eps) + eps)
     y = logits + gumbel_noise
@@ -136,7 +137,6 @@ class BinaryTreeLSTMLayer(nn.Module):
                 each of which has the size
                 (batch_size, max_length - 1, hidden_dim).
         """
-
         hl, cl = l
         hr, cr = r
         hlr_cat = torch.cat([hl, hr], dim=2)
@@ -190,7 +190,7 @@ class StructuredChengyuBert(BertPreTrainedModel):
     def update_state(old_state, new_state, done_mask):
         old_h, old_c = old_state
         new_h, new_c = new_state
-        done_mask = done_mask.float().unsqueeze(1).unsqueeze(2)
+        done_mask = done_mask.type_as(old_h).unsqueeze(1).unsqueeze(2)
         h = done_mask * new_h + (1 - done_mask) * old_h[:, :-1, :]
         c = done_mask * new_c + (1 - done_mask) * old_c[:, :-1, :]
         return h, c
@@ -208,19 +208,23 @@ class StructuredChengyuBert(BertPreTrainedModel):
                 mask=mask)
         else:
             select_mask = greedy_select(logits=comp_weights, mask=mask)
-            select_mask = select_mask.float()
+
+        select_mask = select_mask.type_as(old_h)
         select_mask_expand = select_mask.unsqueeze(2).expand_as(new_h)
         select_mask_cumsum = select_mask.cumsum(1)
+
         left_mask = 1 - select_mask_cumsum
         left_mask_expand = left_mask.unsqueeze(2).expand_as(old_h_left)
         right_mask = select_mask_cumsum - select_mask
         right_mask_expand = right_mask.unsqueeze(2).expand_as(old_h_right)
+
         new_h = (select_mask_expand * new_h
                  + left_mask_expand * old_h_left
                  + right_mask_expand * old_h_right)
         new_c = (select_mask_expand * new_c
                  + left_mask_expand * old_c_left
                  + right_mask_expand * old_c_right)
+
         selected_h = (select_mask_expand * new_h).sum(1)
         return new_h, new_c, select_mask, selected_h
 
@@ -234,12 +238,11 @@ class StructuredChengyuBert(BertPreTrainedModel):
             hs = []
             cs = []
             batch_size, max_length, _ = input.size()
-            zero_state = torch.zeros(batch_size, self.config.hidden_size).type_as(
-                input)  # input.data.new_zeros(batch_size, self.config.hidden_size)
+            zero_state = torch.zeros(batch_size, self.config.hidden_size).type_as(input)
+            # input.data.new_zeros(batch_size, self.config.hidden_size)
             h_prev = c_prev = zero_state
             for i in range(max_length):
-                h, c = self.leaf_rnn_cell(
-                    input=input[:, i, :], hx=(h_prev, c_prev))
+                h, c = self.leaf_rnn_cell(input=input[:, i, :], hx=(h_prev, c_prev))
                 hs.append(h)
                 cs.append(c)
                 h_prev = h
@@ -273,9 +276,11 @@ class StructuredChengyuBert(BertPreTrainedModel):
         else:
             state = self.word_linear(input)
             state = state.chunk(chunks=2, dim=2)
+
         nodes = []
         if self.intra_attention:
             nodes.append(state[0])
+
         for i in range(max_depth - 1):
             h, c = state
             l = (h[:, :-1, :], c[:, :-1, :])
@@ -296,10 +301,11 @@ class StructuredChengyuBert(BertPreTrainedModel):
                                       done_mask=done_mask)
             if self.intra_attention and i >= max_depth - 2:
                 nodes.append(state[0])
+
         h, c = state
         if self.intra_attention:
             att_mask = torch.cat([length_mask, length_mask[:, 1:]], dim=1)
-            att_mask = att_mask.float()
+            att_mask = att_mask.type_as(h)
             # nodes: (batch_size, num_tree_nodes, hidden_dim)
             nodes = torch.cat(nodes, dim=1)
             att_mask_expand = att_mask.unsqueeze(2).expand_as(nodes)
@@ -308,8 +314,7 @@ class StructuredChengyuBert(BertPreTrainedModel):
             nodes_mean = nodes.mean(1).squeeze(1).unsqueeze(2)
             # att_weights: (batch_size, num_tree_nodes)
             att_weights = torch.bmm(nodes, nodes_mean).squeeze(2)
-            att_weights = masked_softmax(
-                logits=att_weights, mask=att_mask)
+            att_weights = masked_softmax(logits=att_weights, mask=att_mask)
             # att_weights_expand: (batch_size, num_tree_nodes, hidden_dim)
             att_weights_expand = att_weights.unsqueeze(2).expand_as(nodes)
             # h: (batch_size, 1, 2 * hidden_dim)
