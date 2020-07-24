@@ -130,7 +130,21 @@ class ChengyuDataset(TxtTokLmdb):
         options = example['options']
         target = example['target']
 
-        input_ids = [self.tokenizer.cls_token_id] + example['input_ids'][st: ed] + [self.tokenizer.sep_token_id]
+        context_ids = example['input_ids'][st: ed]
+        if self.config.structured:
+            idiom_start = context_ids.index(self.tokenizer.mask_token_id)
+            for _ in range(3):
+                context_ids.insert(idiom_start, self.tokenizer.mask_token_id)
+
+            if len(context_ids) > self.max_txt_len - 2:
+                half_length = self.max_txt_len // 2
+                pop_length = len(context_ids) - (self.max_txt_len - 2)
+                if idiom_start > half_length:
+                    context_ids = context_ids[pop_length:]
+                else:
+                    context_ids = context_ids[:-pop_length]
+
+        input_ids = [self.tokenizer.cls_token_id] + context_ids + [self.tokenizer.sep_token_id]
         assert len(input_ids) <= self.max_txt_len
 
         position = input_ids.index(self.tokenizer.mask_token_id)
