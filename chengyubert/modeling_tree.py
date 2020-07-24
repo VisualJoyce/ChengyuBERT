@@ -250,9 +250,9 @@ class StructuredChengyuBert(BertPreTrainedModel):
                 hs_bw = []
                 cs_bw = []
                 h_bw_prev = c_bw_prev = zero_state
-                lengths_list = list(length.data)
+                # lengths_list = list(length.data)
                 input_bw = reverse_padded_sequence(
-                    inputs=input, lengths=lengths_list, batch_first=True)
+                    inputs=input, lengths=length, batch_first=True)
                 for i in range(max_length):
                     h_bw, c_bw = self.leaf_rnn_cell_bw(
                         input=input_bw[:, i, :], hx=(h_bw_prev, c_bw_prev))
@@ -263,9 +263,9 @@ class StructuredChengyuBert(BertPreTrainedModel):
                 hs_bw = torch.stack(hs_bw, dim=1)
                 cs_bw = torch.stack(cs_bw, dim=1)
                 hs_bw = reverse_padded_sequence(
-                    inputs=hs_bw, lengths=lengths_list, batch_first=True)
+                    inputs=hs_bw, lengths=length, batch_first=True)
                 cs_bw = reverse_padded_sequence(
-                    inputs=cs_bw, lengths=lengths_list, batch_first=True)
+                    inputs=cs_bw, lengths=length, batch_first=True)
                 hs = torch.cat([hs, hs_bw], dim=2)
                 cs = torch.cat([cs, cs_bw], dim=2)
             state = (hs, cs)
