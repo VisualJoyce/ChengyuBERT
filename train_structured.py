@@ -285,6 +285,7 @@ def main(opts):
         raise ValueError(f"No such model [{opts.model}] supported!")
 
     opts.use_vocab = True if 'vocab' in opts.model else False
+    opts.structured = True
 
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
