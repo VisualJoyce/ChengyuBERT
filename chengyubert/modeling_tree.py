@@ -108,9 +108,9 @@ def reverse_padded_sequence(inputs, lengths, batch_first=False):
         if length > 0:
             reversed_indices[i][:length] = reversed_indices[i][length - 1::-1]
     reversed_indices = (torch.LongTensor(reversed_indices).unsqueeze(2)
-                        .expand_as(inputs).type_as(lengths))
-    reversed_indices = reversed_indices.to(inputs)
-    reversed_inputs = torch.gather(inputs, 1, reversed_indices)
+                        .expand_as(inputs))
+    # reversed_indices = reversed_indices.to(inputs)
+    reversed_inputs = torch.gather(inputs, 1, reversed_indices.type_as(lengths))
     if not batch_first:
         reversed_inputs = reversed_inputs.transpose(0, 1)
     return reversed_inputs
