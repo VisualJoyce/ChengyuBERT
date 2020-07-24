@@ -234,7 +234,7 @@ class StructuredChengyuBert(BertPreTrainedModel):
             hs = []
             cs = []
             batch_size, max_length, _ = input.size()
-            zero_state = input.data.new_zeros(batch_size, self.hidden_dim)
+            zero_state = input.data.new_zeros(batch_size, self.config.hidden_size)
             h_prev = c_prev = zero_state
             for i in range(max_length):
                 h, c = self.leaf_rnn_cell(
