@@ -201,7 +201,7 @@ class StructuredChengyuBert(BertPreTrainedModel):
         old_h_left, old_h_right = old_h[:, :-1, :], old_h[:, 1:, :]
         old_c_left, old_c_right = old_c[:, :-1, :], old_c[:, 1:, :]
         comp_weights = (self.comp_query * new_h).sum(-1)
-        comp_weights = comp_weights / math.sqrt(self.hidden_dim)
+        comp_weights = comp_weights / math.sqrt(self.config.hidden_size)
         if self.training:
             select_mask = st_gumbel_softmax(
                 logits=comp_weights, temperature=self.gumbel_temperature,
