@@ -279,7 +279,7 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model.startswith('bert-single'):
+    if opts.model.startswith('bert-structured'):
         ModelCls = StructuredChengyuBert
     else:
         raise ValueError(f"No such model [{opts.model}] supported!")
