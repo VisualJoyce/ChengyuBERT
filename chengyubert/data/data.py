@@ -131,7 +131,7 @@ class ChengyuDataset(TxtTokLmdb):
         target = example['target']
 
         context_ids = example['input_ids'][st: ed]
-        if self.config.structured:
+        if hasattr(self.config, 'structured') and self.config.structured:
             idiom_start = context_ids.index(self.tokenizer.mask_token_id)
             for _ in range(3):
                 context_ids.insert(idiom_start, self.tokenizer.mask_token_id)
