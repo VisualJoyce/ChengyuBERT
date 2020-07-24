@@ -321,7 +321,7 @@ class StructuredChengyuBert(BertPreTrainedModel):
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-        batch_size, sequence_num, length = input_ids.shape
+        batch_size, length = input_ids.shape
         encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
                                     attention_mask=attention_mask,
