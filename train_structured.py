@@ -116,13 +116,6 @@ def train(model, dataloaders, opts):
                 TB_LOGGER.add_scalar('loss', running_loss.val, global_step)
                 TB_LOGGER.step()
 
-                # temparature
-                rate = 0
-                new_temperature = max([0.5, math.exp(-rate * global_step)])
-                model.gumbel_temperature = new_temperature
-                LOGGER.info(f'Iter #{global_step}: '
-                            f'Set Gumbel temperature to {new_temperature:.4f}')
-
                 # update model params
                 if opts.grad_norm != -1:
                     grad_norm = clip_grad_norm_(amp.master_params(optimizer),
@@ -141,6 +134,13 @@ def train(model, dataloaders, opts):
                                 f'{ex_per_sec} ex/s')
                     TB_LOGGER.add_scalar('perf/ex_per_s',
                                          ex_per_sec, global_step)
+
+                    # temparature
+                    rate = 1 / opts.num_train_steps
+                    new_temperature = max([0.5, math.exp(-rate * global_step)])
+                    model.gumbel_temperature = new_temperature
+                    LOGGER.info(f'Iter #{global_step}: '
+                                f'Set Gumbel temperature to {new_temperature:.4f}')
 
                 if global_step % opts.valid_steps == 0:
                     log = evaluation(model,
