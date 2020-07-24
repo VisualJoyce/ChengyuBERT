@@ -329,7 +329,14 @@ class StructuredChengyuBert(BertPreTrainedModel):
         encoded_layer = encoded_outputs[0]
 
         encoded_context = encoded_layer
-        idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+
+        gather_index = torch.arange(0, 4, dtype=torch.long,
+                                    ).unsqueeze(0).repeat(batch_size, 1)
+        for i, p in enumerate(positions):
+            gather_index.data[i, :] = torch.arange(p, p + 4, dtype=torch.long).data
+        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size)
+        idiom_states = torch.gather(encoded_layer, dim=1, index=gather_index)
+        # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
 
         blank_states, _, select_masks = self.idiom_compose(idiom_states,
                                                            torch.tensor([4] * batch_size).type_as(input_ids))
