@@ -77,7 +77,7 @@ def sequence_mask(sequence_length, max_length=None):
     if max_length is None:
         max_length = sequence_length.data.max()
     batch_size = sequence_length.size(0)
-    seq_range = torch.arange(0, max_length).long()
+    seq_range = torch.arange(0, max_length).long().type_as(sequence_length)
     seq_range_expand = seq_range.unsqueeze(0).expand(batch_size, max_length)
     seq_range_expand = seq_range_expand.to(sequence_length)
     seq_length_expand = sequence_length.unsqueeze(1).expand_as(seq_range_expand)
