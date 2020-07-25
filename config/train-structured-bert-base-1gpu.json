@@ -32,6 +32,7 @@
     "warmup_steps": 800,
     "seed": 77,
     "fp16": true,
+    "opt_level": "O1",
     "n_workers": 4,
     "pin_mem": true,
     "location_only": false

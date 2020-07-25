@@ -325,7 +325,8 @@ class StructuredChengyuBert(BertPreTrainedModel):
         return h.squeeze(1), c.squeeze(1), select_masks
 
     def vocab(self, blank_states):
-        return torch.einsum('bd,nd->bn', [blank_states, self.idiom_embedding.weight])  # (b, 256, 10)
+        return torch.einsum('bd,nd->bn', [blank_states,
+                                          self.idiom_embedding.weight.type_as(blank_states)])  # (b, 256, 10)
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
