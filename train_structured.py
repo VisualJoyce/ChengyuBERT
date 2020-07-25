@@ -136,7 +136,7 @@ def train(model, dataloaders, opts):
                                          ex_per_sec, global_step)
 
                     # temparature
-                    rate = 1 / opts.num_train_steps
+                    rate = 2 / opts.num_train_steps
                     new_temperature = max([0.5, math.exp(-rate * global_step)])
                     model.gumbel_temperature = new_temperature
                     LOGGER.info(f'Iter #{global_step}: '
