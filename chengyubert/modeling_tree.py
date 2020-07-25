@@ -358,13 +358,14 @@ class StructuredChengyuBert(BertPreTrainedModel):
             encoded_options = self.idiom_embedding(option_ids)  # (b, 10, 768)
 
         over_logits = self.vocab(self.over_linear(blank_states))
-        # cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
+        cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
 
-        mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
-        c_mo_logits, _ = torch.max(mo_logits, dim=1)
+        # mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
+        # c_mo_logits, _ = torch.max(mo_logits, dim=1)
         # over_states = cls_states
+        # logits = c_mo_logits
 
-        logits = c_mo_logits
+        logits = cond_logits
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss()
