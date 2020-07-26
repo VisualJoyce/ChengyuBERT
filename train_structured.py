@@ -183,14 +183,14 @@ def validate(opts, model, val_loader, split, global_step):
             answers = max_idx.cpu().tolist()
 
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
-            for j, (qid, target) in enumerate(zip(qids, targets)):
+            for j, (qid, target, select_mask) in enumerate(zip(qids, targets, select_masks)):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
                 if i % 1000 == 0:
                     print(qid, val_loader.dataset.id2idiom[target],
                           [val_loader.dataset.id2idiom[o] for o in batch['option_ids']])
-                    print(select_masks)
+                    print(select_mask)
 
             results.extend(zip(qids, answers))
             n_ex += len(qids)
