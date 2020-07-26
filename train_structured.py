@@ -217,11 +217,12 @@ def validate(opts, model, val_loader, split, global_step):
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
                 if i % 1000 == 0:
-                    idiom = val_loader.dataset.id2idiom[answer.item()]
+                    options = [val_loader.dataset.id2idiom[o.item()] for o in option_ids]
+                    idiom = options[answer.item()]
                     print(qid,
-                          val_loader.dataset.id2idiom[target.item()],
+                          options[target.item()],
                           idiom,
-                          [val_loader.dataset.id2idiom[o.item()] for o in option_ids])
+                          options)
                     s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
                     Tree(idiom, idiom2tree(idiom, s_masks)).pretty_print()
 
