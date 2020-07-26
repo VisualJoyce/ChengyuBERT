@@ -17,6 +17,7 @@ import shutil
 import torch
 from apex import amp
 from horovod import torch as hvd
+from nltk import Tree
 from time import time
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
@@ -160,6 +161,35 @@ def train(model, dataloaders, opts):
     return best_ckpt
 
 
+def idiom2tree(idiom, select_masks):
+    ans = list(idiom)
+    for k, select_mask in enumerate(select_masks):
+        for idx, v in enumerate(select_mask):
+            if v == 1:
+                c0 = ans.pop(idx)
+                if isinstance(c0, Tree):
+                    c0_label = c0.label()
+                else:
+                    c0_label = c0
+
+                c1 = ans.pop(idx)
+                if isinstance(c1, Tree):
+                    c1_label = c1.label()
+                else:
+                    c1_label = c1
+
+                ans.insert(idx, Tree(c0_label + c1_label, (c0, c1)))
+            else:
+                c = ans.pop(idx)
+                if isinstance(c, Tree):
+                    c_label = c.label()
+                else:
+                    c_label = c
+                ans.insert(idx, Tree(c_label, (c,)))
+    assert len(ans) == 2
+    return ans
+
+
 @torch.no_grad()
 def validate(opts, model, val_loader, split, global_step):
     val_loss = 0
@@ -180,19 +210,22 @@ def validate(opts, model, val_loader, split, global_step):
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
             max_prob, max_idx = scores.max(dim=-1, keepdim=False)
-            answers = max_idx.cpu().tolist()
 
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
-            for j, (qid, target, option_ids) in enumerate(zip(qids, targets, batch['option_ids'])):
+            for j, (qid, target, option_ids, answer) in enumerate(zip(qids, targets, batch['option_ids'], max_idx)):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
                 if i % 1000 == 0:
-                    print(qid, val_loader.dataset.id2idiom[target.item()],
+                    idiom = val_loader.dataset.id2idiom[answer.item()]
+                    print(qid,
+                          val_loader.dataset.id2idiom[target.item()],
+                          idiom,
                           [val_loader.dataset.id2idiom[o.item()] for o in option_ids])
-                    for k, select_mask in enumerate(select_masks):
-                        print(k, select_mask[j])
+                    s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
+                    Tree(idiom, idiom2tree(idiom, s_masks)).pretty_print()
 
+            answers = max_idx.cpu().tolist()
             results.extend(zip(qids, answers))
             n_ex += len(qids)
             tq.update(len(qids))
