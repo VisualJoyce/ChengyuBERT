@@ -187,6 +187,9 @@ def validate(opts, model, val_loader, split, global_step):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
+                if i % 1000 == 0:
+                    print(qid, val_loader.dataset.id2idiom[target],
+                          [val_loader.dataset.id2idiom[o] for o in batch['option_ids']])
 
             results.extend(zip(qids, answers))
             n_ex += len(qids)

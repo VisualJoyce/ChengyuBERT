@@ -4,6 +4,7 @@ import json
 import lmdb
 import msgpack
 import os
+import pandas as pda
 import torch
 from lz4.frame import compress, decompress
 from more_itertools import unzip
@@ -84,12 +85,43 @@ class TxtTokLmdb(object):
         return txt_dump
 
 
+def chengyu_process(annotation_dir='/annotation'):
+    """
+    Load Chengyu to vocab with explanation
+    :return:
+    """
+    # load ChID idioms to first 3848
+    chengyu_vocab = {each: i for i, each in enumerate(eval(open(f'{annotation_dir}/idiomList.txt').readline()))}
+
+    # load Xinhua idioms
+    chengyu_pretrain = pda.read_csv(f"{annotation_dir}/idioms_pretrain.json", sep='\t')
+    chengyu_pretrain.fillna('', inplace=True)
+
+    # read explanation for each idiom
+    explanation = {}
+    count = {}
+    for item in chengyu_pretrain.itertuples():
+        each = item.idiom
+        count[each] = item.num
+        explanation[each] = item.explanation
+
+        # add extra Chengyu to vocab
+        if each not in chengyu_vocab:
+            chengyu_vocab[each] = len(chengyu_vocab)
+
+    print("Total idioms: {}".format(len(chengyu_vocab)))
+
+    return chengyu_vocab
+
+
 class ChengyuDataset(TxtTokLmdb):
     def __init__(self, db_dir, max_txt_len, opts):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
         self.lens, self.ids, self.st_ed = self.get_ids_and_lens()
         self.tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
+        self.vocab = chengyu_process(annotation_dir='/annotation')
+        self.id2idiom = {v: k for k, v in self.vocab.items()}
 
     def __len__(self):
         return len(self.ids)

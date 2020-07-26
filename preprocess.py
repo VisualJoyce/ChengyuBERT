@@ -11,6 +11,7 @@ from tqdm import tqdm
 from transformers import BertTokenizer
 
 from chengyubert.data import open_lmdb
+from chengyubert.data.data import chengyu_process
 from chengyubert.utils.misc import parse_with_config
 
 
@@ -39,35 +40,6 @@ class Example(object):
         if self.label is not None:
             s += ", answer: %s" % self.options[self.label]
         return s
-
-
-def chengyu_process(annotation_dir='/annotation'):
-    """
-    Load Chengyu to vocab with explanation
-    :return:
-    """
-    # load ChID idioms to first 3848
-    chengyu_vocab = {each: i for i, each in enumerate(eval(open(f'{annotation_dir}/idiomList.txt').readline()))}
-
-    # load Xinhua idioms
-    chengyu_pretrain = pda.read_csv(f"{annotation_dir}/idioms_pretrain.json", sep='\t')
-    chengyu_pretrain.fillna('', inplace=True)
-
-    # read explanation for each idiom
-    explanation = {}
-    count = {}
-    for item in chengyu_pretrain.itertuples():
-        each = item.idiom
-        count[each] = item.num
-        explanation[each] = item.explanation
-
-        # add extra Chengyu to vocab
-        if each not in chengyu_vocab:
-            chengyu_vocab[each] = len(chengyu_vocab)
-
-    print("Total idioms: {}".format(len(chengyu_vocab)))
-
-    return chengyu_vocab
 
 
 def create_cct_dataset(candidates_num):
@@ -296,7 +268,7 @@ class ChidCompetitionDataset(object):
 def process_chid(opts, db, tokenizer):
     source, split = opts.annotation.split('_')
 
-    vocab = chengyu_process()
+    vocab = chengyu_process(annotation_dir='/annotation')
 
     if source == 'official':
         assert split in ['train', 'dev', 'test', 'ran', 'sim', 'out']
