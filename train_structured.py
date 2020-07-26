@@ -220,7 +220,7 @@ def validate(opts, model, val_loader, split, global_step):
                     options = [val_loader.dataset.id2idiom[o.item()] for o in option_ids]
                     idiom = options[answer.item()]
                     print(qid,
-                          options[target.item()],
+                          val_loader.dataset.id2idiom[target.item()],
                           idiom,
                           options)
                     s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
