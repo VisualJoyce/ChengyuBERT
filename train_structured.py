@@ -190,7 +190,7 @@ def validate(opts, model, val_loader, split, global_step):
                 if i % 1000 == 0:
                     print(qid, val_loader.dataset.id2idiom[target.item()],
                           [val_loader.dataset.id2idiom[o.item()] for o in option_ids])
-                    print(select_mask.size())
+                    print(select_masks.size(), select_mask.size())
 
             results.extend(zip(qids, answers))
             n_ex += len(qids)
