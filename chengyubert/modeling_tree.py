@@ -150,12 +150,16 @@ class BinaryTreeLSTMLayer(nn.Module):
 
 class StructuredChengyuBert(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name='chengyubert'):
+    def __init__(self, config, len_idiom_vocab, model_name='structured-bert'):
         super().__init__(config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
         self.bidirectional = True
+
+        self.model_name = model_name
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         assert not (self.bidirectional and not self.use_leaf_rnn)
 
@@ -176,10 +180,6 @@ class StructuredChengyuBert(BertPreTrainedModel):
         else:
             self.treelstm_layer = BinaryTreeLSTMLayer(hidden_dim)
             self.comp_query = nn.Parameter(torch.FloatTensor(hidden_dim))
-
-        self.model_name = model_name
-        self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.over_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
@@ -360,12 +360,12 @@ class StructuredChengyuBert(BertPreTrainedModel):
         over_logits = self.vocab(self.over_linear(blank_states))
         cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
 
-        # mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
-        # c_mo_logits, _ = torch.max(mo_logits, dim=1)
-        # over_states = cls_states
-        # logits = c_mo_logits
-
-        logits = cond_logits
+        if self.model_name.endswith('context'):
+            mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
+            c_mo_logits, _ = torch.max(mo_logits, dim=1)
+            logits = c_mo_logits + cond_logits
+        else:
+            logits = cond_logits
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss()
