@@ -188,7 +188,7 @@ def validate(opts, model, val_loader, split, global_step):
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
                 if i % 1000 == 0:
-                    print(qid, val_loader.dataset.id2idiom[target],
+                    print(qid, val_loader.dataset.id2idiom[target.item()],
                           [val_loader.dataset.id2idiom[o] for o in batch['option_ids']])
                     print(select_mask)
 
