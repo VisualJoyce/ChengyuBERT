@@ -176,10 +176,12 @@ class StructuredChengyuBert(BertPreTrainedModel):
                                          out_features=2 * hidden_dim)
         if self.bidirectional:
             self.treelstm_layer = BinaryTreeLSTMLayer(2 * hidden_dim)
-            self.comp_query = nn.Parameter(torch.FloatTensor(2 * hidden_dim))
+            # self.comp_query = nn.Parameter(torch.FloatTensor(2 * hidden_dim))
+            self.comp_query_linear = nn.Linear(hidden_dim * 2, 1, bias=False)
         else:
             self.treelstm_layer = BinaryTreeLSTMLayer(hidden_dim)
-            self.comp_query = nn.Parameter(torch.FloatTensor(hidden_dim))
+            # self.comp_query = nn.Parameter(torch.FloatTensor(hidden_dim))
+            self.comp_query_linear = nn.Linear(hidden_dim, 1, bias=False)
 
         self.over_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
@@ -202,12 +204,16 @@ class StructuredChengyuBert(BertPreTrainedModel):
         old_h, old_c = old_state
         old_h_left, old_h_right = old_h[:, :-1, :], old_h[:, 1:, :]
         old_c_left, old_c_right = old_c[:, :-1, :], old_c[:, 1:, :]
-        comp_weights = (self.comp_query * new_h).sum(-1)
-        comp_weights = comp_weights / math.sqrt(self.config.hidden_size)
+        # comp_weights = (self.comp_query * new_h).sum(-1)
+        # comp_weights = comp_weights / math.sqrt(self.config.hidden_size)
+        comp_weights = self.comp_query_linear(new_h).sum(-1).squeeze(dim=-1)
         if self.training:
-            select_mask = st_gumbel_softmax(
-                logits=comp_weights, temperature=self.gumbel_temperature,
-                mask=mask)
+            # select_mask = st_gumbel_softmax(
+            #     logits=comp_weights, temperature=self.gumbel_temperature,
+            #     mask=mask)
+            select_mask = torch.nn.functional.gumbel_softmax(logits=comp_weights,
+                                                             tau=self.gumbel_temperature,
+                                                             hard=True)
         else:
             select_mask = greedy_select(logits=comp_weights, mask=mask)
 
