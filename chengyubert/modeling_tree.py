@@ -347,9 +347,9 @@ class StructuredChengyuBert(BertPreTrainedModel):
 
         lengths = attention_mask.sum(-1).long()
 
-        width = 2
+        width = 5
         span = 2 * width + 4
-        gather_index = torch.arange(0, span + 1, dtype=torch.long).unsqueeze(0).repeat(batch_size, 1)
+        gather_index = torch.arange(0, span, dtype=torch.long).unsqueeze(0).repeat(batch_size, 1)
         for i, (p, l) in enumerate(zip(positions, lengths)):
             if p <= width:
                 left, right = 1, 1 + span
