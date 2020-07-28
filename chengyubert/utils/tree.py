@@ -389,7 +389,7 @@ class TreePrettyPrinter(object):
                 label = wrapre.sub(r"\1\n", label).strip()
             label = label.split("\n")
             maxnodeheight[row] = max(maxnodeheight[row], len(label))
-            maxnodewith[column] = max(maxnodewith[column], max(map(len, label))) * 2
+            maxnodewith[column] = max(maxnodewith[column], max(map(len, label)))
             labels[a] = label
             if a not in self.edges:
                 continue  # e.g., root
