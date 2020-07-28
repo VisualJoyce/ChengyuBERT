@@ -35,6 +35,7 @@ from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_g
 from chengyubert.utils.logger import LOGGER, TB_LOGGER, RunningMeter, add_log_to_file
 from chengyubert.utils.misc import NoOp, parse_with_config, set_dropout, set_random_seed
 from chengyubert.utils.save import ModelSaver, save_training_meta
+from chengyubert.utils.tree import TreePrettyPrinter
 
 
 def train(model, dataloaders, opts):
@@ -232,7 +233,8 @@ def validate(opts, model, val_loader, split, global_step):
                     start = tokens.index(val_loader.dataset.tokenizer.mask_token)
                     tokens[start:start + len(idiom)] = list(idiom)
                     print(tokens)
-                    Tree(' '.join(tokens), idiom2tree(tokens, s_masks)).pretty_print()
+                    tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
+                    print(TreePrettyPrinter(tree).text())
 
             answers = max_idx.cpu().tolist()
             results.extend(zip(qids, answers))
