@@ -451,9 +451,9 @@ class TreePrettyPrinter(object):
                             maxnodewith[col], " "
                         )
                     )
-
-            print(noderows)
-            print(text)
+            #
+            # print(noderows)
+            # print(text)
             # for each column, if there is a node below us which has a parent
             # above us, draw a vertical branch in that column.
             if row != max(matrix):
