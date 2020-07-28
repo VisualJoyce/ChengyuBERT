@@ -228,6 +228,7 @@ def validate(opts, model, val_loader, split, global_step):
                     s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
 
                     idiom = val_loader.dataset.tokenizer.decode(inp)
+                    print(idiom)
                     Tree(idiom, idiom2tree(idiom, s_masks)).pretty_print()
 
             answers = max_idx.cpu().tolist()
