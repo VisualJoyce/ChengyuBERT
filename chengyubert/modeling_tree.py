@@ -345,16 +345,26 @@ class StructuredChengyuBert(BertPreTrainedModel):
 
         encoded_context = encoded_layer
 
-        gather_index = torch.arange(0, 4, dtype=torch.long,
+        lengths = attention_mask.sum(-1).long()
+
+        width = 5
+        span = 2 * width + 4
+        gather_index = torch.arange(0, span, dtype=torch.long,
                                     ).unsqueeze(0).repeat(batch_size, 1)
-        for i, p in enumerate(positions):
-            gather_index.data[i, :] = torch.arange(p, p + 4, dtype=torch.long).data
+        for i, (p, l) in enumerate(zip(positions, lengths)):
+            if p <= width:
+                left, right = 1, 1 + span
+            elif p + 4 + width >= l:
+                left, right = l - span, l
+            else:
+                left, right = p - width, p + 4 + width
+            gather_index.data[i, :] = torch.arange(left, right + 1, dtype=torch.long).data
         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
         idiom_states = torch.gather(encoded_layer, dim=1, index=gather_index)
         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
 
         blank_states, _, select_masks = self.idiom_compose(idiom_states,
-                                                           torch.tensor([4] * batch_size).type_as(input_ids))
+                                                           torch.tensor([span] * batch_size).type_as(input_ids))
 
         if option_ids is None and options_embeds is None:
             raise ValueError('Either option_ids or options_embeds should be given.')
