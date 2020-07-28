@@ -162,7 +162,8 @@ def train(model, dataloaders, opts):
 
 
 def idiom2tree(idiom, select_masks):
-    ans = list(idiom)
+    # ans = list(idiom)
+    ans = idiom
     for k, select_mask in enumerate(select_masks):
         for idx, v in enumerate(select_mask):
             if v == 1:
