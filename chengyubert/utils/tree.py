@@ -412,7 +412,7 @@ class TreePrettyPrinter(object):
                     # draw horizontal branch towards children for this node
                     if n in minchildcol and minchildcol[n] < maxchildcol[n]:
                         i, j = minchildcol[n], maxchildcol[n]
-                        a, b = (maxnodewith[i] + 1) - 1, maxnodewith[j]
+                        a, b = (maxnodewith[i] + 1) // 2 - 1, maxnodewith[j] // 2
                         branchrow[i] = ((" " * a) + leftcorner).ljust(
                             maxnodewith[i], horzline
                         )
