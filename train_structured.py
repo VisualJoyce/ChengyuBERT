@@ -232,7 +232,7 @@ def validate(opts, model, val_loader, split, global_step):
                     start = tokens.index(val_loader.dataset.tokenizer.mask_token)
                     tokens[start:start + len(idiom)] = list(idiom)
                     print(tokens)
-                    Tree(idiom, idiom2tree(idiom, s_masks)).pretty_print()
+                    Tree(' '.join(tokens), idiom2tree(tokens, s_masks)).pretty_print()
 
             answers = max_idx.cpu().tolist()
             results.extend(zip(qids, answers))
