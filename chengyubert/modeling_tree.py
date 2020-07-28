@@ -334,7 +334,7 @@ class StructuredChengyuBert(BertPreTrainedModel):
         return torch.einsum('bd,nd->bn', [blank_states,
                                           self.idiom_embedding.weight.type_as(blank_states)])  # (b, 256, 10)
 
-    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
         batch_size, length = input_ids.shape
         encoded_outputs = self.bert(input_ids,
@@ -345,19 +345,6 @@ class StructuredChengyuBert(BertPreTrainedModel):
 
         encoded_context = encoded_layer
 
-        lengths = attention_mask.sum(-1).long()
-
-        width = 5
-        span = 2 * width + 4
-        gather_index = torch.arange(0, span, dtype=torch.long).unsqueeze(0).repeat(batch_size, 1)
-        for i, (p, l) in enumerate(zip(positions, lengths)):
-            if p <= width:
-                left, right = 1, 1 + span
-            elif p + 4 + width >= l:
-                left, right = l - span, l
-            else:
-                left, right = p - width, p + 4 + width
-            gather_index.data[i, :] = torch.arange(left, right, dtype=torch.long).data
         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
         idiom_states = torch.gather(encoded_layer, dim=1, index=gather_index)
         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]

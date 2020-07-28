@@ -211,8 +211,10 @@ def validate(opts, model, val_loader, split, global_step):
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
             max_prob, max_idx = scores.max(dim=-1, keepdim=False)
 
+            input_ids = torch.gather(batch['input_ids'], dim=1, index=batch['gather_index'])
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
-            for j, (qid, target, option_ids, answer) in enumerate(zip(qids, targets, batch['option_ids'], max_idx)):
+            for j, (qid, target, inp, option_ids, answer) in enumerate(zip(qids, targets, input_ids,
+                                                                                 batch['option_ids'], max_idx)):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
@@ -224,6 +226,8 @@ def validate(opts, model, val_loader, split, global_step):
                           idiom,
                           options)
                     s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
+
+                    idiom = val_loader.dataset.tokenizer.decode(inp)
                     Tree(idiom, idiom2tree(idiom, s_masks)).pretty_print()
 
             answers = max_idx.cpu().tolist()

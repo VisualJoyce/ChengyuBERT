@@ -196,9 +196,23 @@ def chengyu_collate(inputs):
     token_type_ids = pad_sequence(token_type_ids, batch_first=True, padding_value=0)
     attn_masks = pad_sequence(attention_mask, batch_first=True, padding_value=0)
 
+    lengths = attention_mask.sum(-1).long()
+    width = 5
+    span = 2 * width + 4
+    gather_index = torch.arange(0, span, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
+    for i, (p, l) in enumerate(zip(positions, lengths)):
+        if p <= width:
+            left, right = 1, 1 + span
+        elif p + 4 + width >= l:
+            left, right = l - span, l
+        else:
+            left, right = p - width, p + 4 + width
+        gather_index.data[i, :] = torch.arange(left, right, dtype=torch.long).data
+
     batch = {'input_ids': input_ids,
              'token_type_ids': token_type_ids,
              'attention_mask': attn_masks,
+             'gather_index': gather_index,
              'positions': torch.tensor(positions).long(),
              'option_ids': torch.tensor(options).long(),
              'targets': torch.tensor(targets).long()}
