@@ -357,7 +357,7 @@ class StructuredChengyuBert(BertPreTrainedModel):
                 left, right = l - span, l
             else:
                 left, right = p - width, p + 4 + width
-            gather_index.data[i, :] = torch.arange(left, right + 1, dtype=torch.long).data
+            gather_index.data[i, :] = torch.arange(left, right, dtype=torch.long).data
         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
         idiom_states = torch.gather(encoded_layer, dim=1, index=gather_index)
         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
