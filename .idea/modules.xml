@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="ProjectModuleManager">
-    <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/ChengyuBERT.iml" filepath="$PROJECT_DIR$/.idea/ChengyuBERT.iml" />
-      <module fileurl="file://$USER_HOME$/PycharmProjects/chid_sentiment/.idea/chid_sentiment.iml" filepath="$USER_HOME$/PycharmProjects/chid_sentiment/.idea/chid_sentiment.iml" />
-    </modules>
-  </component>
-</project>
