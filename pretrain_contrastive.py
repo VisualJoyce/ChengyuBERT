@@ -4,22 +4,21 @@ Licensed under the MIT license.
 
 UNITER finetuning for NLVR2
 """
-import argparse
 import glob
-import math
-import os
-import re
 import shutil
 from collections import Counter
 from os.path import exists, join
-from time import time
 
+import argparse
 import numpy as np
+import os
+import re
 import torch
 from apex import amp
 from horovod import torch as hvd
-from nltk import Tree
-from torch.cuda.amp import GradScaler
+from time import time
+
+from torch.cuda.amp import GradScaler, autocast
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
@@ -28,7 +27,7 @@ from transformers import BertConfig
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.modeling_tree import StructuredChengyuBert
+from chengyubert.modeling_contrastive import ContrastiveChengyuBERTForPretrain
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -36,7 +35,6 @@ from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_g
 from chengyubert.utils.logger import LOGGER, TB_LOGGER, RunningMeter, add_log_to_file
 from chengyubert.utils.misc import NoOp, parse_with_config, set_dropout, set_random_seed
 from chengyubert.utils.save import ModelSaver, save_training_meta
-from chengyubert.utils.tree import TreePrettyPrinter
 
 
 def train(model, dataloaders, opts):
@@ -46,9 +44,6 @@ def train(model, dataloaders, opts):
 
     # Prepare optimizer
     optimizer = build_optimizer(model, opts)
-    # model, optimizer = amp.initialize(model, optimizer,
-    #                                   enabled=opts.fp16,
-    #                                   opt_level=opts.opt_level)
     scaler = GradScaler()
 
     global_step = 0
@@ -85,27 +80,17 @@ def train(model, dataloaders, opts):
             targets = batch['targets']
             n_examples += targets.size(0)
 
-            loss, vocab_loss, _ = model(**batch, compute_loss=True)
-            if opts.use_vocab:
-                loss += vocab_loss
-
-            loss = loss.mean()
+            with autocast():
+                loss = model(**batch, compute_loss=True)
+                loss = loss.mean()
 
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
-            # with amp.scale_loss(loss, optimizer, delay_unscale=delay_unscale
-            #                     ) as scaled_loss:
-            #     scaled_loss.backward()
-            #     if not delay_unscale:
-            #         # gather gradients from every processes
-            #         # do this before unscaling to make sure every process uses
-            #         # the same gradient scale
-            #         grads = [p.grad.data for p in model.parameters()
-            #                  if p.requires_grad and p.grad is not None]
-            #         all_reduce_and_rescale_tensors(grads, float(1))
-
             # Scales loss.  Calls backward() on scaled loss to create scaled gradients.
             scaler.scale(loss).backward()
             if not delay_unscale:
+                # gather gradients from every processes
+                # do this before unscaling to make sure every process uses
+                # the same gradient scale
                 grads = [p.grad.data for p in model.parameters()
                          if p.requires_grad and p.grad is not None]
                 all_reduce_and_rescale_tensors(grads, float(1))
@@ -130,8 +115,10 @@ def train(model, dataloaders, opts):
 
                 # update model params
                 if opts.grad_norm != -1:
-                    grad_norm = clip_grad_norm_(amp.master_params(optimizer),
-                                                opts.grad_norm)
+                    # Unscales the gradients of optimizer's assigned params in-place
+                    scaler.unscale_(optimizer)
+                    # Since the gradients of optimizer's assigned params are unscaled, clips as usual:
+                    grad_norm = clip_grad_norm_(model.parameters(), opts.grad_norm)
                     TB_LOGGER.add_scalar('grad_norm', grad_norm, global_step)
 
                 # scaler.step() first unscales gradients of the optimizer's params.
@@ -156,13 +143,6 @@ def train(model, dataloaders, opts):
                     TB_LOGGER.add_scalar('perf/ex_per_s',
                                          ex_per_sec, global_step)
 
-                    # temparature
-                    rate = 2 / opts.num_train_steps
-                    new_temperature = max([0.5, math.exp(-rate * global_step)])
-                    model.gumbel_temperature = new_temperature
-                    LOGGER.info(f'Iter #{global_step}: '
-                                f'Set Gumbel temperature to {new_temperature:.4f}')
-
                 if global_step % opts.valid_steps == 0:
                     log = evaluation(model,
                                      dict(filter(lambda x: x[0].startswith('val'), dataloaders.items())),
@@ -170,6 +150,7 @@ def train(model, dataloaders, opts):
                     if log['val/acc'] > best_eval:
                         best_ckpt = global_step
                         best_eval = log['val/acc']
+                        pbar.set_description(f'{opts.model}: {n_epoch}-{best_ckpt} best_acc-{best_eval * 100:.2f}')
                     model_saver.save(model, global_step)
             if global_step >= opts.num_train_steps:
                 break
@@ -178,36 +159,6 @@ def train(model, dataloaders, opts):
         n_epoch += 1
         LOGGER.info(f"Step {global_step}: finished {n_epoch} epochs")
     return best_ckpt
-
-
-def idiom2tree(idiom, select_masks):
-    # ans = list(idiom)
-    ans = idiom
-    for k, select_mask in enumerate(select_masks):
-        for idx, v in enumerate(select_mask):
-            if v == 1:
-                c0 = ans.pop(idx)
-                if isinstance(c0, Tree):
-                    c0_label = c0.label()
-                else:
-                    c0_label = c0
-
-                c1 = ans.pop(idx)
-                if isinstance(c1, Tree):
-                    c1_label = c1.label()
-                else:
-                    c1_label = c1
-
-                ans.insert(idx, Tree(c0_label + c1_label, (c0, c1)))
-            else:
-                c = ans.pop(idx)
-                if isinstance(c, Tree):
-                    c_label = c.label()
-                else:
-                    c_label = c
-                ans.insert(idx, Tree(c_label, (c,)))
-    assert len(ans) == 2
-    return ans
 
 
 @torch.no_grad()
@@ -225,36 +176,19 @@ def validate(opts, model, val_loader, split, global_step):
             del batch['targets']
             del batch['qids']
 
-            scores, over_logits, select_masks = model(**batch, targets=None, compute_loss=False)
+            scores, over_logits = model(**batch, targets=None, compute_loss=False)
             loss = F.cross_entropy(scores, targets, reduction='sum')
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
             max_prob, max_idx = scores.max(dim=-1, keepdim=False)
+            answers = max_idx.cpu().tolist()
 
-            input_ids = torch.gather(batch['input_ids'], dim=1, index=batch['gather_index'])
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
-            for j, (qid, target, inp, option_ids, answer) in enumerate(zip(qids, targets, input_ids,
-                                                                           batch['option_ids'], max_idx)):
+            for j, (qid, target) in enumerate(zip(qids, targets)):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
-                if i % 1000 == 0:
-                    options = [val_loader.dataset.id2idiom[o.item()] for o in option_ids]
-                    idiom = options[answer.item()]
-                    print(qid,
-                          val_loader.dataset.id2idiom[target.item()],
-                          idiom,
-                          options)
-                    s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
 
-                    tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(inp)
-                    start = tokens.index(val_loader.dataset.tokenizer.mask_token)
-                    tokens[start:start + len(idiom)] = list(idiom)
-                    print(tokens)
-                    tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
-                    print(TreePrettyPrinter(tree).text(unicodelines=True))
-
-            answers = max_idx.cpu().tolist()
             results.extend(zip(qids, answers))
             n_ex += len(qids)
             tq.update(len(qids))
@@ -347,13 +281,10 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model.startswith('bert-structured'):
-        ModelCls = StructuredChengyuBert
+    if opts.model.startswith('contrastive'):
+        ModelCls = ContrastiveChengyuBERTForPretrain
     else:
-        raise ValueError(f"No such model [{opts.model}] supported!")
-
-    opts.use_vocab = True if 'vocab' in opts.model else False
-    opts.structured = True
+        raise ValueError('No such model for pretrain!')
 
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
@@ -484,7 +415,7 @@ if __name__ == "__main__":
     args.output_dir = os.path.join(args.output_dir,
                                    args.model,
                                    checkpoint,
-                                   f'official_{args.num_train_steps}_{args.learning_rate}')
+                                   f'pretrain_{args.num_train_steps}_{args.learning_rate}')
 
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/results'):
         if args.mode == 'train':
