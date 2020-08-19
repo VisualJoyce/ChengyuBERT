@@ -173,6 +173,7 @@ def validate(opts, model, val_loader, split, global_step):
             targets = batch['targets']
             del batch['targets']
             del batch['qids']
+            del batch['gather_index']
 
             scores, over_logits = model(**batch, targets=None, compute_loss=False)
             loss = F.cross_entropy(scores, targets, reduction='sum')
