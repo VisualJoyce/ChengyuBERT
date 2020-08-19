@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from transformers import BertModel, BertPreTrainedModel
 
-from chengyubert.loss import NTXentLoss, ContrastiveLoss
+from chengyubert.loss import ContrastiveLoss
 
 
 class ContrastiveChengyuBERTIdiomEmbedding(nn.Module):
