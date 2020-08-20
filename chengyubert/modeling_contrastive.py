@@ -66,7 +66,9 @@ class ContrastiveChengyuBERTForPretrain(BertPreTrainedModel):
         else:
             if compute_loss:
                 loss_fct = nn.CrossEntropyLoss()
-                return loss_fct(over_logits, targets)
+                target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
+                over_loss = loss_fct(over_logits, target.squeeze(1))
+                return over_loss
             else:
                 cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
                 return cond_logits, over_logits
