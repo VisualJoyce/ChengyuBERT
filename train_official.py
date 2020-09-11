@@ -15,7 +15,6 @@ from time import time
 
 import numpy as np
 import torch
-from apex import amp
 from horovod import torch as hvd
 from torch.cuda.amp import autocast, GradScaler
 from torch.nn import functional as F
@@ -119,8 +118,7 @@ def train(model, dataloaders, opts):
                 if opts.grad_norm != -1:
                     # Unscales the gradients of optimizer's assigned params in-place
                     scaler.unscale_(optimizer)
-                    grad_norm = clip_grad_norm_(amp.master_params(optimizer),
-                                                opts.grad_norm)
+                    grad_norm = clip_grad_norm_(model.parameters(), opts.grad_norm)
                     TB_LOGGER.add_scalar('grad_norm', grad_norm, global_step)
 
                 # scaler.step() first unscales gradients of the optimizer's params.
