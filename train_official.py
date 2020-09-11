@@ -77,6 +77,7 @@ def train(model, dataloaders, opts):
     while True:
         for step, batch in enumerate(dataloaders['train']):
             targets = batch['targets']
+            del batch['gather_index']
             n_examples += targets.size(0)
 
             with autocast():
@@ -170,6 +171,7 @@ def validate(opts, model, val_loader, split, global_step):
         for i, batch in enumerate(val_loader):
             qids = batch['qids']
             targets = batch['targets']
+            del batch['gather_index']
             del batch['targets']
             del batch['qids']
 
