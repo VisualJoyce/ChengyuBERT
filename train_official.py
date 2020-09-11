@@ -4,19 +4,20 @@ Licensed under the MIT license.
 
 UNITER finetuning for NLVR2
 """
+import argparse
 import glob
+import os
+import re
 import shutil
 from collections import Counter
 from os.path import exists, join
+from time import time
 
-import argparse
 import numpy as np
-import os
-import re
 import torch
 from apex import amp
 from horovod import torch as hvd
-from time import time
+from torch.cuda.amp import autocast, GradScaler
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
@@ -43,8 +44,7 @@ def train(model, dataloaders, opts):
 
     # Prepare optimizer
     optimizer = build_optimizer(model, opts)
-    model, optimizer = amp.initialize(model, optimizer,
-                                      enabled=opts.fp16, opt_level='O2')
+    scaler = GradScaler()
 
     global_step = 0
     if opts.rank == 0:
@@ -80,23 +80,22 @@ def train(model, dataloaders, opts):
             targets = batch['targets']
             n_examples += targets.size(0)
 
-            loss, vocab_loss = model(**batch, compute_loss=True)
-            if opts.use_vocab:
-                loss += vocab_loss
+            with autocast():
+                loss, vocab_loss = model(**batch, compute_loss=True)
+                if opts.use_vocab:
+                    loss += vocab_loss
 
-            loss = loss.mean()
+                loss = loss.mean()
 
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
-            with amp.scale_loss(loss, optimizer, delay_unscale=delay_unscale
-                                ) as scaled_loss:
-                scaled_loss.backward()
-                if not delay_unscale:
-                    # gather gradients from every processes
-                    # do this before unscaling to make sure every process uses
-                    # the same gradient scale
-                    grads = [p.grad.data for p in model.parameters()
-                             if p.requires_grad and p.grad is not None]
-                    all_reduce_and_rescale_tensors(grads, float(1))
+            scaler.scale(loss).backward()
+            if not delay_unscale:
+                # gather gradients from every processes
+                # do this before unscaling to make sure every process uses
+                # the same gradient scale
+                grads = [p.grad.data for p in model.parameters()
+                         if p.requires_grad and p.grad is not None]
+                all_reduce_and_rescale_tensors(grads, float(1))
 
             running_loss(loss.item())
 
@@ -118,10 +117,19 @@ def train(model, dataloaders, opts):
 
                 # update model params
                 if opts.grad_norm != -1:
+                    # Unscales the gradients of optimizer's assigned params in-place
+                    scaler.unscale_(optimizer)
                     grad_norm = clip_grad_norm_(amp.master_params(optimizer),
                                                 opts.grad_norm)
                     TB_LOGGER.add_scalar('grad_norm', grad_norm, global_step)
-                optimizer.step()
+
+                # scaler.step() first unscales gradients of the optimizer's params.
+                # If gradients don't contain infs/NaNs, optimizer.step() is then called,
+                # otherwise, optimizer.step() is skipped.
+                scaler.step(optimizer)
+
+                # Updates the scale for next iteration.
+                scaler.update()
                 optimizer.zero_grad()
                 pbar.update(1)
 
