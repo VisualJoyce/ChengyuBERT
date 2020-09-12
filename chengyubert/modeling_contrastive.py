@@ -75,6 +75,12 @@ class BertContrastiveSingle(BertPreTrainedModel):
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
         self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
 
+        # projection MLP
+        self.projection = nn.Sequential(nn.Linear(config.hidden_size, 512, bias=False),
+                                        nn.LayerNorm(512),
+                                        nn.ReLU(inplace=True),
+                                        nn.Linear(512, 100, bias=True))
+
         self.init_weights()
 
     def vocab(self, blank_states):
