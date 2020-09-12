@@ -25,8 +25,9 @@ from transformers import BertConfig
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.modeling_bert import ChengyuBert, BertForClozeChid, BertForClozeSingle, BertForClozeDual, \
-    ChengyuBertDual
+from chengyubert.modeling_2stage import ChengyuBert, ChengyuBertDual
+from chengyubert.modeling_bert import BertForClozeChid
+from chengyubert.modeling_dual import BertForClozeSingle, BertForClozeDual
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,

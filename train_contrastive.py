@@ -25,7 +25,7 @@ from transformers import BertConfig
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.modeling_contrastive import ChengyuBERTContrastive
+from chengyubert.modeling_contrastive import ChengyuBERTContrastive, BertContrastiveSingle
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -288,7 +288,9 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model.startswith('bert-contrastive'):
+    if opts.model.startswith('bert-contrastive-single'):
+        ModelCls = BertContrastiveSingle
+    if opts.model.startswith('chengyubert-contrastive'):
         ModelCls = ChengyuBERTContrastive
     else:
         raise ValueError(f"No such model [{opts.model}] supported!")
