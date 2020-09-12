@@ -78,6 +78,7 @@ def train(model, dataloaders, opts):
         dataloader = dataloaders['train']
         for step, batch in enumerate(dataloader):
             targets = batch['targets']
+            del batch['gather_index']
             n_examples += targets.size(0)
 
             if len(dataloader.batch_sampler.contrastive_deque) == 0:
