@@ -118,7 +118,6 @@ class ChengyuDataset(TxtTokLmdb):
     def __init__(self, db_dir, max_txt_len, opts):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
-        self.lens, self.ids, self.st_ed = self.get_ids_and_lens()
         self.tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
         self.vocab = chengyu_process(annotation_dir='/annotation')
         self.id2idiom = {v: k for k, v in self.vocab.items()}
