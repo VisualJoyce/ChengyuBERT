@@ -23,7 +23,7 @@ from tqdm import tqdm
 from transformers import BertConfig
 
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
-    create_dataloaders
+    create_dataloaders, create_contrastive_dataloader
 from chengyubert.data.data import judge
 from chengyubert.modeling_contrastive import ChengyuBERTContrastive, BertContrastiveSingle
 from chengyubert.optim import get_lr_sched
@@ -298,7 +298,9 @@ def main(opts):
     opts.use_vocab = True if 'vocab' in opts.model else False
 
     # data loaders
-    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
+    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls,
+                                             collate_fn, eval_collate_fn, opts,
+                                             create_dataloader_fn_dict={'train': create_contrastive_dataloader})
 
     # Prepare model
     bert_config = BertConfig.from_json_file(args.model_config)
