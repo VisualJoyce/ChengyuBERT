@@ -88,7 +88,7 @@ class BertContrastiveSingle(BertPreTrainedModel):
         return torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
-                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None, contrastive=True):
         # batch_size, sequence_num, length = input_ids.shape
         encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
