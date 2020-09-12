@@ -21,7 +21,7 @@ fi
 docker run --ipc=host --rm \
   --mount src="${WORK_DIR}",dst=/src,type=bind \
   --mount src="$PRETRAIN_DIR",dst=/pretrain,type=bind,readonly \
-  --mount src=$ANNOTATION_DIR,dst=/annotation,type=bind,readonly \
+  --mount src=$ANNOTATION_DIR,dst=/annotations,type=bind,readonly \
   --mount src=$OUT_DIR,dst=/output,type=bind \
   -w /src vimos/uniter_ve:latest \
   bash -c "python preprocess.py --annotation $SOURCE_SPLIT --config=$CONFIG_DIR/$CONFIG_FILE"
