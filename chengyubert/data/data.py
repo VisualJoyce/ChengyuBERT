@@ -1,9 +1,9 @@
+import json
+import os
 from contextlib import contextmanager
 
-import json
 import lmdb
 import msgpack
-import os
 import pandas as pda
 import torch
 from lz4.frame import compress, decompress
@@ -123,6 +123,12 @@ class ChengyuDataset(TxtTokLmdb):
         self.vocab = chengyu_process(annotation_dir='/annotation')
         self.id2idiom = {v: k for k, v in self.vocab.items()}
 
+        self.reverse_index = {int(k): v for k, v in json.load(open(f'{db_dir}/reverse_index.json')).items() if
+                              int(k) < opts.len_idiom_vocab}
+        self.allowed = set()
+        [self.allowed.update(v) for _, v in self.reverse_index.items()]
+        self.lens, self.ids, self.st_ed = self.get_ids_and_lens()
+
     def __len__(self):
         return len(self.ids)
 
@@ -131,6 +137,8 @@ class ChengyuDataset(TxtTokLmdb):
         ids = []
         st_ed = []
         for id_, len_ in self.id2len.items():
+            if id_ not in self.allowed:
+                continue
             example = self.db[id_]
             position = example['position']
             input_ids = example['input_ids']
