@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from contextlib import contextmanager
 
 import lmdb
@@ -85,7 +86,7 @@ class TxtTokLmdb(object):
         return txt_dump
 
 
-def chengyu_process(annotation_dir='/annotation'):
+def chengyu_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
     """
     Load Chengyu to vocab with explanation
     :return:
@@ -109,6 +110,8 @@ def chengyu_process(annotation_dir='/annotation'):
         if each not in chengyu_vocab:
             chengyu_vocab[each] = len(chengyu_vocab)
 
+    chengyu_vocab = {k: v for k, v in chengyu_vocab.items() if v < len_idiom_vocab}
+
     print("Total idioms: {}".format(len(chengyu_vocab)))
 
     return chengyu_vocab
@@ -119,7 +122,7 @@ class ChengyuDataset(TxtTokLmdb):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
         self.tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
-        self.vocab = chengyu_process(annotation_dir='/annotation')
+        self.vocab = chengyu_process(opts.len_idiom_vocab, annotation_dir='/annotations')
         self.id2idiom = {v: k for k, v in self.vocab.items()}
 
         self.reverse_index = {int(k): v for k, v in json.load(open(f'{db_dir}/reverse_index.json')).items() if
