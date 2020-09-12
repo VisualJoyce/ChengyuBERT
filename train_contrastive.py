@@ -288,9 +288,9 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model.startswith('bert-contrastive-single'):
+    if opts.model.startswith('bert-single-contrastive'):
         ModelCls = BertContrastiveSingle
-    if opts.model.startswith('chengyubert-contrastive'):
+    elif opts.model.startswith('chengyubert-contrastive'):
         ModelCls = ChengyuBERTContrastive
     else:
         raise ValueError(f"No such model [{opts.model}] supported!")
