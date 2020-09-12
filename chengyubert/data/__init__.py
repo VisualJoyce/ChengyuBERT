@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader
 
 from chengyubert.data.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, open_lmdb
 from chengyubert.data.loader import PrefetchLoader
-from chengyubert.data.sampler import DistributedTokenBucketSampler
+from chengyubert.data.sampler import DistributedTokenBucketSampler, ContrastiveSampler
 from chengyubert.utils.const import BUCKET_SIZE
 
 
@@ -18,7 +18,21 @@ def create_dataloader(txt_path, batch_size, is_train,
     return PrefetchLoader(loader)
 
 
-def create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts, pretrain_collate_fn=None):
+def create_contrastive_dataloader(txt_path, batch_size, is_train,
+                                  dset_cls, collate_fn, opts):
+    dset = dset_cls(txt_path, opts.max_txt_len, opts)
+    sampler = ContrastiveSampler(opts.size, opts.rank, dset.lens, dset.ids, batch_size, dset.reverse_index,
+                                 droplast=is_train)
+    loader = DataLoader(dset, batch_sampler=sampler,
+                        num_workers=opts.n_workers, pin_memory=opts.pin_mem,
+                        collate_fn=collate_fn)
+    return PrefetchLoader(loader)
+
+
+def create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts,
+                       pretrain_collate_fn=None, create_dataloader_fn_dict=None):
+    if create_dataloader_fn_dict is None:
+        create_dataloader_fn_dict = {}
     splits = []
     for k in dir(opts):
         if k.endswith('_txt_db'):
@@ -36,5 +50,6 @@ def create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_coll
             c_fn = pretrain_collate_fn or collate_fn
         else:
             c_fn = collate_fn if split == 'train' else eval_collate_fn
-        dataloaders[split] = create_dataloader(txt_db, batch_size, 'train' == split, dataset_cls, c_fn, opts)
+        create_dataloader_fn = create_dataloader_fn_dict.get(split, create_dataloader)
+        dataloaders[split] = create_dataloader_fn(txt_db, batch_size, 'train' == split, dataset_cls, c_fn, opts)
     return splits, dataloaders

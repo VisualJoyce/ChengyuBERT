@@ -53,7 +53,6 @@ class ChengyuBert(BertPreTrainedModel):
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-        batch_size, length = input_ids.size()
         encoded_outputs = self.bert(input_ids,
                                     token_type_ids=token_type_ids,
                                     attention_mask=attention_mask,

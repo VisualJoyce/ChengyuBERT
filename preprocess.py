@@ -1,11 +1,11 @@
-import random
-
 import argparse
 import json
 import os
-import pandas as pda
+import random
 import re
 from abc import abstractmethod
+
+import pandas as pda
 from cytoolz import curry
 from tqdm import tqdm
 from transformers import BertTokenizer
@@ -295,10 +295,15 @@ def process_chid(opts, db, tokenizer):
     id2len = {}
     ans_dict = {}
     id2eid = {}
+    reverse_index = {}
     for ex in parser.read_examples():
         parse_example(ex)
         ans_dict[ex.tag] = ex.label
         id2eid[ex.tag] = ex.idx
+
+        idiom_id = vocab[ex.options[ex.label]]
+        reverse_index.setdefault(idiom_id, [])
+        reverse_index[idiom_id].append(ex.tag)
 
     assert len(id2len) == len(ans_dict)
 
@@ -308,6 +313,9 @@ def process_chid(opts, db, tokenizer):
 
     with open(f'/output/id2eid.json', 'w') as f:
         json.dump(id2eid, f)
+
+    with open(f'{opts.output}/reverse_index.json', 'w') as f:
+        json.dump(reverse_index, f)
 
     return id2len
 

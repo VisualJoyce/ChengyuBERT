@@ -41,6 +41,7 @@ class PrefetchLoader(object):
     overlap compute and cuda data transfer
     (copied and then modified from nvidia apex)
     """
+
     def __init__(self, loader):
         self.loader = loader
         self.stream = torch.cuda.Stream()
