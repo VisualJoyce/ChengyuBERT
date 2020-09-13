@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader
 
 from chengyubert.data.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, open_lmdb
 from chengyubert.data.loader import PrefetchLoader
-from chengyubert.data.sampler import DistributedTokenBucketSampler, ContrastiveSampler
+from chengyubert.data.sampler import DistributedTokenBucketSampler, ContrastiveSampler, ContrastivePairSampler
 from chengyubert.utils.const import BUCKET_SIZE
 
 
@@ -22,6 +22,17 @@ def create_contrastive_dataloader(txt_path, batch_size, is_train,
                                   dset_cls, collate_fn, opts):
     dset = dset_cls(txt_path, opts.max_txt_len, opts)
     sampler = ContrastiveSampler(opts.size, opts.rank, dset.lens, dset.ids, batch_size, dset.reverse_index,
+                                 droplast=is_train)
+    loader = DataLoader(dset, batch_sampler=sampler,
+                        num_workers=opts.n_workers, pin_memory=opts.pin_mem,
+                        collate_fn=collate_fn)
+    return PrefetchLoader(loader)
+
+
+def create_contrastive_pair_dataloader(txt_path, batch_size, is_train,
+                                  dset_cls, collate_fn, opts):
+    dset = dset_cls(txt_path, opts.max_txt_len, opts)
+    sampler = ContrastivePairSampler(opts.size, opts.rank, dset.lens, dset.ids, batch_size, dset.reverse_index,
                                  droplast=is_train)
     loader = DataLoader(dset, batch_sampler=sampler,
                         num_workers=opts.n_workers, pin_memory=opts.pin_mem,

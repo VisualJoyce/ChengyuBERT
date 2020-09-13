@@ -8,6 +8,7 @@ import random
 from collections import deque
 
 from cytoolz import partition_all
+from more_itertools import flatten
 from torch.utils.data import Sampler
 
 
@@ -117,6 +118,62 @@ class ContrastiveSampler(Sampler):
                     break
                 else:
                     batch_indices.extend(indices)
+            yield batch_indices
+
+    def __len__(self):
+        raise ValueError("NOT supported. "
+                         "This has some randomness across epochs")
+
+
+class ContrastivePairSampler(Sampler):
+    def __init__(self, num_replicas, rank, lens, ids, batch_size, reverse_index,
+                 droplast=False, size_multiple=8):
+        self._rank = rank
+        self._num_replicas = num_replicas
+        self._lens = lens
+        self._ids = {v: k for k, v in enumerate(ids)}
+        self._max_tok = batch_size
+        self._droplast = droplast
+        self._size_mul = size_multiple
+        self.reverse_index = reverse_index
+        self.contrastive_deque = deque(maxlen=500 * self._num_replicas)
+
+    def _sort_fn(self, i):
+        return self._lens[i]
+
+    def _contrastive_bucket(self):
+        if len(self.contrastive_deque) == 0:
+            self.contrastive_deque.append(random.choices(list(self.reverse_index.keys()),
+                                                         k=500 * self._num_replicas)[self._rank::self._num_replicas])
+
+        idiom_ids = self.contrastive_deque.pop()
+
+        bucket = []
+        for idx in random.choices(idiom_ids, k=500):
+            try:
+                qid_pair = random.choices(self.reverse_index[idx], k=2)
+                bucket.append([self._ids[qid] for qid in qid_pair])
+            except:
+                continue
+        return bucket
+
+    def __iter__(self):
+        while True:
+            bucket = self._contrastive_bucket()
+            max_len = 0
+            batch_indices = []
+            for indices in partition_all(self._size_mul, bucket):
+                max_len = max(max_len, max(self._lens[j] for i in indices for j in i))
+                if (max_len * (len(batch_indices) + self._size_mul) * 2
+                        > self._max_tok):
+                    if not batch_indices:
+                        raise ValueError(
+                            "max_tokens too small / max_seq_len too long")
+                    assert len(batch_indices) % self._size_mul == 0
+                    break
+                else:
+                    batch_indices.extend(flatten(indices))
+            assert len(batch_indices) % 2 == 0
             yield batch_indices
 
     def __len__(self):
