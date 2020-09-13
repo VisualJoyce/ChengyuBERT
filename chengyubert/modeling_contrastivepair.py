@@ -43,7 +43,8 @@ class BertContrastivePairSingle(BertPreTrainedModel):
         blank_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
         # cls_states = encoded_layer[:, 0]
 
-        augmentation_0, augmentation_1 = blank_states.view(-1, 2, 10).chunk(2, dim=1)
+        augmentation_0, augmentation_1 = blank_states.view(-1, 2,
+                                                           blank_states.size(-1)).chunk(2, dim=1)
 
         if option_ids is None and options_embeds is None:
             raise ValueError('Either option_ids or options_embeds should be given.')
