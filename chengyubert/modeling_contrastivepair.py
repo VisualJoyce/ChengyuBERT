@@ -43,36 +43,34 @@ class BertContrastivePairSingle(BertPreTrainedModel):
         blank_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
         # cls_states = encoded_layer[:, 0]
 
-        if option_ids is None and options_embeds is None:
-            raise ValueError('Either option_ids or options_embeds should be given.')
-        elif options_embeds is not None:
-            encoded_options = options_embeds
-        else:
-            encoded_options = self.idiom_embedding(option_ids)  # (b, 10, 768)
+        # if option_ids is None and options_embeds is None:
+        #     raise ValueError('Either option_ids or options_embeds should be given.')
+        # elif options_embeds is not None:
+        #     encoded_options = options_embeds
+        # else:
+        #     encoded_options = self.idiom_embedding(option_ids)  # (b, 10, 768)
 
         over_logits = self.vocab(blank_states)
-        # cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
+        cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
 
-        mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
-        c_mo_logits, _ = torch.max(mo_logits, dim=1)
-        # over_states = cls_states
-
-        logits = c_mo_logits
+        # mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
+        # c_mo_logits, _ = torch.max(mo_logits, dim=1)
+        # # over_states = cls_states
+        #
+        # logits = c_mo_logits
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(logits, targets)
-
+            # loss = loss_fct(logits, targets)
             target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
+            over_loss = loss_fct(over_logits, target.squeeze(1))
 
             contrastive_loss_fct = ContrastiveLoss(tau=0.5)
-
             augmentation_0, augmentation_1 = blank_states.view(-1, 2,
                                                                blank_states.size(-1)).chunk(2, dim=1)
             closs = contrastive_loss_fct(self.projection(augmentation_0.squeeze(1)),
                                          self.projection(augmentation_1.squeeze(1)))
 
-            over_loss = loss_fct(over_logits, target.squeeze(1))
-            return loss + over_loss + closs, over_logits
+            return over_loss + closs, over_logits
         else:
-            return logits, over_logits
+            return cond_logits, over_logits
