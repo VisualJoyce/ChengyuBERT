@@ -81,18 +81,9 @@ def train(model, dataloaders, opts):
             del batch['gather_index']
             n_examples += targets.size(0)
 
-            if len(dataloader.batch_sampler.contrastive_deque) == 0:
-                with autocast():
-                    loss, logits = model(**batch, compute_loss=True)
-                    loss = loss.mean()
-                    _, indices = logits.topk(500 * opts.size)
-                    for indice in indices.detach().cpu().tolist():
-                        dataloader.batch_sampler.contrastive_deque.append(indice)
-                print(loss_deque)
-            else:
-                with autocast():
-                    contrastive_loss, _ = model(**batch, compute_loss=True, contrastive=True)
-                    loss = contrastive_loss.mean()
+            with autocast():
+                contrastive_loss, _ = model(**batch, compute_loss=True, contrastive=True)
+                loss = contrastive_loss.mean()
 
             loss_deque.append(loss.item())
 
