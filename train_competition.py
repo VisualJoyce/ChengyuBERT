@@ -183,6 +183,7 @@ def main(opts):
                     if log['val/acc'] > best_eval:
                         best_ckpt = global_step
                         best_eval = log['val/acc']
+                        pbar.set_description(f'{opts.model}: {n_epoch}-{best_ckpt} best_acc-{best_eval * 100:.2f}')
                     model_saver.save(model, global_step)
             if global_step >= opts.num_train_steps:
                 break
