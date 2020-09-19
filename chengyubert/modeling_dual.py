@@ -13,12 +13,14 @@ class BertForClozeSingle(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         emb_hidden_size = config.hidden_size
+        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
 
         self.init_weights()
 
     def vocab(self, blank_states):
-        return torch.einsum('bd,nd->bn', [blank_states, self.idiom_embedding.weight])  # (b, 256, 10)
+        idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        return torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
