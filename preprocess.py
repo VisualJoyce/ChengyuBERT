@@ -163,7 +163,7 @@ class ChidBalancedParser(ChidParser):
     """
     splits = ['train', 'test']
 
-    def __init__(self, split, vocab, annotation_dir='/annotation'):
+    def __init__(self, split, vocab, annotation_dir='/annotations'):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
@@ -187,7 +187,7 @@ class ChidExternalParser(ChidParser):
     """
     splits = ['pretrain', 'cct7', 'cct4']
 
-    def __init__(self, split, vocab, annotation_dir='/annotation'):
+    def __init__(self, split, vocab, annotation_dir='/annotations'):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
@@ -214,7 +214,7 @@ class ChidOfficialParser(ChidParser):
     """
     splits = ['train', 'dev', 'test', 'ran', 'sim', 'out']
 
-    def __init__(self, split, vocab, annotation_dir='/annotation'):
+    def __init__(self, split, vocab, annotation_dir='/annotations'):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
@@ -245,7 +245,7 @@ class ChidCompetitionDataset(object):
     """
     splits = ['train', 'dev', 'test', 'out']
 
-    def __init__(self, split, vocab, annotation_dir='/annotation'):
+    def __init__(self, split, vocab, annotation_dir='/annotations'):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
