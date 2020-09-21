@@ -170,7 +170,7 @@ class ChidBalancedParser(ChidParser):
 
     @property
     def data_dir(self):
-        return f'/{self.annotation_dir}/balanced'
+        return f'{self.annotation_dir}/balanced'
 
     @property
     def data_file(self):
