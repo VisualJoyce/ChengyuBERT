@@ -194,7 +194,7 @@ class ChidExternalParser(ChidParser):
 
     @property
     def data_dir(self):
-        return f'/{self.annotation_dir}/external'
+        return f'{self.annotation_dir}/external'
 
     @property
     def data_file(self):
@@ -249,7 +249,7 @@ class ChidCompetitionDataset(object):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
-        self.data_dir = f'/{self.annotation_dir}/competition'
+        self.data_dir = f'{self.annotation_dir}/competition'
 
     @property
     def answer_file(self):
