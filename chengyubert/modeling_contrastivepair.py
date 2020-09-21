@@ -65,7 +65,7 @@ class BertContrastivePairSingle(BertPreTrainedModel):
             target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
             over_loss = loss_fct(over_logits, target.squeeze(1))
 
-            contrastive_loss_fct = ContrastiveLoss(tau=0.5)
+            contrastive_loss_fct = ContrastiveLoss(tau=1)
             augmentation_0, augmentation_1 = blank_states.view(-1, 2,
                                                                blank_states.size(-1)).chunk(2, dim=1)
             closs = contrastive_loss_fct(self.projection(augmentation_0.squeeze(1)),

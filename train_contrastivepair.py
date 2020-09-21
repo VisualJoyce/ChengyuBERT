@@ -146,10 +146,10 @@ def train(model, dataloaders, opts):
                     log = evaluation(model,
                                      dict(filter(lambda x: x[0].startswith('val'), dataloaders.items())),
                                      opts, global_step)
-                    if log['val/acc'] > best_eval:
+                    if log['val/mrr'] > best_eval:
                         best_ckpt = global_step
-                        best_eval = log['val/acc']
-                        pbar.set_description(f'{opts.model}: {n_epoch}-{best_ckpt} best_acc-{best_eval * 100:.2f}')
+                        best_eval = log['val/mrr']
+                        pbar.set_description(f'{opts.model}: {n_epoch}-{best_ckpt} best_mrr-{best_eval * 100:.2f}')
                     model_saver.save(model, global_step)
             if global_step >= opts.num_train_steps:
                 break
