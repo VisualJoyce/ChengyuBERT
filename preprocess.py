@@ -153,6 +153,30 @@ class ChidParser(object):
                         )
 
 
+class ChidBalancedParser(ChidParser):
+    """Dataset wrapping tensors.
+
+    Each sample will be retrieved by indexing tensors along the first dimension.
+
+    Arguments:
+        *tensors (Tensor): tensors that have the same size of the first dimension.
+    """
+    splits = ['train', 'test']
+
+    def __init__(self, split, vocab, annotation_dir='/annotation'):
+        self.split = split
+        self.vocab = vocab
+        self.annotation_dir = annotation_dir
+
+    @property
+    def data_dir(self):
+        return f'/{self.annotation_dir}/balanced'
+
+    @property
+    def data_file(self):
+        return os.path.join(self.data_dir, 'balanced_{}.txt'.format(self.split))
+
+
 class ChidExternalParser(ChidParser):
     """Dataset wrapping tensors.
 
@@ -276,6 +300,9 @@ def process_chid(opts, db, tokenizer):
     elif source == 'external':
         assert split in ['pretrain', 'cct7', 'cct4']
         parser = ChidExternalParser(split, vocab)
+    elif source == 'balanced':
+        assert split in ['train', 'test']
+        parser = ChidBalancedParser(split, vocab)
     else:
         assert split in ['train', 'dev', 'test', 'out']
         parser = ChidCompetitionDataset(split, vocab)
