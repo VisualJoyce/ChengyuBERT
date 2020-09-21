@@ -292,7 +292,7 @@ class ChidCompetitionDataset(object):
 def process_chid(opts, db, tokenizer):
     source, split = opts.annotation.split('_')
 
-    vocab = chengyu_process(annotation_dir='/annotation')
+    vocab = chengyu_process(annotation_dir='/annotations')
 
     if source == 'official':
         assert split in ['train', 'dev', 'test', 'ran', 'sim', 'out']
