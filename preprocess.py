@@ -334,11 +334,11 @@ def process_chid(opts, db, tokenizer):
 
     assert len(id2len) == len(ans_dict)
 
-    with open(f'/output/answer.csv', 'w') as f:
+    with open(f'{opts.output}/answer.csv', 'w') as f:
         for k, v in ans_dict.items():
             f.write('{},{}\n'.format(k, v))
 
-    with open(f'/output/id2eid.json', 'w') as f:
+    with open(f'{opts.output}/id2eid.json', 'w') as f:
         json.dump(id2eid, f)
 
     with open(f'{opts.output}/reverse_index.json', 'w') as f:
@@ -349,12 +349,15 @@ def process_chid(opts, db, tokenizer):
 
 def main(opts):
     print(opts)
+    dataset, split = opts.annotation.split('_')
+    txt_db = f'{split}_txt_db'
+    opts.output = getattr(opts, txt_db)
     # train_db_dir = os.path.join(os.path.dirname(opts.output), f'{source}_{split}.db')
     # meta = vars(opts)
     # meta['tokenizer'] = opts.toker
     tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
 
-    open_db = curry(open_lmdb, '/output', readonly=False)
+    open_db = curry(open_lmdb, opts.output, readonly=False)
     with open_db() as db:
         id2lens = process_chid(opts, db, tokenizer)
 
