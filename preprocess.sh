@@ -7,6 +7,7 @@ WORK_DIR=$(readlink -f .)
 DATA_DIR=${WORK_DIR}/data
 CONFIG_DIR=/src/config
 PRETRAIN_DIR=${DATA_DIR}/pretrained
+TXT_DB=${DATA_DIR}/txt_db
 
 echo "extracting text features..."
 if [ ! -d $OUT_DIR ]; then
@@ -19,6 +20,7 @@ fi
 
 docker run --ipc=host --rm \
   --mount src="${WORK_DIR}",dst=/src,type=bind \
+  --mount src="$TXT_DB",dst=/txt,type=bind \
   --mount src="$PRETRAIN_DIR",dst=/pretrain,type=bind,readonly \
   --mount src=$ANNOTATION_DIR,dst=/annotations,type=bind,readonly \
   -w /src vimos/zhuge:latest \
