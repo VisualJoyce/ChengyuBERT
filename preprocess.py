@@ -361,7 +361,7 @@ def main(opts):
     with open_db() as db:
         id2lens = process_chid(opts, db, tokenizer)
 
-    with open('/output/id2len.json', 'w') as f:
+    with open(f'{opts.output}/id2len.json', 'w') as f:
         json.dump(id2lens, f)
 
 
