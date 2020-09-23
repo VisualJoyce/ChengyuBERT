@@ -1,6 +1,6 @@
 {
-    "train_txt_db": "/txt/balanced_train.db",
-    "val_txt_db": "/txt/balanced_val.db",
+    "train_txt_db": "/txt/balanced3848_train.db",
+    "val_txt_db": "/txt/balanced3848_val.db",
     "dev_txt_db": "/txt/official_dev.db",
     "test_txt_db": "/txt/official_test.db",
     "out_txt_db": "/txt/official_out.db",

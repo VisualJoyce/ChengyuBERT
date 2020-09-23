@@ -174,7 +174,7 @@ class ChidBalancedParser(ChidParser):
 
     @property
     def data_file(self):
-        return os.path.join(self.data_dir, 'balanced_{}.txt'.format(self.split))
+        return os.path.join(self.data_dir, 'balanced{}_{}.txt'.format(len(self.vocab), self.split))
 
 
 class ChidExternalParser(ChidParser):
@@ -292,7 +292,7 @@ class ChidCompetitionDataset(object):
 def process_chid(opts, db, tokenizer):
     source, split = opts.annotation.split('_')
 
-    vocab = chengyu_process(annotation_dir='/annotations')
+    vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
 
     if source == 'official':
         assert split in ['train', 'dev', 'test', 'ran', 'sim', 'out']
