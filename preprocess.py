@@ -301,7 +301,7 @@ def process_chid(opts, db, tokenizer):
         assert split in ['pretrain', 'cct7', 'cct4']
         parser = ChidExternalParser(split, vocab)
     elif source == 'balanced':
-        assert split in ['train', 'test']
+        assert split in ['train', 'val']
         parser = ChidBalancedParser(split, vocab)
     else:
         assert split in ['train', 'dev', 'test', 'out']
