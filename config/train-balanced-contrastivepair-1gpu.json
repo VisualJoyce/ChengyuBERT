@@ -1,6 +1,7 @@
 {
     "train_txt_db": "/txt/balanced_train.db",
-    "val_txt_db": "/txt/official_dev.db",
+    "val_txt_db": "/txt/balanced_dev.db",
+    "dev_txt_db": "/txt/official_dev.db",
     "test_txt_db": "/txt/official_test.db",
     "out_txt_db": "/txt/official_out.db",
     "sim_txt_db": "/txt/official_sim.db",
