@@ -8,7 +8,7 @@ CONFIG_DIR=/src/config
 TXT_DB=${DATA_DIR}/txt_db
 OUTPUT=${DATA_DIR}/output
 PRETRAIN_DIR=${DATA_DIR}/pretrained
-ANNOTATION_DIR=${DATA_DIR}/annotation
+ANNOTATION_DIR=${DATA_DIR}/annotations
 
 if [ -z "$MODEL_PARA" ]; then
   MODEL_PARA=""
