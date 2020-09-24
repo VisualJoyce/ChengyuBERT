@@ -252,13 +252,15 @@ def evaluation(model, data_loaders: dict, opts, global_step):
 
 
 def get_best_ckpt(val_data_dir, opts):
-    pat = re.compile(r'val_results_(?P<step>\d+)_rank0.csv')
-    prediction_files = glob.glob('{}/results/val_results_*_rank0.csv'.format(opts.output_dir))
+    pat = re.compile(r'val_results_(?P<step>\d+).csv')
+    prediction_files = glob.glob('{}/results/val_results_*.csv'.format(opts.output_dir))
 
     top_files = Counter()
     for f in prediction_files:
-        acc = judge(f, os.path.join(val_data_dir, 'answer.csv'))
-        top_files.update({f: acc})
+        m = pat.match(os.path.basename(f))
+        if m:
+            acc = judge(f, os.path.join(val_data_dir, 'answer.csv'))
+            top_files.update({f: acc})
 
     print(top_files)
 
