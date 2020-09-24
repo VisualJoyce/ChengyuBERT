@@ -217,10 +217,14 @@ def validate(opts, model, val_loader, split, global_step):
     val_loss /= n_ex
     val_mrr = val_mrr / n_ex
 
+    pat = re.compile(rf'{split}_results_(?P<step>\d+)_rank(?P<rank>\d+).csv')
     out_file = f'{opts.output_dir}/results/{split}_results_{global_step}.csv'
     with open(out_file, 'wb') as g:
         for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
-            shutil.copyfileobj(open(f, 'rb'), g)
+            m = pat.match(os.path.basename(f))
+            rank = int(m.group('rank'))
+            if rank < opts.size:
+                shutil.copyfileobj(open(f, 'rb'), g)
             shutil.rmtree(f)
 
     sum(all_gather_list(opts.rank))
