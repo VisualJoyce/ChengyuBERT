@@ -218,10 +218,9 @@ def validate(opts, model, val_loader, split, global_step):
     val_mrr = val_mrr / n_ex
 
     out_file = f'{opts.output_dir}/results/{split}_results_{global_step}.csv'
-    if not os.path.isfile(out_file):
-        with open(out_file, 'wb') as g:
-            for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
-                shutil.copyfileobj(open(f, 'rb'), g)
+    with open(out_file, 'wb') as g:
+        for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
+            shutil.copyfileobj(open(f, 'rb'), g)
 
     sum(all_gather_list(opts.rank))
 
