@@ -225,7 +225,7 @@ def validate(opts, model, val_loader, split, global_step):
             rank = int(m.group('rank'))
             if rank < opts.size:
                 shutil.copyfileobj(open(f, 'rb'), g)
-            shutil.rmtree(f)
+            os.remove(f)
 
     sum(all_gather_list(opts.rank))
 
