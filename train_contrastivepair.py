@@ -221,6 +221,7 @@ def validate(opts, model, val_loader, split, global_step):
     with open(out_file, 'wb') as g:
         for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
             shutil.copyfileobj(open(f, 'rb'), g)
+            shutil.rmtree(f)
 
     sum(all_gather_list(opts.rank))
 
@@ -305,8 +306,6 @@ def main(opts):
             opts.use_contrastive = True
     else:
         raise ValueError(f"No such model [{opts.model}] supported!")
-
-    opts.use_vocab = True if 'vocab' in opts.model else False
 
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls,
