@@ -24,7 +24,7 @@ from transformers import BertConfig
 
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders, create_contrastive_pair_dataloader
-from chengyubert.data.data import judge
+from chengyubert.data.data import judge, judge_by_idiom
 from chengyubert.modeling_contrastivepair import BertContrastivePairSingle
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
@@ -82,8 +82,15 @@ def train(model, dataloaders, opts):
             n_examples += targets.size(0)
 
             with autocast():
-                contrastive_loss, _ = model(**batch, compute_loss=True, contrastive=True)
-                loss = contrastive_loss.mean()
+                over_loss, contrastive_loss = model(**batch, compute_loss=True, contrastive=True)
+                if opts.use_vocab and opts.use_contrastive:
+                    loss = over_loss + contrastive_loss
+                elif opts.use_vocab:
+                    loss = over_loss
+                elif opts.use_contrastive:
+                    loss = contrastive_loss
+                else:
+                    raise ValueError('No such method!')
 
             loss_deque.append(loss.item())
 
@@ -184,19 +191,22 @@ def validate(opts, model, val_loader, split, global_step):
             answers = max_idx.cpu().tolist()
 
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
+            mrrs = []
             for j, (qid, target) in enumerate(zip(qids, targets)):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
-                val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
+                mrr = 1 / (1 + np.argwhere(top_k == target).item())
+                val_mrr += mrr
+                mrrs.append(mrr)
 
-            results.extend(zip(qids, answers))
+            results.extend(zip(qids, answers, mrrs, targets))
             n_ex += len(qids)
             tq.update(len(qids))
 
     out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{opts.rank}.csv'
     with open(out_file, 'w') as f:
-        for id_, ans in results:
-            f.write(f'{id_},{ans}\n')
+        for id_, ans, mrr, target in results:
+            f.write(f'{id_},{ans},{mrr},{target}\n')
 
     val_loss = sum(all_gather_list(val_loss))
     val_mrr = sum(all_gather_list(val_mrr))
@@ -217,6 +227,8 @@ def validate(opts, model, val_loader, split, global_step):
 
     txt_db = getattr(opts, f'{split}_txt_db')
     val_acc = judge(out_file, f'{txt_db}/answer.csv')
+    judge_by_idiom(out_file, val_loader.dataset.id2idiom, f'{opts.output_dir}/results/{split}_mrr_{global_step}.csv')
+
     val_log = {f'{split}/loss': val_loss,
                f'{split}/acc': val_acc,
                f'{split}/mrr': val_mrr,
@@ -281,8 +293,15 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model.startswith('bert-single-contrastive-pair'):
+    opts.use_vocab = False
+    opts.use_contrastive = False
+
+    if opts.model.startswith('bert-single-'):
         ModelCls = BertContrastivePairSingle
+        if 'vocab' in opts.model:
+            opts.use_vocab = True
+        if 'contrastive-pair' in opts.model:
+            opts.use_contrastive = True
     else:
         raise ValueError(f"No such model [{opts.model}] supported!")
 

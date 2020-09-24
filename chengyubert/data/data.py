@@ -274,3 +274,26 @@ def judge(pred_file, answer_file):
             acc += 1
 
     return acc / cnt
+
+
+def judge_by_idiom(pred_file, id2idiom, out_file):
+    if isinstance(pred_file, str):
+        pred = open(pred_file).readlines()
+    else:
+        pred = pred_file.readlines()
+
+    mrr_dict = {}
+    for line in pred:
+        qid, ans, mrr, target = line.strip().split(',')
+        mrr_dict.setdefault(target, [])
+        mrr_dict[target].append(mrr)
+
+    with open(out_file, 'w') as f:
+        for idiom_id, mrrs in mrr_dict.items():
+            if len(mrrs) > 0:
+                mean_mrr = sum(mrrs) / len(mrrs)
+                if idiom_id % 1000 == 0:
+                    print(id2idiom[idiom_id], mean_mrr)
+            else:
+                mean_mrr = 0
+            f.write(f'{id2idiom[idiom_id]},{mean_mrr:.3f}\n')

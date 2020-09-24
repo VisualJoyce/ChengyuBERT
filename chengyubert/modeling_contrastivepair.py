@@ -71,6 +71,6 @@ class BertContrastivePairSingle(BertPreTrainedModel):
             closs = contrastive_loss_fct(self.projection(augmentation_0.squeeze(1)),
                                          self.projection(augmentation_1.squeeze(1)))
 
-            return over_loss + closs, over_logits
+            return over_loss, closs
         else:
             return cond_logits, over_logits
