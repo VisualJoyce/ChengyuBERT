@@ -30,7 +30,7 @@ docker run --gpus '"'device=$CUDA_VISIBLE_DEVICES'"' --ipc=host --rm -it \
   --mount src="${WORK_DIR}",dst=/src,type=bind \
   --mount src="$OUTPUT",dst=/storage,type=bind \
   --mount src="$PRETRAIN_DIR",dst=/pretrain,type=bind,readonly \
-  --mount src=$ANNOTATION_DIR,dst=/annotation,type=bind,readonly \
+  --mount src=$ANNOTATION_DIR,dst=/annotations,type=bind,readonly \
   --mount src="$TXT_DB",dst=/txt,type=bind \
   -e NVIDIA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
   -w /src vimos/uniter_ve:latest \
