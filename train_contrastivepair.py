@@ -199,7 +199,7 @@ def validate(opts, model, val_loader, split, global_step):
                 val_mrr += mrr
                 mrrs.append(mrr)
 
-            results.extend(zip(qids, answers, mrrs, targets.tolist()))
+            results.extend(zip(qids, answers, mrrs, np.squeeze(targets).tolist()))
             n_ex += len(qids)
             tq.update(len(qids))
 
