@@ -285,8 +285,9 @@ def judge_by_idiom(pred_file, id2idiom, out_file):
     mrr_dict = {}
     for line in pred:
         qid, ans, mrr, target = line.strip().split(',')
+        target = int(target)
         mrr_dict.setdefault(target, [])
-        mrr_dict[target].append(mrr)
+        mrr_dict[target].append(float(mrr))
 
     with open(out_file, 'w') as f:
         for idiom_id, mrrs in mrr_dict.items():
