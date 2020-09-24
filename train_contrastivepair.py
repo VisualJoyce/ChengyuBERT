@@ -62,6 +62,8 @@ def train(model, dataloaders, opts):
     LOGGER.info("  Batch size = %d", opts.train_batch_size)
     LOGGER.info("  Accumulate steps = %d", opts.gradient_accumulation_steps)
     LOGGER.info("  Num steps = %d", opts.num_train_steps)
+    LOGGER.info("  Using Vocab = %s", opts.use_vocab)
+    LOGGER.info("  Using Contrastive = %s", opts.use_contrastive)
 
     running_loss = RunningMeter('loss')
     model.train()
