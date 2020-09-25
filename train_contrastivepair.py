@@ -331,6 +331,8 @@ def main(opts):
     else:
         best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
 
+    sum(all_gather_list(opts.rank))
+
     best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
     model.load_state_dict(torch.load(best_pt), strict=False)
     evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
