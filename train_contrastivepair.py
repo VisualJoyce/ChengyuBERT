@@ -258,7 +258,7 @@ def evaluation(model, data_loaders: dict, opts, global_step):
     return log
 
 
-def get_best_ckpt(val_data_dir, opts):
+def get_best_ckpt(id2idiom, opts):
     pat = re.compile(r'val_results_(?P<step>\d+).csv')
     prediction_files = glob.glob('{}/results/val_results_*.csv'.format(opts.output_dir))
 
@@ -266,8 +266,8 @@ def get_best_ckpt(val_data_dir, opts):
     for f in prediction_files:
         m = pat.match(os.path.basename(f))
         if m:
-            acc = judge(f, os.path.join(val_data_dir, 'answer.csv'))
-            top_files.update({f: acc})
+            mrr = judge_by_idiom(f, id2idiom)
+            top_files.update({f: mrr})
 
     print(top_files)
 
@@ -329,7 +329,7 @@ def main(opts):
     if opts.mode == 'train':
         best_ckpt = train(model, dataloaders, opts)
     else:
-        best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
+        best_ckpt = get_best_ckpt(dataloaders['val'].dataset.id2idiom, opts)
 
     sum(all_gather_list(opts.rank))
 
