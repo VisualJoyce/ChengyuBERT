@@ -177,6 +177,42 @@ class ChidBalancedParser(ChidParser):
         return os.path.join(self.data_dir, 'balanced{}_{}.txt'.format(len(self.vocab), self.split))
 
 
+class ChidBalancedFixParser(ChidParser):
+    """Dataset wrapping tensors.
+
+    Each sample will be retrieved by indexing tensors along the first dimension.
+
+    Arguments:
+        *tensors (Tensor): tensors that have the same size of the first dimension.
+    """
+    splits = ['train', 'test']
+    fix_dict = {'一笑百媚': '一笑百媚生',
+                '不可终日': '惶惶不可终日',
+                '不识泰山': '有眼不识泰山',
+                '吹灰之力': '不费吹灰之力',
+                '来者居上': '后来者居上',
+                '死而后已': '鞠躬尽瘁，死而后已',
+                '语不惊人': '语不惊人死不休',
+                '雨后春笋': '如雨后春笋般'}
+
+    def __init__(self, split, vocab, annotation_dir='/annotations'):
+        self.split = split
+        self.vocab = {}
+        for k, v in vocab.items():
+            k = self.fix_dict.get(k, k)
+            self.vocab[k] = v
+
+        self.annotation_dir = annotation_dir
+
+    @property
+    def data_dir(self):
+        return f'{self.annotation_dir}/balanced'
+
+    @property
+    def data_file(self):
+        return os.path.join(self.data_dir, 'balanced{}fix_{}.txt'.format(len(self.vocab), self.split))
+
+
 class ChidExternalParser(ChidParser):
     """Dataset wrapping tensors.
 
@@ -303,6 +339,9 @@ def process_chid(opts, db, tokenizer):
     elif source == 'balanced':
         assert split in ['train', 'val']
         parser = ChidBalancedParser(split, vocab)
+    elif source == 'balancedfix':
+        assert split in ['train', 'val']
+        parser = ChidBalancedFixParser(split, vocab)
     else:
         assert split in ['train', 'dev', 'test', 'out']
         parser = ChidCompetitionDataset(split, vocab)
@@ -316,7 +355,7 @@ def process_chid(opts, db, tokenizer):
             'input_ids': input_ids,
             'position': position,
             'target': example.label,
-            'options': [vocab[o] for o in example.options]
+            'options': [parser.vocab[o] for o in example.options]
         }
 
     id2len = {}
@@ -328,7 +367,7 @@ def process_chid(opts, db, tokenizer):
         ans_dict[ex.tag] = ex.label
         id2eid[ex.tag] = ex.idx
 
-        idiom_id = vocab[ex.options[ex.label]]
+        idiom_id = parser.vocab[ex.options[ex.label]]
         reverse_index.setdefault(idiom_id, [])
         reverse_index[idiom_id].append(ex.tag)
 
