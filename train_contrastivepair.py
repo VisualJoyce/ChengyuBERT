@@ -24,7 +24,7 @@ from transformers import BertConfig
 
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders, create_contrastive_pair_dataloader
-from chengyubert.data.data import judge, judge_by_idiom
+from chengyubert.data.data import judge, judge_by_idiom, chengyu_process
 from chengyubert.modeling_contrastivepair import BertContrastivePairSingle
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
@@ -33,6 +33,7 @@ from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_g
 from chengyubert.utils.logger import LOGGER, TB_LOGGER, RunningMeter, add_log_to_file
 from chengyubert.utils.misc import NoOp, parse_with_config, set_dropout, set_random_seed
 from chengyubert.utils.save import ModelSaver, save_training_meta
+from preprocess import ChidBalancedParser, ChidBalancedFixParser
 
 
 def train(model, dataloaders, opts):
@@ -304,6 +305,14 @@ def main(opts):
 
     opts.use_vocab = False
     opts.use_contrastive = False
+
+    vocab = chengyu_process(opts.len_idiom_vocab, annotation_dir='/annotations')
+    if f'balanced{opts.len_idiom_vocab}fix' in opts.train_txt_db:
+        parser = ChidBalancedFixParser('train', vocab)
+    else:
+        parser = ChidBalancedParser('train', vocab)
+
+    opts.vocab = parser.vocab
 
     if opts.model.startswith('bert-single-'):
         ModelCls = BertContrastivePairSingle
