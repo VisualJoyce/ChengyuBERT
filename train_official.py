@@ -308,9 +308,11 @@ def main(opts):
     else:
         best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
 
-    best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
-    model.load_state_dict(torch.load(best_pt), strict=False)
-    evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
+    if opts.rank == 0:
+        opts.size = 1
+        best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
+        model.load_state_dict(torch.load(best_pt), strict=False)
+        evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
 
 
 if __name__ == "__main__":
