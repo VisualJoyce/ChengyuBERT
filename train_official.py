@@ -81,7 +81,7 @@ def train(model, dataloaders, opts):
 
             with autocast():
                 loss, vocab_loss = model(**batch, compute_loss=True)
-                if opts.use_vocab:
+                if opts.enlarged_candidates:
                     loss += vocab_loss
 
                 loss = loss.mean()
