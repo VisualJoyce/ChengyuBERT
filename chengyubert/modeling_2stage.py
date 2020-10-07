@@ -37,7 +37,7 @@ class ChengyuBertTwoStage(BertPreTrainedModel):
 
     """
 
-    def __init__(self, config, len_idiom_vocab, model_name='chengyubert'):
+    def __init__(self, config, len_idiom_vocab, model_name):
         super().__init__(config)
         self.model_name = model_name
         self.bert = BertModel(config)
@@ -123,7 +123,7 @@ class ChengyuBertTwoStageWindow(BertPreTrainedModel):
 
     """
 
-    def __init__(self, config, len_idiom_vocab, model_name='chengyubert-window'):
+    def __init__(self, config, len_idiom_vocab, model_name):
         super().__init__(config)
         self.model_name = model_name
         self.bert = BertModel(config)
@@ -198,7 +198,7 @@ class ChengyuBertTwoStageWindow(BertPreTrainedModel):
 
 
 class ChengyuBertTwoStageDual(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name='chengyubert-dual'):
+    def __init__(self, config, len_idiom_vocab, model_name):
         super().__init__(config)
         self.model_name = model_name
         self.bert = BertModel(config)

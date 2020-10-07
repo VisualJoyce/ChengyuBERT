@@ -18,7 +18,7 @@ if [ -z "$CUDA_VISIBLE_DEVICES" ]; then
   CUDA_VISIBLE_DEVICES='all'
   N_GPU=1
 else
-  N_GPU=`echo ${CUDA_VISIBLE_DEVICES} | tr -cd , | wc -c`
+  N_GPU=$(echo ${CUDA_VISIBLE_DEVICES} | tr -cd , | wc -c)
   N_GPU=$((N_GPU+1))
 fi
 

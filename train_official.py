@@ -280,20 +280,18 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model.startswith('bert-single'):
-        ModelCls = ChengyuBertSingle
-    elif opts.model.startswith('bert-dual'):
-        ModelCls = ChengyuBertDual
-    elif opts.model.startswith('bert-chid'):
-        ModelCls = BertForClozeChid
-    elif opts.model.startswith('chengyubert'):
-        ModelCls = ChengyuBertTwoStage
-    elif opts.model.startswith('chengyubert-dual'):
-        ModelCls = ChengyuBertTwoStageDual
+    model_candidates = {
+        'bert-chid': BertForClozeChid,
+        'chengyubert-single': ChengyuBertSingle,
+        'chengyubert-dual': ChengyuBertDual,
+        'chengyubert-twostage': ChengyuBertTwoStage,
+        'chengyubert-twostagedual': ChengyuBertTwoStageDual
+    }
+
+    if opts.model in model_candidates:
+        ModelCls = model_candidates[opts.model]
     else:
         raise ValueError(f"No such model [{opts.model}] supported!")
-
-    opts.use_vocab = True if 'vocab' in opts.model else False
 
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
@@ -422,8 +420,8 @@ if __name__ == "__main__":
     checkpoint = os.path.basename(os.path.dirname(args.checkpoint))
 
     args.output_dir = os.path.join(args.output_dir,
-                                   args.model,
                                    checkpoint,
+                                   f'{args.model}-{args.enlarged_candidates}',
                                    f'official_{args.num_train_steps}_{args.learning_rate}')
 
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/results'):
