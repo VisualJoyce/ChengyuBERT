@@ -33,6 +33,6 @@ docker run --gpus '"'device=$CUDA_VISIBLE_DEVICES'"' --ipc=host --rm -it \
   --mount src=$ANNOTATION_DIR,dst=/annotations,type=bind,readonly \
   --mount src="$TXT_DB",dst=/txt,type=bind \
   -e NVIDIA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
-  -w /src vimos/uniter_ve:latest \
+  -w /src visualjoyce/chengyubert:latest \
   bash -c " PYTHONPATH=/src ${MODEL_PARA} \\
     python train_${SUB_PROJECT}.py --config=$CONFIG_DIR/$CONFIG_FILE --mode infer"
