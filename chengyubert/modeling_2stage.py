@@ -5,7 +5,7 @@ import torch.nn as nn
 from transformers import BertModel, BertPreTrainedModel
 
 
-class ChengyuBert(BertPreTrainedModel):
+class ChengyuBertTwoStage(BertPreTrainedModel):
     r"""
         **labels**: (`optional`) ``torch.LongTensor`` of shape ``(batch_size,)``:
             Labels for computing the sequence classification/regression loss.
@@ -91,7 +91,7 @@ class ChengyuBert(BertPreTrainedModel):
             return logits, over_logits
 
 
-class ChengyuBertWindow(BertPreTrainedModel):
+class ChengyuBertTwoStageWindow(BertPreTrainedModel):
     r"""
         **labels**: (`optional`) ``torch.LongTensor`` of shape ``(batch_size,)``:
             Labels for computing the sequence classification/regression loss.
@@ -197,7 +197,7 @@ class ChengyuBertWindow(BertPreTrainedModel):
             return logits, over_logits
 
 
-class ChengyuBertDual(BertPreTrainedModel):
+class ChengyuBertTwoStageDual(BertPreTrainedModel):
     def __init__(self, config, len_idiom_vocab, model_name='chengyubert-dual'):
         super().__init__(config)
         self.model_name = model_name

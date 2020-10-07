@@ -5,7 +5,7 @@ import torch.nn as nn
 from transformers import BertModel, BertPreTrainedModel
 
 
-class BertForClozeSingle(BertPreTrainedModel):
+class ChengyuBertSingle(BertPreTrainedModel):
     def __init__(self, config, len_idiom_vocab, model_name='bertsingle'):
         super().__init__(config)
         self.model_name = model_name
@@ -61,7 +61,7 @@ class BertForClozeSingle(BertPreTrainedModel):
             return logits, over_logits
 
 
-class BertForClozeDual(BertPreTrainedModel):
+class ChengyuBertDual(BertPreTrainedModel):
     def __init__(self, config, len_idiom_vocab, model_name='bertdual'):
         super().__init__(config)
         self.model_name = model_name
