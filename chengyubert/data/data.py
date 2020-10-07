@@ -122,7 +122,7 @@ class ChengyuDataset(TxtTokLmdb):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
         self.tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
-        self.id2idiom = {v: k for k, v in opts.vocab.items()}
+        # self.id2idiom = {v: k for k, v in opts.vocab.items()}
 
         self.reverse_index = {int(k): v for k, v in json.load(open(f'{db_dir}/reverse_index.json')).items() if
                               int(k) < opts.len_idiom_vocab}
