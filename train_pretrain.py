@@ -1,22 +1,20 @@
 """
-Copyright (c) Microsoft Corporation.
+Copyright (c) VisualJoyce.
 Licensed under the MIT license.
-
-UNITER finetuning for NLVR2
 """
+import argparse
 import glob
+import os
+import re
 import shutil
 from collections import Counter
 from os.path import exists, join
+from time import time
 
-import argparse
 import numpy as np
-import os
-import re
 import torch
 from apex import amp
 from horovod import torch as hvd
-from time import time
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm

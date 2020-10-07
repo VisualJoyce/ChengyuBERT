@@ -1,19 +1,18 @@
 """
-Copyright (c) Visual Joyce.
+Copyright (c) VisualJoyce.
 Licensed under the MIT license.
 """
-import json
-from os.path import exists, join
-
 import argparse
-import numpy as np
+import json
 import os
-import re
+from os.path import exists, join
+from time import time
+
+import numpy as np
 import torch
 from apex import amp
 from horovod import torch as hvd
 from scipy.optimize import linear_sum_assignment
-from time import time
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
@@ -22,7 +21,9 @@ from transformers import BertConfig
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.modeling_bert import ChengyuBert, BertForClozeChid, BertForClozeSingle, BertForClozeDual
+from chengyubert.modeling_2stage import ChengyuBert
+from chengyubert.modeling_bert import BertForClozeChid
+from chengyubert.modeling_dual import BertForClozeSingle, BertForClozeDual
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,

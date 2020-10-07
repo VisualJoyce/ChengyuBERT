@@ -1,8 +1,6 @@
 """
-Copyright (c) Microsoft Corporation.
+Copyright (c) VisualJoyce.
 Licensed under the MIT license.
-
-UNITER finetuning for NLVR2
 """
 import argparse
 import glob
