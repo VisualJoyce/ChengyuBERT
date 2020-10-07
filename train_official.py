@@ -294,7 +294,8 @@ def main(opts):
         raise ValueError(f"No such model [{opts.model}] supported!")
 
     # data loaders
-    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
+    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls,
+                                             collate_fn, eval_collate_fn, opts, splits=['train', 'val'])
 
     # Prepare model
     bert_config = BertConfig.from_json_file(args.model_config)
@@ -310,9 +311,18 @@ def main(opts):
 
     if opts.rank == 0:
         opts.size = 1
+        splits = []
+        for k in dir(opts):
+            if k.endswith('_txt_db'):
+                split = k.replace('_txt_db', '')
+                if split not in ['train', 'val']:
+                    splits.append(split)
+        _, eval_dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls,
+                                                 collate_fn, eval_collate_fn,
+                                                 opts, splits=splits)
         best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
         model.load_state_dict(torch.load(best_pt), strict=False)
-        evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
+        evaluation(model, dict(filter(lambda x: x[0] != 'train', eval_dataloaders.items())), opts, best_ckpt)
 
 
 if __name__ == "__main__":

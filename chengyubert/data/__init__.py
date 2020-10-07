@@ -41,13 +41,15 @@ def create_contrastive_pair_dataloader(txt_path, batch_size, is_train,
 
 
 def create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts,
-                       pretrain_collate_fn=None, create_dataloader_fn_dict=None):
+                       pretrain_collate_fn=None, create_dataloader_fn_dict=None, splits=None):
     if create_dataloader_fn_dict is None:
         create_dataloader_fn_dict = {}
-    splits = []
-    for k in dir(opts):
-        if k.endswith('_txt_db'):
-            splits.append(k.replace('_txt_db', ''))
+
+    if splits is None:
+        splits = []
+        for k in dir(opts):
+            if k.endswith('_txt_db'):
+                splits.append(k.replace('_txt_db', ''))
 
     print(splits)
 
