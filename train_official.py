@@ -167,7 +167,7 @@ def validate(opts, model, val_loader, split, global_step):
     val_mrr = 0
     st = time()
     results = []
-    with tqdm(range(len(val_loader.dataset)), desc=f'{split}-{opts.rank}') as tq:
+    with tqdm(range(len(val_loader.dataset) // opts.size), desc=f'{split}-{opts.rank}') as tq:
         for i, batch in enumerate(val_loader):
             qids = batch['qids']
             targets = batch['targets']
