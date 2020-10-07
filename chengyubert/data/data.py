@@ -10,7 +10,7 @@ import torch
 from lz4.frame import compress, decompress
 from more_itertools import unzip
 from torch.nn.utils.rnn import pad_sequence
-from transformers import BertTokenizer
+from transformers import AutoTokenizer
 
 os.environ['TOKENIZERS_PARALLELISM'] = "false"
 
@@ -121,9 +121,7 @@ class ChengyuDataset(TxtTokLmdb):
     def __init__(self, db_dir, max_txt_len, opts):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
-        self.tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
-        # self.id2idiom = {v: k for k, v in opts.vocab.items()}
-
+        self.tokenizer = AutoTokenizer.from_pretrained(opts.pretrained_model_name_or_path)
         self.reverse_index = {int(k): v for k, v in json.load(open(f'{db_dir}/reverse_index.json')).items() if
                               int(k) < opts.len_idiom_vocab}
         self.allowed = set()
