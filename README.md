@@ -5,7 +5,7 @@ A repository for Chinese Idiom/Chengyu Recommendation.
 In this repo, we release code for the two papers 
 
 ## Data
-We used the newly released dataset ChID[https://github.com/zhengcj1/ChID-Dataset].
+We used the newly released dataset [ChID](https://github.com/zhengcj1/ChID-Dataset).
 Users of this repo are encouraged to read their paper to get detailed descriptions of each splits.
 
 ## Data Preprocessing
@@ -29,3 +29,6 @@ bash docker_train.sh official "MODEL=bert-dual-vocab"
 
 ## Acknowledgement
 The author of this repo learned a lot from the code of the following repos:
+* [🤗 Transformers](https://github.com/huggingface/transformers)
+* [UNITER](https://github.com/ChenRocks/UNITER)
+* [中文BERT-wwm](https://github.com/ymcui/Chinese-BERT-wwm)
