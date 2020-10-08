@@ -293,10 +293,6 @@ def main(opts):
     else:
         raise ValueError(f"No such model [{opts.model}] supported!")
 
-    # data loaders
-    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls,
-                                             collate_fn, eval_collate_fn, opts, splits=['train', 'val'])
-
     # Prepare model
     bert_config = BertConfig.from_json_file(args.model_config)
     model = ModelCls.from_pretrained(opts.checkpoint,
@@ -305,21 +301,22 @@ def main(opts):
     model.to(device)
 
     if opts.mode == 'train':
+        # data loaders
+        splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls,
+                                                 collate_fn, eval_collate_fn, opts, splits=['train', 'val'])
         best_ckpt = train(model, dataloaders, opts)
     else:
-        best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
-
-    if opts.rank == 0:
-        opts.size = 1
         splits = []
         for k in dir(opts):
             if k.endswith('_txt_db'):
                 split = k.replace('_txt_db', '')
-                if split not in ['train', 'val']:
+                if split not in ['train']:
                     splits.append(split)
         _, eval_dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls,
                                                  collate_fn, eval_collate_fn,
                                                  opts, splits=splits)
+
+        best_ckpt = get_best_ckpt(eval_dataloaders['val'].dataset.db_dir, opts)
         best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
         model.load_state_dict(torch.load(best_pt), strict=False)
         evaluation(model, eval_dataloaders, opts, best_ckpt)
