@@ -244,8 +244,10 @@ def get_best_ckpt(val_data_dir, opts):
 
     top_files = Counter()
     for f in prediction_files:
-        acc = judge(f, os.path.join(val_data_dir, 'answer.csv'))
-        top_files.update({f: acc})
+        m = pat.match(os.path.basename(f))
+        if m:
+            acc = judge(f, os.path.join(val_data_dir, 'answer.csv'))
+            top_files.update({f: acc})
 
     print(top_files)
 
