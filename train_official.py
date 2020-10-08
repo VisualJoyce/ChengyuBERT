@@ -322,9 +322,7 @@ def main(opts):
                                                  opts, splits=splits)
         best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
         model.load_state_dict(torch.load(best_pt), strict=False)
-        evaluation(model, dict(filter(lambda x: x[0] != 'train', eval_dataloaders.items())), opts, best_ckpt)
-
-    sum(all_gather_list(opts.rank))
+        evaluation(model, eval_dataloaders, opts, best_ckpt)
 
 
 if __name__ == "__main__":
