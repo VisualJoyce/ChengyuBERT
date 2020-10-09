@@ -51,7 +51,7 @@ def train(model, dataloaders, opts):
         pbar = tqdm(total=opts.num_train_steps, desc=opts.model)
         model_saver = ModelSaver(join(opts.output_dir, 'ckpt'))
         os.makedirs(join(opts.output_dir, 'results'), exist_ok=True)  # store val predictions
-        add_log_to_file(join(opts.output_dir, 'log', 'log.txt'))
+        add_log_to_file(join(opts.output_dir, 'log', f'{opts.mode}.log'))
     else:
         LOGGER.disabled = True
         pbar = NoOp()
