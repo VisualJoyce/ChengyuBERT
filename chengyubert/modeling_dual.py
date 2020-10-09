@@ -75,7 +75,7 @@ class ChengyuBertDual(BertPreTrainedModel):
     def vocab(self, blank_states):
         idiom_facial_embeddings = self.idiom_facial_embedding(self.enlarged_candidates)
         c_fo_logits = torch.einsum('bd,nd->bn', [blank_states, idiom_facial_embeddings])  # (b, 256, 10)
-        idiom_meaning_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        idiom_meaning_embeddings = self.idiom_meaning_embedding(self.enlarged_candidates)
         c_mo_logits = torch.einsum('bd,nd->bn', [blank_states, idiom_meaning_embeddings])  # (b, 256, 10)
         return c_mo_logits + c_fo_logits
 
