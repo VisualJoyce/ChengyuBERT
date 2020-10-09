@@ -10,14 +10,19 @@ Users of this repo are encouraged to read their paper to get detailed descriptio
 
 ## Data Preprocessing
 ```shell script
-CONFIG_FILE="train-balanced-contrastivepair-1gpu.json" bash preprocess.sh chengyu $PWD/data/annotations balanced_train
+CONFIG_FILE="train-balanced-contrastivepair-1gpu.json" bash preprocess.sh chengyu $PWD/data/annotations official_train
 ```
 
 ## Dual Embeddings
-### Training and Evaluation  
+### Training
 ```shell script
-CUDA_VISIBLE_DEVICES=7 CONFIG_FILE="train-official-bert-base-1gpu.json" \
-bash docker_train.sh official "MODEL=bert-dual-vocab"
+CUDA_VISIBLE_DEVICES=3,5 CONFIG_FILE="train-official-bert-base-1gpu.json" \
+bash docker_train.sh official "MODEL=chengyubert-dual ENLARGED_CANDIDATES=1 LEARNING_RATE=0.0001"
+```
+### Evaluation  
+```shell script
+CUDA_VISIBLE_DEVICES=3,5 CONFIG_FILE="train-official-bert-base-1gpu.json" \
+bash docker_infer.sh official "MODEL=chengyubert-dual ENLARGED_CANDIDATES=1 LEARNING_RATE=0.0001"
 ```
 
 ## Idiom-oriented Pretraning
