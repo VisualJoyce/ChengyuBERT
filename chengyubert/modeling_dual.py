@@ -55,7 +55,8 @@ class ChengyuBertSingle(BertPreTrainedModel):
             over_loss = loss_fct(over_logits, target.squeeze(1))
             return loss, over_loss
         else:
-            return logits, over_logits
+            cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
+            return logits, over_logits, cond_logits
 
 
 class ChengyuBertDual(BertPreTrainedModel):
@@ -113,4 +114,5 @@ class ChengyuBertDual(BertPreTrainedModel):
             over_loss = loss_fct(over_logits, target.squeeze(1))
             return loss, over_loss
         else:
-            return logits, over_logits
+            cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
+            return logits, over_logits, cond_logits

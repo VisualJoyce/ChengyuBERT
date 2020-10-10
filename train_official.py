@@ -175,11 +175,13 @@ def validate(opts, model, val_loader, split, global_step):
             del batch['targets']
             del batch['qids']
 
-            scores, over_logits = model(**batch, targets=None, compute_loss=False)
-            loss = F.cross_entropy(scores, targets, reduction='sum')
+            logits, over_logits, cond_logits = model(**batch, targets=None, compute_loss=False)
+            loss = F.cross_entropy(logits, targets, reduction='sum')
             val_loss += loss.item()
-            tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
-            max_prob, max_idx = scores.max(dim=-1, keepdim=False)
+
+            prediction = logits + cond_logits if opts.enlarged_candidates else logits
+            max_prob, max_idx = prediction.max(dim=-1, keepdim=False)
+            tot_score += torch.eq(max_idx, targets).sum().item()
             answers = max_idx.cpu().tolist()
 
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
