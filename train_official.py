@@ -47,11 +47,9 @@ def train(model, dataloaders, opts):
     global_step = 0
     if opts.rank == 0:
         save_training_meta(opts)
-        TB_LOGGER.create(join(opts.output_dir, 'log'))
         pbar = tqdm(total=opts.num_train_steps, desc=opts.model)
         model_saver = ModelSaver(join(opts.output_dir, 'ckpt'))
         os.makedirs(join(opts.output_dir, 'results'), exist_ok=True)  # store val predictions
-        add_log_to_file(join(opts.output_dir, 'log', f'{opts.mode}.log'))
     else:
         LOGGER.disabled = True
         pbar = NoOp()
@@ -278,6 +276,9 @@ def main(opts):
             opts.gradient_accumulation_steps))
 
     set_random_seed(opts.seed)
+    if opts.rank == 0:
+        TB_LOGGER.create(join(opts.output_dir, 'log'))
+        add_log_to_file(join(opts.output_dir, 'log', f'{opts.mode}.log'))
 
     DatasetCls = ChengyuDataset
     EvalDatasetCls = ChengyuEvalDataset
