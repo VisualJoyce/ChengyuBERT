@@ -389,7 +389,7 @@ def process_chid(opts, db, tokenizer):
 def main(opts):
     print(opts)
     dataset, split = opts.annotation.split('_')
-    txt_db = f'{split}_txt_db'
+    txt_db = 'val_txt_db' if split == 'dev' else f'{split}_txt_db'
     opts.output = getattr(opts, txt_db)
     # train_db_dir = os.path.join(os.path.dirname(opts.output), f'{source}_{split}.db')
     # meta = vars(opts)

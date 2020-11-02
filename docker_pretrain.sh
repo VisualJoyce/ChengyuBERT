@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
+cat smusg.logo
 WORK_DIR=$(readlink -f .)
 DATA_DIR=${WORK_DIR}/data
 SUB_PROJECT="$1"
