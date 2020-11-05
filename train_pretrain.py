@@ -13,8 +13,9 @@ from time import time
 
 import numpy as np
 import torch
-from apex import amp
 from horovod import torch as hvd
+# from apex import amp
+from torch.cuda.amp import autocast, GradScaler
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
@@ -23,7 +24,9 @@ from transformers import BertConfig
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.modeling_bert import ChengyuBertForPretrain, BertForPretrain
+from chengyubert.modeling_2stage import ChengyuBertTwoStagePretrain
+from chengyubert.modeling_bert import BertForPretrain
+from chengyubert.modeling_emb import ChengyuBertEmb
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -40,8 +43,7 @@ def train(model, dataloaders, opts):
 
     # Prepare optimizer
     optimizer = build_optimizer(model, opts)
-    model, optimizer = amp.initialize(model, optimizer,
-                                      enabled=opts.fp16, opt_level='O2')
+    scaler = GradScaler()
 
     global_step = 0
     if opts.rank == 0:
@@ -75,22 +77,22 @@ def train(model, dataloaders, opts):
     while True:
         for step, batch in enumerate(dataloaders['train']):
             targets = batch['targets']
+            del batch['gather_index']
             n_examples += targets.size(0)
 
-            loss = model(**batch, compute_loss=True)
-            loss = loss.mean()
+            with autocast():
+                loss = model(**batch, compute_loss=True)
+                loss = loss.mean()
 
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
-            with amp.scale_loss(loss, optimizer, delay_unscale=delay_unscale
-                                ) as scaled_loss:
-                scaled_loss.backward()
-                if not delay_unscale:
-                    # gather gradients from every processes
-                    # do this before unscaling to make sure every process uses
-                    # the same gradient scale
-                    grads = [p.grad.data for p in model.parameters()
-                             if p.requires_grad and p.grad is not None]
-                    all_reduce_and_rescale_tensors(grads, float(1))
+            scaler.scale(loss).backward()
+            if not delay_unscale:
+                # gather gradients from every processes
+                # do this before unscaling to make sure every process uses
+                # the same gradient scale
+                grads = [p.grad.data for p in model.parameters()
+                         if p.requires_grad and p.grad is not None]
+                all_reduce_and_rescale_tensors(grads, float(1))
 
             running_loss(loss.item())
 
@@ -112,10 +114,18 @@ def train(model, dataloaders, opts):
 
                 # update model params
                 if opts.grad_norm != -1:
-                    grad_norm = clip_grad_norm_(amp.master_params(optimizer),
-                                                opts.grad_norm)
+                    # Unscales the gradients of optimizer's assigned params in-place
+                    scaler.unscale_(optimizer)
+                    grad_norm = clip_grad_norm_(model.parameters(), opts.grad_norm)
                     TB_LOGGER.add_scalar('grad_norm', grad_norm, global_step)
-                optimizer.step()
+
+                # scaler.step() first unscales gradients of the optimizer's params.
+                # If gradients don't contain infs/NaNs, optimizer.step() is then called,
+                # otherwise, optimizer.step() is skipped.
+                scaler.step(optimizer)
+
+                # Updates the scale for next iteration.
+                scaler.update()
                 optimizer.zero_grad()
                 pbar.update(1)
 
@@ -161,6 +171,7 @@ def validate(opts, model, val_loader, split, global_step):
             targets = batch['targets']
             del batch['targets']
             del batch['qids']
+            del batch['gather_index']
 
             scores, over_logits = model(**batch, targets=None, compute_loss=False)
             loss = F.cross_entropy(scores, targets, reduction='sum')
@@ -213,6 +224,34 @@ def validate(opts, model, val_loader, split, global_step):
     return val_log
 
 
+def evaluate_embeddings_recall(embeddings, chengyu_vocab, chengyu_synonyms_dict):
+    iw = [k for k in embeddings]
+
+    vectors = np.array([embeddings[iw[i]] for i in range(len(iw))])
+    cnt = 0
+    recall_at_k = {}
+    recall_at_k_filter = {}
+    k_list = [1, 3, 5, 10]
+    total = len(chengyu_synonyms_dict)
+    for w, wl in tqdm(chengyu_synonyms_dict.items()):
+        if w in embeddings and any([x in embeddings for x in wl]):
+            cnt += 1
+            distances = np.linalg.norm(vectors - embeddings[w], axis=1).argsort()
+            distances_filter = [idx for idx in distances if iw[idx] in chengyu_vocab]
+            for k in k_list:
+                top_ids = distances[1:k + 1]
+                recall_at_k.setdefault(k, 0)
+                recall_at_k[k] += sum([1 for idx in top_ids if iw[idx] in wl])
+
+                top_ids = distances_filter[1:k + 1]
+                recall_at_k_filter.setdefault(k, 0)
+                recall_at_k_filter[k] += sum([1 for idx in top_ids if iw[idx] in wl])
+    LOGGER.info(cnt, ' word pairs appered in the training dictionary , total word pairs ', total)
+    LOGGER.info(recall_at_k)
+    LOGGER.info(recall_at_k_filter)
+    return cnt, total, recall_at_k, recall_at_k_filter
+
+
 def evaluation(model, data_loaders: dict, opts, global_step):
     model.eval()
     log = {}
@@ -220,6 +259,11 @@ def evaluation(model, data_loaders: dict, opts, global_step):
         LOGGER.info(f"Step {global_step}: start running "
                     f"validation on {split} split...")
         log.update(validate(opts, model, loader, split, global_step))
+        if split == 'val':
+            embeddings_np = model.idiom_embedding.weight.detach().cpu().numpy()
+            embeddings = {k: embeddings_np[v] for k, v in loader.dataset.chengyu_vocab.items()}
+            evaluate_embeddings_recall(embeddings, loader.dataset.chengyu_vocab,
+                                       loader.dataset.chengyu_synonyms_dict)
     TB_LOGGER.log_scaler_dict(log)
     model.train()
     return log
@@ -267,10 +311,12 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model.startswith('chengyubert'):
-        ModelCls = ChengyuBertForPretrain
-    elif opts.model.startswith('bert'):
+    if opts.model.startswith('chengyubert-2stage'):
+        ModelCls = ChengyuBertTwoStagePretrain
+    elif opts.model.startswith('chengyubert-dual'):
         ModelCls = BertForPretrain
+    elif opts.model.startswith('chengyubert-emb'):
+        ModelCls = ChengyuBertEmb
     else:
         raise ValueError('No such model for pretrain!')
 

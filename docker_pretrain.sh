@@ -8,7 +8,7 @@ CONFIG_DIR=/src/config
 TXT_DB=${DATA_DIR}/txt_db
 OUTPUT=${DATA_DIR}/output
 PRETRAIN_DIR=${DATA_DIR}/pretrained
-ANNOTATION_DIR=${DATA_DIR}/annotation
+ANNOTATION_DIR=${DATA_DIR}/annotations
 
 if [ -z "$MODEL_PARA" ]; then
   MODEL_PARA=""
@@ -42,9 +42,9 @@ docker run --gpus '"'device=$CUDA_VISIBLE_DEVICES'"' --ipc=host --rm -it \
   --mount src="${WORK_DIR}",dst=/src,type=bind \
   --mount src="$OUTPUT",dst=/storage,type=bind \
   --mount src="$PRETRAIN_DIR",dst=/pretrain,type=bind,readonly \
-  --mount src=$ANNOTATION_DIR,dst=/annotation,type=bind,readonly \
+  --mount src=$ANNOTATION_DIR,dst=/annotations,type=bind,readonly \
   --mount src="$TXT_DB",dst=/txt,type=bind \
   -e NVIDIA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
   -w /src visualjoyce/chengyubert:latest \
   bash -c " PYTHONPATH=/src ${MODEL_PARA} ${HOROVOD_PARA} \\
-    python pretrain_${SUB_PROJECT}.py --config=$CONFIG_DIR/$CONFIG_FILE"
+    python train_${SUB_PROJECT}.py --config=$CONFIG_DIR/$CONFIG_FILE"
