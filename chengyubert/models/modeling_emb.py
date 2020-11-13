@@ -170,7 +170,7 @@ class ChengyuBertContrastive(BertPreTrainedModel):
 
         emb_u = self.project(cls_states, blank_states)
 
-        target_ids = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
+        target_ids = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1)).squeeze(1)
         emb_v = self.idiom_embedding(target_ids)  # (b, 768)
 
         if compute_loss:
