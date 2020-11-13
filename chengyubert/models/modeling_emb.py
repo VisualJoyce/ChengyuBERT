@@ -128,7 +128,7 @@ class ChengyuBertContrastive(BertPreTrainedModel):
         self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
 
         # projection MLP
-        if self.model_name.startswith('chengyubert-mask-ns'):
+        if self.model_name.startswith('chengyubert-mask-contrastive'):
             self.project_linear = nn.Linear(config.hidden_size, chengyu_emb_dim)
         else:
             self.project_linear = nn.Linear(config.hidden_size * 4, chengyu_emb_dim)
@@ -142,7 +142,7 @@ class ChengyuBertContrastive(BertPreTrainedModel):
         self.init_weights()
 
     def project(self, cls_states, blank_states):
-        if self.model_name.startswith('chengyubert-mask-ns'):
+        if self.model_name.startswith('chengyubert-mask-contrastive'):
             return self.project_linear(blank_states)
         else:
             return self.project_linear(torch.cat([blank_states,
