@@ -26,7 +26,7 @@ from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate
 from chengyubert.data.data import judge
 from chengyubert.models.modeling_2stage import ChengyuBertTwoStagePretrain
 from chengyubert.models.modeling_bert import BertForPretrain
-from chengyubert.models.modeling_emb import ChengyuBertEmb, ChengyuBertSGNS
+from chengyubert.models.modeling_emb import ChengyuBertEmb, ChengyuBertSGNS, ChengyuBertContrastive
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -316,6 +316,8 @@ def main(opts):
         ModelCls = ChengyuBertEmb
     elif opts.model.startswith(('chengyubert-mask-ns', 'chengyubert-cls-ns')):
         ModelCls = ChengyuBertSGNS
+    elif opts.model.startswith(('chengyubert-mask-contrastive', 'chengyubert-cls-contrastive')):
+        ModelCls = ChengyuBertContrastive
     else:
         raise ValueError('No such model for pretrain!')
 
