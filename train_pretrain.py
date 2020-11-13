@@ -15,6 +15,7 @@ import numpy as np
 import torch
 from horovod import torch as hvd
 # from apex import amp
+from sklearn.metrics.pairwise import cosine_similarity
 from torch.cuda.amp import autocast, GradScaler
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
@@ -229,27 +230,30 @@ def evaluate_embeddings_recall(embeddings, chengyu_vocab, chengyu_synonyms_dict)
 
     vectors = np.array([embeddings[iw[i]] for i in range(len(iw))])
     cnt = 0
-    recall_at_k = {}
-    recall_at_k_filter = {}
+    recall_at_k_cosine = {}
+    recall_at_k_norm = {}
     k_list = [1, 3, 5, 10]
     total = len(chengyu_synonyms_dict)
     for w, wl in tqdm(chengyu_synonyms_dict.items()):
         if w in embeddings and any([x in embeddings for x in wl]):
             cnt += 1
-            distances = np.linalg.norm(vectors - embeddings[w], axis=1).argsort()
-            distances_filter = [idx for idx in distances if iw[idx] in chengyu_vocab]
-            for k in k_list:
-                top_ids = distances[1:k + 1]
-                recall_at_k.setdefault(k, 0)
-                recall_at_k[k] += sum([1 for idx in top_ids if iw[idx] in wl])
 
-                top_ids = distances_filter[1:k + 1]
-                recall_at_k_filter.setdefault(k, 0)
-                recall_at_k_filter[k] += sum([1 for idx in top_ids if iw[idx] in wl])
+            cosine_distances = (1 - cosine_similarity(embeddings[w].reshape(1, -1), vectors)[0]).argsort()
+            norm_distances = np.linalg.norm(vectors - embeddings[w], axis=1).argsort()
+            cids = [idx for idx in cosine_distances if iw[idx] in chengyu_vocab]
+            nids = [idx for idx in norm_distances if iw[idx] in chengyu_vocab]
+            for k in k_list:
+                top_ids = cids[1:k + 1]
+                recall_at_k_cosine.setdefault(k, 0)
+                recall_at_k_cosine[k] += sum([1 for idx in top_ids if iw[idx] in wl])
+
+                top_ids = nids[1:k + 1]
+                recall_at_k_norm.setdefault(k, 0)
+                recall_at_k_norm[k] += sum([1 for idx in top_ids if iw[idx] in wl])
     LOGGER.info(f'{cnt} word pairs appeared in the training dictionary , total word pairs {total}')
-    LOGGER.info(recall_at_k)
-    LOGGER.info(recall_at_k_filter)
-    return cnt, total, recall_at_k, recall_at_k_filter
+    LOGGER.info(recall_at_k_cosine)
+    LOGGER.info(recall_at_k_norm)
+    return cnt, total, recall_at_k_cosine, recall_at_k_norm
 
 
 def evaluation(model, data_loaders: dict, opts, global_step):
