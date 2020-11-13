@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import sys
 from contextlib import contextmanager
 
@@ -122,6 +123,7 @@ class ChengyuDataset(TxtTokLmdb):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
         self.chengyu_vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
+        self.idiom_ids = list(range(opts.len_idiom_vocab))
         with open('/annotations/synonyms/chengyu_synonyms_recall_filter.json') as f:
             self.chengyu_synonyms_dict = json.load(f)
         self.tokenizer = AutoTokenizer.from_pretrained(opts.pretrained_model_name_or_path)
@@ -171,6 +173,13 @@ class ChengyuDataset(TxtTokLmdb):
         example = self.db[id_]
         options = example['options']
         target = example['target']
+        if len(options) == 0:
+            idiom = example['idiom']
+            options = random.sample(self.idiom_ids, k=7)
+            if idiom not in options:
+                options[-1] = idiom
+            random.shuffle(options)
+            target = options.index(idiom)
 
         context_ids = example['input_ids'][st: ed]
         if hasattr(self.config, 'structured') and self.config.structured:

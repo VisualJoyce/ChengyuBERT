@@ -24,9 +24,9 @@ from transformers import BertConfig
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.modeling_2stage import ChengyuBertTwoStagePretrain
-from chengyubert.modeling_bert import BertForPretrain
-from chengyubert.modeling_emb import ChengyuBertEmb
+from chengyubert.models.modeling_2stage import ChengyuBertTwoStagePretrain
+from chengyubert.models.modeling_bert import BertForPretrain
+from chengyubert.models.modeling_emb import ChengyuBertEmb, ChengyuBertSGNS
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -246,7 +246,7 @@ def evaluate_embeddings_recall(embeddings, chengyu_vocab, chengyu_synonyms_dict)
                 top_ids = distances_filter[1:k + 1]
                 recall_at_k_filter.setdefault(k, 0)
                 recall_at_k_filter[k] += sum([1 for idx in top_ids if iw[idx] in wl])
-    LOGGER.info(cnt, ' word pairs appered in the training dictionary , total word pairs ', total)
+    LOGGER.info(f'{cnt} word pairs appeared in the training dictionary , total word pairs {total}')
     LOGGER.info(recall_at_k)
     LOGGER.info(recall_at_k_filter)
     return cnt, total, recall_at_k, recall_at_k_filter
@@ -287,12 +287,9 @@ def get_best_ckpt(val_data_dir, opts):
 
 
 def main(opts):
-    hvd.init()
-    n_gpu = hvd.size()
     device = torch.device("cuda", hvd.local_rank())
     torch.cuda.set_device(hvd.local_rank())
     rank = hvd.rank()
-    opts.n_gpu = n_gpu
     opts.rank = rank
     opts.size = hvd.size()
     LOGGER.info("device: {} n_gpu: {}, rank: {}, "
@@ -317,6 +314,8 @@ def main(opts):
         ModelCls = BertForPretrain
     elif opts.model.startswith('chengyubert-emb'):
         ModelCls = ChengyuBertEmb
+    elif opts.model.startswith(('chengyubert-mask-ns', 'chengyubert-cls-ns')):
+        ModelCls = ChengyuBertSGNS
     else:
         raise ValueError('No such model for pretrain!')
 
@@ -446,10 +445,14 @@ if __name__ == "__main__":
 
     checkpoint = os.path.basename(os.path.dirname(args.checkpoint))
 
+    hvd.init()
+    n_gpu = hvd.size()
+    args.n_gpu = n_gpu
+
     args.output_dir = os.path.join(args.output_dir,
                                    args.model,
                                    checkpoint,
-                                   f'pretrain_{args.num_train_steps}_{args.learning_rate}')
+                                   f'pretrain_{args.n_gpu}_{args.num_train_steps}_{args.learning_rate}')
 
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/results'):
         if args.mode == 'train':

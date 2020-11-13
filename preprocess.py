@@ -8,7 +8,7 @@ from abc import abstractmethod
 import pandas as pda
 from cytoolz import curry
 from tqdm import tqdm
-from transformers import BertTokenizer
+from transformers import AutoTokenizer
 
 from chengyubert.data import open_lmdb
 from chengyubert.data.data import chengyu_process
@@ -20,11 +20,13 @@ class Example(object):
                  idx,
                  tag,
                  context,
+                 idiom,
                  options,
                  label=None):
         self.idx = idx
         self.tag = tag
         self.context = context
+        self.idiom = idiom
         self.options = options
         self.label = label
 
@@ -37,7 +39,7 @@ class Example(object):
         s += "tag: %s" % (self.tag)
         s += ", context: %s" % (self.context)
         s += ", options: [%s]" % (", ".join(self.options))
-        if self.label is not None:
+        if self.label is not None and self.options:
             s += ", answer: %s" % self.options[self.label]
         return s
 
@@ -113,8 +115,6 @@ class ChidParser(object):
         return os.path.join(self.data_dir, '{}_answer.csv'.format(self.split))
 
     def read_examples(self):
-        idioms = list(self.vocab.keys())
-
         with tqdm(total=os.path.getsize(self.data_file), desc=self.split,
                   bar_format="{desc}: {percentage:.3f}%|{bar}| {n:.2f}/{total_fmt} [{elapsed}<{remaining}]") as pbar:
             with open(self.data_file, mode='rb') as f:
@@ -122,34 +122,30 @@ class ChidParser(object):
                     pbar.update(len(data_str))
                     data = eval(data_str.decode('utf8'))
                     context = data['content']
-                    if 'candidates' not in data:
-                        k_i = data['groundTruth'][0]
-                        if k_i not in idioms and not self.config.use_xinhua:
-                            continue
-
-                        candidates = random.sample(idioms, 6) + [k_i]
-                        random.shuffle(candidates)
-                        data['candidates'] = [candidates]
-
-                    for i, (tag, label, options) in enumerate(
-                            zip(re.finditer("#idiom#", context), data['groundTruth'], data['candidates'])):
-                        if len(options) != 7:
-                            print(data)
-                            assert len(options) == 7
-                        tmp_context = context
-                        ind = options.index(label)
+                    for i, (tag, idiom) in enumerate(zip(re.finditer("#idiom#", context), data['groundTruth'])):
                         new_tag = idx * 20 + i
                         tag_str = "#idiom%06d#" % new_tag
 
+                        tmp_context = context
                         tmp_context = "".join((tmp_context[:tag.start(0)], tag_str, tmp_context[tag.end(0):]))
                         tmp_context = tmp_context.replace("#idiom#", "[UNK]")
+
+                        if 'candidates' not in data:
+                            options, label = [], -1
+                        else:
+                            options = data['candidates'][i]
+                            if len(options) != 7:
+                                print(data)
+                                assert len(options) == 7
+                            label = options.index(idiom)
 
                         yield Example(
                             idx=new_tag,
                             tag=tag_str,
                             context=tmp_context,
+                            idiom=idiom,
                             options=options,
-                            label=ind
+                            label=label
                         )
 
 
@@ -320,6 +316,7 @@ class ChidCompetitionDataset(object):
                                 idx=idx,
                                 tag=tag,
                                 context=tmp_context,
+                                idiom=options[ans_dict[tag]],
                                 options=options,
                                 label=ans_dict[tag]
                             )
@@ -348,12 +345,10 @@ def process_chid(opts, db, tokenizer):
 
     def parse_example(example):
         input_ids, position = tokenize(tokenizer, example)
-
-        id_ = example.tag
-        id2len[id_] = len(input_ids)
-        db[id_] = {
+        return {
             'input_ids': input_ids,
             'position': position,
+            'idiom': parser.vocab[example.idiom],
             'target': example.label,
             'options': [parser.vocab[o] for o in example.options]
         }
@@ -363,11 +358,14 @@ def process_chid(opts, db, tokenizer):
     id2eid = {}
     reverse_index = {}
     for ex in parser.read_examples():
-        parse_example(ex)
+        exa = parse_example(ex)
+
+        db[ex.tag] = exa
+        id2len[ex.tag] = len(exa['input_ids'])
         ans_dict[ex.tag] = ex.label
         id2eid[ex.tag] = ex.idx
 
-        idiom_id = parser.vocab[ex.options[ex.label]]
+        idiom_id = parser.vocab[ex.idiom]
         reverse_index.setdefault(idiom_id, [])
         reverse_index[idiom_id].append(ex.tag)
 
@@ -389,12 +387,17 @@ def process_chid(opts, db, tokenizer):
 def main(opts):
     print(opts)
     dataset, split = opts.annotation.split('_')
-    txt_db = 'val_txt_db' if split == 'dev' else f'{split}_txt_db'
+    if split == 'dev':
+        txt_db = 'val_txt_db'
+    elif split == 'pretrain':
+        txt_db = 'train_txt_db'
+    else:
+        txt_db = f'{split}_txt_db'
     opts.output = getattr(opts, txt_db)
     # train_db_dir = os.path.join(os.path.dirname(opts.output), f'{source}_{split}.db')
     # meta = vars(opts)
     # meta['tokenizer'] = opts.toker
-    tokenizer = BertTokenizer.from_pretrained(os.path.dirname(opts.checkpoint))
+    tokenizer = AutoTokenizer.from_pretrained(opts.pretrained_model_name_or_path, use_fast=True)
 
     open_db = curry(open_lmdb, opts.output, readonly=False)
     with open_db() as db:
