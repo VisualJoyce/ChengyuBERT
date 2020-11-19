@@ -56,6 +56,7 @@ class ChengyuBertSGNS(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, chengyu_emb_dim)
+        self.LayerNorm = nn.LayerNorm(chengyu_emb_dim, eps=config.layer_norm_eps)
         if self.model_name.startswith('chengyubert-mask-ns'):
             self.project_linear = nn.Linear(config.hidden_size, chengyu_emb_dim)
         else:
@@ -73,7 +74,7 @@ class ChengyuBertSGNS(BertPreTrainedModel):
                                                   blank_states - cls_states], dim=-1))
 
     def vocab(self, over_states):
-        idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        idiom_embeddings = self.LayerNorm(self.idiom_embedding(self.enlarged_candidates))
         c_mo_logits = torch.einsum('bd,nd->bn', [over_states, idiom_embeddings])  # (b, 256, 10)
         return c_mo_logits
 
@@ -90,13 +91,13 @@ class ChengyuBertSGNS(BertPreTrainedModel):
 
         if compute_loss:
             target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
-            emb_v = self.idiom_embedding(target.squeeze(1))
+            emb_v = self.LayerNorm(self.idiom_embedding(target.squeeze(1)))
 
             bs, num = option_ids.size()
 
             negative_samples = torch.masked_select(option_ids,
                                                    option_ids != target.repeat([1, num])).view(bs, -1)
-            emb_neg_v = self.idiom_embedding(negative_samples)
+            emb_neg_v = self.LayerNorm(self.idiom_embedding(negative_samples))
 
             score = torch.sum(torch.mul(emb_u, emb_v), dim=1)
             # score = torch.clamp(score, max=10, min=-10)
@@ -125,6 +126,7 @@ class ChengyuBertContrastive(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, chengyu_emb_dim)
+        self.LayerNorm = nn.LayerNorm(chengyu_emb_dim, eps=config.layer_norm_eps)
         self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
 
         # projection MLP
@@ -134,7 +136,7 @@ class ChengyuBertContrastive(BertPreTrainedModel):
             self.project_linear = nn.Linear(config.hidden_size * 4, chengyu_emb_dim)
 
         # projection MLP
-        self.projection = nn.Sequential(nn.Linear(config.hidden_size, chengyu_emb_dim, bias=False),
+        self.projection = nn.Sequential(nn.Linear(chengyu_emb_dim, chengyu_emb_dim, bias=False),
                                         nn.LayerNorm(chengyu_emb_dim),
                                         nn.ReLU(inplace=True),
                                         nn.Linear(chengyu_emb_dim, contrastive_dim, bias=True))
@@ -151,7 +153,7 @@ class ChengyuBertContrastive(BertPreTrainedModel):
                                                   blank_states - cls_states], dim=-1))
 
     def vocab(self, over_states):
-        idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        idiom_embeddings = self.LayerNorm(self.idiom_embedding(self.enlarged_candidates))
         c_mo_logits = torch.einsum('bd,nd->bn', [over_states, idiom_embeddings])  # (b, 256, 10)
         return c_mo_logits
 
@@ -172,9 +174,9 @@ class ChengyuBertContrastive(BertPreTrainedModel):
 
         if compute_loss:
             target_ids = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1)).squeeze(1)
-            emb_v = self.idiom_embedding(target_ids)  # (b, 768)
+            emb_v = self.LayerNorm(self.idiom_embedding(target_ids))  # (b, 768)
             contrastive_loss_fct = ContrastiveLoss(tau=1)
-            return contrastive_loss_fct(emb_u, emb_v)
+            return contrastive_loss_fct(self.projection(emb_u), self.projection(emb_v))
         else:
             over_logits = self.vocab(emb_u)
             cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
