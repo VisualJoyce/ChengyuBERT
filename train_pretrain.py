@@ -263,7 +263,7 @@ def evaluation(model, data_loaders: dict, opts, global_step):
         LOGGER.info(f"Step {global_step}: start running "
                     f"validation on {split} split...")
         log.update(validate(opts, model, loader, split, global_step))
-        if split == 'val':
+        if split == 'val' and opts.evaluate_embedding:
             embeddings_np = model.idiom_embedding.weight.detach().cpu().numpy()
             embeddings = {k: embeddings_np[v] for k, v in loader.dataset.chengyu_vocab.items()}
             evaluate_embeddings_recall(embeddings, loader.dataset.chengyu_vocab,
@@ -311,6 +311,7 @@ def main(opts):
     EvalDatasetCls = ChengyuEvalDataset
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
+    opts.evaluate_embedding = False
 
     if opts.model.startswith('chengyubert-2stage'):
         ModelCls = ChengyuBertTwoStagePretrain
@@ -318,10 +319,13 @@ def main(opts):
         ModelCls = BertForPretrain
     elif opts.model.startswith('chengyubert-emb'):
         ModelCls = ChengyuBertEmb
+        opts.evaluate_embedding = True
     elif opts.model.startswith(('chengyubert-mask-ns', 'chengyubert-cls-ns')):
         ModelCls = ChengyuBertSGNS
+        opts.evaluate_embedding = True
     elif opts.model.startswith(('chengyubert-mask-contrastive', 'chengyubert-cls-contrastive')):
         ModelCls = ChengyuBertContrastive
+        opts.evaluate_embedding = True
     else:
         raise ValueError('No such model for pretrain!')
 
