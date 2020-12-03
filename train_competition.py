@@ -407,13 +407,11 @@ if __name__ == "__main__":
 
     args = parse_with_config(parser)
 
-    checkpoint = os.path.basename(os.path.dirname(args.checkpoint))
-
     args.output_dir = os.path.join(args.output_dir,
                                    args.model,
-                                   checkpoint,
+                                   os.path.basename(args.pretrained_model_name_or_path),
                                    f'competition_{args.num_train_steps}_{args.learning_rate}')
-    if exists(args.output_dir) and os.listdir(f'{args.output_dir}/results'):
+    if exists(args.output_dir) and os.listdir(f'{args.output_dir}/ckpt'):
         raise ValueError("Output directory ({}) already exists and is not "
                          "empty.".format(args.output_dir))
 
