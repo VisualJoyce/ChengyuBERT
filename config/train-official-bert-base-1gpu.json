@@ -5,8 +5,6 @@
     "out_txt_db": "/txt/official_out.db",
     "sim_txt_db": "/txt/official_sim.db",
     "ran_txt_db": "/txt/official_ran.db",
-    "checkpoint": "/pretrain/wwm_ext/pytorch_model.bin",
-    "model_config": "/pretrain/wwm_ext/config.json",
     "pretrained_model_name_or_path": "/pretrain/wwm_ext",
     "model": "chengyubert-dual",
     "output_dir": "/storage",
