@@ -7,7 +7,7 @@ from transformers import BertModel, BertPreTrainedModel
 from chengyubert.models import register_model
 
 
-@register_model('chengyubert-2stage')
+@register_model('chengyubert-single')
 class ChengyuBertSingle(BertPreTrainedModel):
     def __init__(self, config, len_idiom_vocab, model_name='bertsingle'):
         super().__init__(config)
@@ -62,6 +62,7 @@ class ChengyuBertSingle(BertPreTrainedModel):
             return logits, over_logits, cond_logits
 
 
+@register_model('chengyubert-dual')
 class ChengyuBertDual(BertPreTrainedModel):
     def __init__(self, config, len_idiom_vocab, model_name='bertdual'):
         super().__init__(config)
