@@ -20,14 +20,11 @@ from torch.cuda.amp import autocast, GradScaler
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
-from transformers import BertConfig
 
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.models.modeling_2stage import ChengyuBertTwoStagePretrain
-from chengyubert.models.modeling_bert import BertForPretrain
-from chengyubert.models.modeling_emb import ChengyuBertEmb, ChengyuBertSGNS, ChengyuBertContrastive
+from chengyubert.models import build_model
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -134,9 +131,10 @@ def train(model, dataloaders, opts):
                     # monitor training throughput
                     tot_ex = sum(all_gather_list(n_examples))
                     ex_per_sec = int(tot_ex / (time() - start))
-                    LOGGER.info(f'Step {global_step}: '
+                    LOGGER.info(f'{opts.model}: {n_epoch}-{global_step}: '
                                 f'{tot_ex} examples trained at '
-                                f'{ex_per_sec} ex/s')
+                                f'{ex_per_sec} ex/s '
+                                f'best_acc-{best_eval * 100:.2f}')
                     TB_LOGGER.add_scalar('perf/ex_per_s',
                                          ex_per_sec, global_step)
 
@@ -313,30 +311,11 @@ def main(opts):
     eval_collate_fn = chengyu_eval_collate
     opts.evaluate_embedding = False
 
-    if opts.model.startswith('chengyubert-2stage'):
-        ModelCls = ChengyuBertTwoStagePretrain
-    elif opts.model.startswith('chengyubert-dual'):
-        ModelCls = BertForPretrain
-    elif opts.model.startswith('chengyubert-emb'):
-        ModelCls = ChengyuBertEmb
-        opts.evaluate_embedding = True
-    elif opts.model.startswith(('chengyubert-mask-ns', 'chengyubert-cls-ns')):
-        ModelCls = ChengyuBertSGNS
-        opts.evaluate_embedding = True
-    elif opts.model.startswith(('chengyubert-mask-contrastive', 'chengyubert-cls-contrastive')):
-        ModelCls = ChengyuBertContrastive
-        opts.evaluate_embedding = True
-    else:
-        raise ValueError('No such model for pretrain!')
-
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
 
     # Prepare model
-    bert_config = BertConfig.from_json_file(args.model_config)
-    model = ModelCls.from_pretrained(opts.checkpoint,
-                                     config=bert_config,
-                                     len_idiom_vocab=opts.len_idiom_vocab, model_name=opts.model)
+    model = build_model(opts)
     model.to(device)
 
     if opts.mode == 'train':

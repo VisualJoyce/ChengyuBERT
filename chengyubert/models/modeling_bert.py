@@ -4,8 +4,11 @@ import torch
 import torch.nn as nn
 from transformers import BertModel, BertPreTrainedModel
 
+from chengyubert.models import register_model
 
-class BertForClozeChid(BertPreTrainedModel):
+
+@register_model('chengyubert-cloze')
+class ChengyuBertForClozeChid(BertPreTrainedModel):
     """BERT model for multiple choice tasks.
     This module is composed of the BERT model with a linear layer on top of
     the pooled output.
@@ -35,7 +38,7 @@ class BertForClozeChid(BertPreTrainedModel):
     """
 
     def __init__(self, config, len_idiom_vocab, model_name='bertchid'):
-        super(BertForClozeChid, self).__init__(config)
+        super().__init__(config)
         self.model_name = model_name
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -81,6 +84,7 @@ class BertForClozeChid(BertPreTrainedModel):
             return reshaped_logits, over_logits
 
 
+@register_model('chengyubert-choice')
 class BertForClozeChoice(BertPreTrainedModel):
     r"""
         **labels**: (`optional`) ``torch.LongTensor`` of shape ``(batch_size,)``:

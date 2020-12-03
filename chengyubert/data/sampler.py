@@ -8,7 +8,6 @@ import random
 from collections import deque, Counter
 
 from cytoolz import partition_all
-from more_itertools import flatten
 from torch.utils.data import Sampler
 
 
@@ -33,18 +32,18 @@ class TokenBucketSampler(Sampler):
         buckets = [sorted(ids[i:i + self._bucket_size],
                           key=self._sort_fn, reverse=True)
                    for i in range(0, len(ids), self._bucket_size)]
-        # fill batches until max_token (include padding)
         batches = []
         for bucket in buckets:
             max_len = 0
             batch_indices = []
+
+            # Partition the bucket into tuples of length at most self._size_mul
             for indices in partition_all(self._size_mul, bucket):
                 max_len = max(max_len, max(self._lens[i] for i in indices))
-                if (max_len * (len(batch_indices) + self._size_mul)
-                        > self._max_tok):
+                # fill batches until max_token (include padding)
+                if max_len * (len(batch_indices) + self._size_mul) > self._max_tok:
                     if not batch_indices:
-                        raise ValueError(
-                            "max_tokens too small / max_seq_len too long")
+                        raise ValueError("max_tokens too small / max_seq_len too long")
                     assert len(batch_indices) % self._size_mul == 0
                     batches.append(batch_indices)
                     batch_indices = list(indices)

@@ -18,14 +18,11 @@ from torch.cuda.amp import autocast, GradScaler
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
-from transformers import BertConfig
 
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.models.modeling_2stage import ChengyuBertTwoStage, ChengyuBertTwoStageDual
-from chengyubert.models.modeling_bert import BertForClozeChid
-from chengyubert.models.modeling_dual import ChengyuBertSingle, ChengyuBertDual
+from chengyubert.models import build_model
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -133,9 +130,10 @@ def train(model, dataloaders, opts):
                     # monitor training throughput
                     tot_ex = sum(all_gather_list(n_examples))
                     ex_per_sec = int(tot_ex / (time() - start))
-                    LOGGER.info(f'Step {global_step}: '
+                    LOGGER.info(f'{opts.model}: {n_epoch}-{global_step}: '
                                 f'{tot_ex} examples trained at '
-                                f'{ex_per_sec} ex/s')
+                                f'{ex_per_sec} ex/s '
+                                f'best_acc-{best_eval * 100:.2f}')
                     TB_LOGGER.add_scalar('perf/ex_per_s',
                                          ex_per_sec, global_step)
 
@@ -285,24 +283,8 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    model_candidates = {
-        'bert-chid': BertForClozeChid,
-        'chengyubert-single': ChengyuBertSingle,
-        'chengyubert-dual': ChengyuBertDual,
-        'chengyubert-twostage': ChengyuBertTwoStage,
-        'chengyubert-twostagedual': ChengyuBertTwoStageDual
-    }
-
-    if opts.model in model_candidates:
-        ModelCls = model_candidates[opts.model]
-    else:
-        raise ValueError(f"No such model [{opts.model}] supported!")
-
     # Prepare model
-    bert_config = BertConfig.from_json_file(args.model_config)
-    model = ModelCls.from_pretrained(opts.checkpoint,
-                                     config=bert_config,
-                                     len_idiom_vocab=opts.len_idiom_vocab, model_name=opts.model)
+    model = build_model(opts)
     model.to(device)
 
     if opts.mode == 'train':

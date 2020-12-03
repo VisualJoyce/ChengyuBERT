@@ -10,20 +10,17 @@ from time import time
 
 import numpy as np
 import torch
-from apex import amp
 from horovod import torch as hvd
 from scipy.optimize import linear_sum_assignment
+from torch.cuda.amp import autocast, GradScaler
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
-from transformers import BertConfig
 
 from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
     create_dataloaders
 from chengyubert.data.data import judge
-from chengyubert.models.modeling_2stage import ChengyuBertTwoStage
-from chengyubert.models.modeling_bert import BertForClozeChid
-from chengyubert.models.modeling_dual import ChengyuBertSingle, ChengyuBertDual
+from chengyubert.models import build_model
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -57,27 +54,11 @@ def main(opts):
     collate_fn = chengyu_collate
     eval_collate_fn = chengyu_eval_collate
 
-    if opts.model.startswith('bert-single'):
-        ModelCls = ChengyuBertSingle
-    elif opts.model.startswith('bert-dual'):
-        ModelCls = ChengyuBertDual
-    elif opts.model.startswith('bert-chid'):
-        ModelCls = BertForClozeChid
-    elif opts.model.startswith('chengyubert'):
-        ModelCls = ChengyuBertTwoStage
-    else:
-        raise ValueError(f"No such model [{opts.model}] supported!")
-
-    opts.use_vocab = True if 'vocab' in opts.model else False
-
     # data loaders
     splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
 
     # Prepare model
-    bert_config = BertConfig.from_json_file(args.model_config)
-    model = ModelCls.from_pretrained(opts.checkpoint,
-                                     config=bert_config,
-                                     len_idiom_vocab=opts.len_idiom_vocab, model_name=opts.model)
+    model = build_model(opts)
     model.to(device)
     # make sure every process has same model parameters in the beginning
     broadcast_tensors([p.data for p in model.parameters()], 0)
@@ -85,8 +66,7 @@ def main(opts):
 
     # Prepare optimizer
     optimizer = build_optimizer(model, opts)
-    model, optimizer = amp.initialize(model, optimizer,
-                                      enabled=opts.fp16, opt_level='O2')
+    scaler = GradScaler()
 
     global_step = 0
     if rank == 0:
@@ -122,23 +102,22 @@ def main(opts):
             targets = batch['targets']
             n_examples += targets.size(0)
 
-            loss, vocab_loss = model(**batch, compute_loss=True)
-            if opts.use_vocab:
-                loss += vocab_loss
+            with autocast():
+                loss, vocab_loss = model(**batch, compute_loss=True)
+                if opts.enlarged_candidates:
+                    loss += vocab_loss
 
             loss = loss.mean()
 
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
-            with amp.scale_loss(loss, optimizer, delay_unscale=delay_unscale
-                                ) as scaled_loss:
-                scaled_loss.backward()
-                if not delay_unscale:
-                    # gather gradients from every processes
-                    # do this before unscaling to make sure every process uses
-                    # the same gradient scale
-                    grads = [p.grad.data for p in model.parameters()
-                             if p.requires_grad and p.grad is not None]
-                    all_reduce_and_rescale_tensors(grads, float(1))
+            scaler.scale(loss).backward()
+            if not delay_unscale:
+                # gather gradients from every processes
+                # do this before unscaling to make sure every process uses
+                # the same gradient scale
+                grads = [p.grad.data for p in model.parameters()
+                         if p.requires_grad and p.grad is not None]
+                all_reduce_and_rescale_tensors(grads, float(1))
 
             running_loss(loss.item())
 
@@ -160,10 +139,18 @@ def main(opts):
 
                 # update model params
                 if opts.grad_norm != -1:
-                    grad_norm = clip_grad_norm_(amp.master_params(optimizer),
-                                                opts.grad_norm)
+                    # Unscales the gradients of optimizer's assigned params in-place
+                    scaler.unscale_(optimizer)
+                    grad_norm = clip_grad_norm_(model.parameters(), opts.grad_norm)
                     TB_LOGGER.add_scalar('grad_norm', grad_norm, global_step)
-                optimizer.step()
+
+                # scaler.step() first unscales gradients of the optimizer's params.
+                # If gradients don't contain infs/NaNs, optimizer.step() is then called,
+                # otherwise, optimizer.step() is skipped.
+                scaler.step(optimizer)
+
+                # Updates the scale for next iteration.
+                scaler.update()
                 optimizer.zero_grad()
                 pbar.update(1)
 
@@ -171,9 +158,10 @@ def main(opts):
                     # monitor training throughput
                     tot_ex = sum(all_gather_list(n_examples))
                     ex_per_sec = int(tot_ex / (time() - start))
-                    LOGGER.info(f'Step {global_step}: '
+                    LOGGER.info(f'{opts.model}: {n_epoch}-{global_step}: '
                                 f'{tot_ex} examples trained at '
-                                f'{ex_per_sec} ex/s')
+                                f'{ex_per_sec} ex/s '
+                                f'best_acc-{best_eval * 100:.2f}')
                     TB_LOGGER.add_scalar('perf/ex_per_s',
                                          ex_per_sec, global_step)
 

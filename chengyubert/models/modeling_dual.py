@@ -4,7 +4,10 @@ import torch
 import torch.nn as nn
 from transformers import BertModel, BertPreTrainedModel
 
+from chengyubert.models import register_model
 
+
+@register_model('chengyubert-2stage')
 class ChengyuBertSingle(BertPreTrainedModel):
     def __init__(self, config, len_idiom_vocab, model_name='bertsingle'):
         super().__init__(config)

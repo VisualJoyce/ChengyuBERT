@@ -4,7 +4,10 @@ import torch
 import torch.nn as nn
 from transformers import BertModel, BertPreTrainedModel
 
+from chengyubert.models import register_model
 
+
+@register_model('chengyubert-2stage-stage1')
 class ChengyuBertTwoStagePretrain(BertPreTrainedModel):
     def __init__(self, config, len_idiom_vocab, model_name='chengyubert-2stage'):
         super().__init__(config)
@@ -48,6 +51,7 @@ class ChengyuBertTwoStagePretrain(BertPreTrainedModel):
             return cond_logits, over_logits
 
 
+@register_model('chengyubert-2stage-stage2')
 class ChengyuBertTwoStage(BertPreTrainedModel):
     r"""
         **labels**: (`optional`) ``torch.LongTensor`` of shape ``(batch_size,)``:
@@ -135,6 +139,7 @@ class ChengyuBertTwoStage(BertPreTrainedModel):
             return logits, over_logits
 
 
+@register_model('chengyubert-2stage-stage2-window')
 class ChengyuBertTwoStageWindow(BertPreTrainedModel):
     r"""
         **labels**: (`optional`) ``torch.LongTensor`` of shape ``(batch_size,)``:
@@ -241,6 +246,7 @@ class ChengyuBertTwoStageWindow(BertPreTrainedModel):
             return logits, over_logits
 
 
+@register_model('chengyubert-2stage-stage2-dual')
 class ChengyuBertTwoStageDual(BertPreTrainedModel):
     def __init__(self, config, len_idiom_vocab, model_name):
         super().__init__(config)
