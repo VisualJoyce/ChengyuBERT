@@ -27,6 +27,7 @@ from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate
 from chengyubert.data.data import judge
 from chengyubert.models import build_model
 from chengyubert.optim import get_lr_sched
+from chengyubert.optim.misc import build_optimizer
 from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
                                            broadcast_tensors)
 from chengyubert.utils.logger import LOGGER, TB_LOGGER, RunningMeter, add_log_to_file
@@ -40,14 +41,7 @@ def train(model, dataloaders, opts):
     set_dropout(model, opts.dropout)
 
     # Prepare optimizer
-    # optimizer = build_optimizer(model, opts)
-    no_decay = ['bias', 'LayerNorm.weight']
-    optimizer_grouped_parameters = [
-        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
-         'weight_decay': args.weight_decay},
-        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-    ]
-    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+    optimizer = build_optimizer(model, opts)
     scaler = GradScaler()
 
     global_step = 0
