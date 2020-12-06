@@ -154,8 +154,8 @@ def train(model, dataloaders, opts):
             break
         n_epoch += 1
         LOGGER.info(f"Step {global_step}: finished {n_epoch} epochs")
-        if n_epoch >= opts.num_train_epochs:
-            break
+        # if n_epoch >= opts.num_train_epochs:
+        #     break
     return best_ckpt
 
 
