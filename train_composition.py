@@ -232,8 +232,11 @@ def validate(opts, model, val_loader, split, global_step):
                     # tokens[position:position + len(idiom)] = list(idiom)
                     tokens = list(idiom)
                     print(tokens, s_masks)
-                    tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
-                    print(TreePrettyPrinter(tree).text(unicodelines=True))
+                    try:
+                        tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
+                        print(TreePrettyPrinter(tree).text(unicodelines=True))
+                    except:
+                        pass
 
             answers = max_idx.cpu().tolist()
             results.extend(zip(qids, answers))
