@@ -211,8 +211,10 @@ def validate(opts, model, val_loader, split, global_step):
 
             input_ids = torch.gather(batch['input_ids'], dim=1, index=batch['gather_index'])
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
-            for j, (qid, target, inp, option_ids, answer) in enumerate(zip(qids, targets, input_ids,
-                                                                           batch['option_ids'], max_idx)):
+            for j, (qid, target, inp, option_ids, position, answer) in enumerate(zip(qids, targets, input_ids,
+                                                                           batch['option_ids'],
+                                                                           batch['positions'],
+                                                                           max_idx)):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
@@ -226,8 +228,8 @@ def validate(opts, model, val_loader, split, global_step):
                     s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
 
                     tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(inp)
-                    start = tokens.index(val_loader.dataset.tokenizer.mask_token)
-                    tokens[start:start + len(idiom)] = list(idiom)
+                    # start = tokens.index(val_loader.dataset.tokenizer.mask_token)
+                    tokens[position:position + len(idiom)] = list(idiom)
                     print(tokens)
                     tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
                     print(TreePrettyPrinter(tree).text(unicodelines=True))
