@@ -111,7 +111,7 @@ class ChengyuSequentialDataset(TxtTokLmdb):
         attn_masks = pad_sequence(attention_mask, batch_first=True, padding_value=0)
 
         width_max = max(widths)
-        gather_index = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
+        gather_index = torch.arange(0, width_max + 1, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
         for i, (p, w) in enumerate(zip(positions, widths)):
             gather_index.data[i, :(w + 1)] = torch.arange(p, p + w + 1, dtype=torch.long).data
 
