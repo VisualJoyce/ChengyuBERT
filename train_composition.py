@@ -76,7 +76,6 @@ def train(model, dataloaders, opts):
     while True:
         for step, batch in enumerate(dataloaders['train']):
             targets = batch['targets']
-            del batch['gather_index']
             n_examples += targets.size(0)
 
             with autocast():
