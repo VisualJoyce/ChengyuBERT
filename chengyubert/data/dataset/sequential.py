@@ -24,10 +24,19 @@ class ChengyuSequentialDataset(TxtTokLmdb):
                               int(k) < opts.len_idiom_vocab}
         self.allowed = set()
         [self.allowed.update(v) for _, v in self.reverse_index.items()]
+        self.idiom_input_ids = self.tokenize_idioms()
         self.lens, self.ids, self.st_ed = self.get_ids_and_lens()
 
     def __len__(self):
         return len(self.ids)
+
+    def tokenize_idioms(self):
+        idiom_ids = {}
+        for idiom, idiom_id in self.chengyu_vocab.items():
+            tokens = self.tokenizer.tokenize(idiom)
+            input_ids = self.tokenizer.convert_tokens_to_ids(tokens)
+            idiom_ids[idiom_id] = input_ids
+        return idiom_ids
 
     def get_ids_and_lens(self):
         lens = []
@@ -66,8 +75,8 @@ class ChengyuSequentialDataset(TxtTokLmdb):
         example = self.db[id_]
         options = example['options']
         target = example['target']
+        idiom = example['idiom']
         if len(options) == 0:
-            idiom = example['idiom']
             options = random.sample(self.idiom_ids, k=7)
             if idiom not in options:
                 options[-1] = idiom
@@ -75,51 +84,36 @@ class ChengyuSequentialDataset(TxtTokLmdb):
             target = options.index(idiom)
 
         context_ids = example['input_ids'][st: ed]
-        if hasattr(self.config, 'structured') and self.config.structured:
-            idiom_start = context_ids.index(self.tokenizer.mask_token_id)
-            for _ in range(3):
-                context_ids.insert(idiom_start, self.tokenizer.mask_token_id)
+        idiom_start = context_ids.index(self.tokenizer.mask_token_id)
+        idiom_input_ids = self.idiom_input_ids[idiom]
+        input_ids = [self.tokenizer.cls_token_id] + context_ids[:idiom_start] + idiom_input_ids + context_ids[
+                                                                                                  idiom_start + 1:] + [
+                        self.tokenizer.sep_token_id]
+        assert len(input_ids) <= self.max_txt_len + len(idiom_input_ids)
 
-            if len(context_ids) > self.max_txt_len - 2:
-                half_length = self.max_txt_len // 2
-                pop_length = len(context_ids) - (self.max_txt_len - 2)
-                if idiom_start > half_length:
-                    context_ids = context_ids[pop_length:]
-                else:
-                    context_ids = context_ids[:-pop_length]
+        position = idiom_start + 1
+        width = len(idiom_input_ids)
 
-        input_ids = [self.tokenizer.cls_token_id] + context_ids + [self.tokenizer.sep_token_id]
-        assert len(input_ids) <= self.max_txt_len
-
-        position = input_ids.index(self.tokenizer.mask_token_id)
         token_type_ids = [0] * len(input_ids)
         attention_mask = [1] * len(input_ids)
 
         input_ids = torch.tensor(input_ids)
         token_type_ids = torch.tensor(token_type_ids)
         attention_mask = torch.tensor(attention_mask)
-        return input_ids, token_type_ids, attention_mask, position, options, target
+        return input_ids, token_type_ids, attention_mask, position, width, options, target
 
     @staticmethod
     def collate_fn(inputs):
-        (input_ids, token_type_ids, attention_mask, positions, options, targets) = map(list, unzip(inputs))
+        (input_ids, token_type_ids, attention_mask, positions, widths, options, targets) = map(list, unzip(inputs))
 
         input_ids = pad_sequence(input_ids, batch_first=True, padding_value=0)
         token_type_ids = pad_sequence(token_type_ids, batch_first=True, padding_value=0)
         attn_masks = pad_sequence(attention_mask, batch_first=True, padding_value=0)
 
-        lengths = attn_masks.sum(-1).long()
-        width = 5
-        span = 2 * width + 4
-        gather_index = torch.arange(0, span, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
-        for i, (p, l) in enumerate(zip(positions, lengths)):
-            if p <= width:
-                left, right = 1, 1 + span
-            elif p + 4 + width >= l:
-                left, right = l - span, l
-            else:
-                left, right = p - width, p + 4 + width
-            gather_index.data[i, :] = torch.arange(left, right, dtype=torch.long).data
+        width_max = max(widths)
+        gather_index = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
+        for i, (p, w) in enumerate(zip(positions, widths)):
+            gather_index.data[i, :] = torch.arange(p, p + w + 1, dtype=torch.long).data
 
         batch = {'input_ids': input_ids,
                  'token_type_ids': token_type_ids,
