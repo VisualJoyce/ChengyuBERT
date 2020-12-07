@@ -18,8 +18,8 @@ from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 
 from chengyubert.data import create_dataloaders
-from chengyubert.data.datasets import DATA_REGISTRY
-from chengyubert.data.datasets.masked import judge
+from chengyubert.data.dataset import DATA_REGISTRY
+from chengyubert.data.dataset.masked import judge
 from chengyubert.models import build_model
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
