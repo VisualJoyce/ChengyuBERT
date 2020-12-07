@@ -7,6 +7,8 @@
     "ran_txt_db": "/txt/official_ran.db",
     "pretrained_model_name_or_path": "/pretrain/wwm_ext_pretrain,xinhua-4-21796",
     "model": "chengyubert",
+    "dataset_cls": "chengyu-masked",
+    "eval_dataset_cls": "chengyu-masked-eval",
     "output_dir": "/storage",
     "len_idiom_vocab": 33237,
     "max_txt_len": 128,

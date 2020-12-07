@@ -15,7 +15,7 @@ import numpy as np
 import torch
 from horovod import torch as hvd
 # from apex import amp
-from sklearn.metrics.pairwise import cosine_similarity
+from nltk import Tree
 from torch.cuda.amp import autocast, GradScaler
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
@@ -32,6 +32,7 @@ from chengyubert.utils.distributed import (all_reduce_and_rescale_tensors, all_g
 from chengyubert.utils.logger import LOGGER, TB_LOGGER, RunningMeter, add_log_to_file
 from chengyubert.utils.misc import NoOp, parse_with_config, set_dropout, set_random_seed
 from chengyubert.utils.save import ModelSaver, save_training_meta
+from chengyubert.utils.tree import TreePrettyPrinter
 
 
 def train(model, dataloaders, opts):
@@ -158,6 +159,36 @@ def train(model, dataloaders, opts):
     return best_ckpt
 
 
+def idiom2tree(idiom, select_masks):
+    # ans = list(idiom)
+    ans = idiom
+    for k, select_mask in enumerate(select_masks):
+        for idx, v in enumerate(select_mask):
+            if v == 1:
+                c0 = ans.pop(idx)
+                if isinstance(c0, Tree):
+                    c0_label = c0.label()
+                else:
+                    c0_label = c0
+
+                c1 = ans.pop(idx)
+                if isinstance(c1, Tree):
+                    c1_label = c1.label()
+                else:
+                    c1_label = c1
+
+                ans.insert(idx, Tree(c0_label + c1_label, (c0, c1)))
+            else:
+                c = ans.pop(idx)
+                if isinstance(c, Tree):
+                    c_label = c.label()
+                else:
+                    c_label = c
+                ans.insert(idx, Tree(c_label, (c,)))
+    assert len(ans) == 2
+    return ans
+
+
 @torch.no_grad()
 def validate(opts, model, val_loader, split, global_step):
     val_loss = 0
@@ -166,27 +197,43 @@ def validate(opts, model, val_loader, split, global_step):
     val_mrr = 0
     st = time()
     results = []
-    with tqdm(range(len(val_loader.dataset) // opts.size), desc=f'{split}-{opts.rank}') as tq:
+    with tqdm(range(len(val_loader.dataset)), desc=f'{split}-{opts.rank}') as tq:
         for i, batch in enumerate(val_loader):
             qids = batch['qids']
             targets = batch['targets']
             del batch['targets']
             del batch['qids']
-            del batch['gather_index']
 
-            scores, over_logits = model(**batch, targets=None, compute_loss=False)
+            scores, over_logits, select_masks = model(**batch, targets=None, compute_loss=False)
             loss = F.cross_entropy(scores, targets, reduction='sum')
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
             max_prob, max_idx = scores.max(dim=-1, keepdim=False)
-            answers = max_idx.cpu().tolist()
 
+            input_ids = torch.gather(batch['input_ids'], dim=1, index=batch['gather_index'])
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
-            for j, (qid, target) in enumerate(zip(qids, targets)):
+            for j, (qid, target, inp, option_ids, answer) in enumerate(zip(qids, targets, input_ids,
+                                                                           batch['option_ids'], max_idx)):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
+                if i % 1000 == 0:
+                    options = [val_loader.dataset.id2idiom[o.item()] for o in option_ids]
+                    idiom = options[answer.item()]
+                    print(qid,
+                          val_loader.dataset.id2idiom[target.item()],
+                          idiom,
+                          options)
+                    s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
 
+                    tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(inp)
+                    start = tokens.index(val_loader.dataset.tokenizer.mask_token)
+                    tokens[start:start + len(idiom)] = list(idiom)
+                    print(tokens)
+                    tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
+                    print(TreePrettyPrinter(tree).text(unicodelines=True))
+
+            answers = max_idx.cpu().tolist()
             results.extend(zip(qids, answers))
             n_ex += len(qids)
             tq.update(len(qids))
@@ -225,37 +272,6 @@ def validate(opts, model, val_loader, split, global_step):
     return val_log
 
 
-def evaluate_embeddings_recall(embeddings, chengyu_vocab, chengyu_synonyms_dict):
-    iw = [k for k in embeddings]
-
-    vectors = np.array([embeddings[iw[i]] for i in range(len(iw))])
-    cnt = 0
-    recall_at_k_cosine = {}
-    recall_at_k_norm = {}
-    k_list = [1, 3, 5, 10]
-    total = len(chengyu_synonyms_dict)
-    for w, wl in tqdm(chengyu_synonyms_dict.items()):
-        if w in embeddings and any([x in embeddings for x in wl]):
-            cnt += 1
-
-            cosine_distances = (1 - cosine_similarity(embeddings[w].reshape(1, -1), vectors)[0]).argsort()
-            norm_distances = np.linalg.norm(vectors - embeddings[w], axis=1).argsort()
-            cids = [idx for idx in cosine_distances if iw[idx] in chengyu_vocab]
-            nids = [idx for idx in norm_distances if iw[idx] in chengyu_vocab]
-            for k in k_list:
-                top_ids = cids[1:k + 1]
-                recall_at_k_cosine.setdefault(k, 0)
-                recall_at_k_cosine[k] += sum([1 for idx in top_ids if iw[idx] in wl])
-
-                top_ids = nids[1:k + 1]
-                recall_at_k_norm.setdefault(k, 0)
-                recall_at_k_norm[k] += sum([1 for idx in top_ids if iw[idx] in wl])
-    LOGGER.info(f'{cnt} word pairs appeared in the training dictionary , total word pairs {total}')
-    LOGGER.info(recall_at_k_cosine)
-    LOGGER.info(recall_at_k_norm)
-    return cnt, total, recall_at_k_cosine, recall_at_k_norm
-
-
 def evaluation(model, data_loaders: dict, opts, global_step):
     model.eval()
     log = {}
@@ -263,11 +279,6 @@ def evaluation(model, data_loaders: dict, opts, global_step):
         LOGGER.info(f"Step {global_step}: start running "
                     f"validation on {split} split...")
         log.update(validate(opts, model, loader, split, global_step))
-        if split == 'val' and opts.evaluate_embedding:
-            embeddings_np = model.idiom_embedding.weight.detach().cpu().numpy()
-            embeddings = {k: embeddings_np[v] for k, v in loader.dataset.chengyu_vocab.items()}
-            evaluate_embeddings_recall(embeddings, loader.dataset.chengyu_vocab,
-                                       loader.dataset.chengyu_synonyms_dict)
     TB_LOGGER.log_scaler_dict(log)
     model.train()
     return log

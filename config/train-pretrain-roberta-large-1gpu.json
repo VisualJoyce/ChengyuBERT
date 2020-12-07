@@ -7,6 +7,8 @@
     "ran_txt_db": "/txt/official_ran.db",
     "pretrained_model_name_or_path": "/pretrain/roberta_wwm_large_ext",
     "model": "chengyubert-pretrain",
+    "dataset_cls": "chengyu-masked",
+    "eval_dataset_cls": "chengyu-masked-eval",
     "output_dir": "/storage",
     "len_idiom_vocab": 33237,
     "max_txt_len": 128,

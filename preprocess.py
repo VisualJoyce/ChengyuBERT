@@ -10,8 +10,7 @@ from cytoolz import curry
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from chengyubert.data import open_lmdb
-from chengyubert.data.data import chengyu_process
+from chengyubert.data import open_lmdb, chengyu_process
 from chengyubert.utils.misc import parse_with_config
 
 

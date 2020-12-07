@@ -17,9 +17,9 @@ from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 
-from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
-    create_dataloaders
-from chengyubert.data.data import judge
+from chengyubert.data import create_dataloaders
+from chengyubert.data.datasets import DATA_REGISTRY
+from chengyubert.data.datasets.masked import judge
 from chengyubert.models import build_model
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
@@ -49,13 +49,10 @@ def main(opts):
 
     set_random_seed(opts.seed)
 
-    DatasetCls = ChengyuDataset
-    EvalDatasetCls = ChengyuEvalDataset
-    collate_fn = chengyu_collate
-    eval_collate_fn = chengyu_eval_collate
-
     # data loaders
-    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, collate_fn, eval_collate_fn, opts)
+    DatasetCls = DATA_REGISTRY[opts.dataset_cls]
+    EvalDatasetCls = DATA_REGISTRY[opts.eval_dataset_cls]
+    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, opts)
 
     # Prepare model
     model = build_model(opts)

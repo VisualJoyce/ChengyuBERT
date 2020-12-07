@@ -7,6 +7,8 @@
     "ran_txt_db": "/txt/official_ran.db",
     "pretrained_model_name_or_path": "/pretrain/wwm_ext",
     "model": "chengyubert-dual",
+    "dataset_cls": "chengyu-masked",
+    "eval_dataset_cls": "chengyu-masked-eval",
     "output_dir": "/storage",
     "enlarged_candidates": false,
     "len_idiom_vocab": 3848,

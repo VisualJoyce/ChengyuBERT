@@ -19,9 +19,9 @@ from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 
-from chengyubert.data import ChengyuDataset, ChengyuEvalDataset, chengyu_collate, chengyu_eval_collate, \
-    create_dataloaders
-from chengyubert.data.data import judge
+from chengyubert.data import create_dataloaders
+from chengyubert.data.datasets import DATA_REGISTRY
+from chengyubert.data.datasets.masked import judge
 from chengyubert.models import build_model
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
@@ -278,35 +278,23 @@ def main(opts):
         TB_LOGGER.create(join(opts.output_dir, 'log'))
         add_log_to_file(join(opts.output_dir, 'log', f'{opts.mode}.log'))
 
-    DatasetCls = ChengyuDataset
-    EvalDatasetCls = ChengyuEvalDataset
-    collate_fn = chengyu_collate
-    eval_collate_fn = chengyu_eval_collate
+    # data loaders
+    DatasetCls = DATA_REGISTRY[opts.dataset_cls]
+    EvalDatasetCls = DATA_REGISTRY[opts.eval_dataset_cls]
+    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, opts)
 
     # Prepare model
     model = build_model(opts)
     model.to(device)
 
     if opts.mode == 'train':
-        # data loaders
-        splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls,
-                                                 collate_fn, eval_collate_fn, opts, splits=['train', 'val'])
         best_ckpt = train(model, dataloaders, opts)
     else:
-        splits = []
-        for k in dir(opts):
-            if k.endswith('_txt_db'):
-                split = k.replace('_txt_db', '')
-                if split not in ['train']:
-                    splits.append(split)
-        _, eval_dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls,
-                                                 collate_fn, eval_collate_fn,
-                                                 opts, splits=splits)
+        best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
 
-        best_ckpt = get_best_ckpt(eval_dataloaders['val'].dataset.db_dir, opts)
-        best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
-        model.load_state_dict(torch.load(best_pt), strict=False)
-        evaluation(model, eval_dataloaders, opts, best_ckpt)
+    best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
+    model.load_state_dict(torch.load(best_pt), strict=False)
+    evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
 
 
 if __name__ == "__main__":
