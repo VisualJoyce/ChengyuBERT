@@ -4,15 +4,18 @@ A repository for Chinese Idiom/Chengyu Recommendation.
 
 In this repo, we release code for the two papers 
 ``` bibtex
-@inproceedings{chengyu-dual,
-    title = "A BERT-based Dual Embedding Model for Chinese Idiom Prediction",
-    author = "Minghuan, Tan  and
-      Jing, Jiang",
+@inproceedings{tan-jiang-2020-bert,
+    title = "A {BERT}-based Dual Embedding Model for {C}hinese Idiom Prediction",
+    author = "Tan, Minghuan  and
+      Jiang, Jing",
     booktitle = "Proceedings of the 28th International Conference on Computational Linguistics",
     month = dec,
     year = "2020",
-    address = "Online",
-    publisher = "Association for Computational Linguistics",
+    address = "Barcelona, Spain (Online)",
+    publisher = "International Committee on Computational Linguistics",
+    url = "https://www.aclweb.org/anthology/2020.coling-main.113",
+    pages = "1312--1322",
+    abstract = "Chinese idioms are special fixed phrases usually derived from ancient stories, whose meanings are oftentimes highly idiomatic and non-compositional. The Chinese idiom prediction task is to select the correct idiom from a set of candidate idioms given a context with a blank. We propose a BERT-based dual embedding model to encode the contextual words as well as to learn dual embeddings of the idioms. Specifically, we first match the embedding of each candidate idiom with the hidden representation corresponding to the blank in the context. We then match the embedding of each candidate idiom with the hidden representations of all the tokens in the context thorough context pooling. We further propose to use two separate idiom embeddings for the two kinds of matching. Experiments on a recently released Chinese idiom cloze test dataset show that our proposed method performs better than the existing state of the art. Ablation experiments also show that both context pooling and dual embedding contribute to the improvement of performance.",
 }
 
 @misc{chengyu-2stage,
