@@ -113,7 +113,7 @@ class ChengyuSequentialDataset(TxtTokLmdb):
         width_max = max(widths)
         gather_index = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
         for i, (p, w) in enumerate(zip(positions, widths)):
-            gather_index.data[i, :] = torch.arange(p, p + w + 1, dtype=torch.long).data
+            gather_index.data[i, :(w + 1)] = torch.arange(p, p + w + 1, dtype=torch.long).data
 
         batch = {'input_ids': input_ids,
                  'token_type_ids': token_type_ids,
