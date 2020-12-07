@@ -16,6 +16,7 @@ class ChengyuSequentialDataset(TxtTokLmdb):
         super().__init__(db_dir, max_txt_len)
         self.config = opts
         self.chengyu_vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
+        self.id2idiom = {v: k for k, v in self.chengyu_vocab.items()}
         self.idiom_ids = list(range(opts.len_idiom_vocab))
         with open('/annotations/synonyms/chengyu_synonyms_recall_filter.json') as f:
             self.chengyu_synonyms_dict = json.load(f)
