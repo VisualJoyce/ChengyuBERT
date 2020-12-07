@@ -216,6 +216,7 @@ class ChengyuBertComposition(BertPreTrainedModel):
         emb_hidden_size = config.hidden_size
         self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.LayerNorm = nn.LayerNorm(emb_hidden_size, eps=config.layer_norm_eps)
 
         self.init_weights()
 
@@ -467,6 +468,7 @@ class ChengyuBertCompositionPaired(BertPreTrainedModel):
         emb_hidden_size = config.hidden_size
         self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.LayerNorm = nn.LayerNorm(emb_hidden_size, eps=config.layer_norm_eps)
 
         self.init_weights()
 
