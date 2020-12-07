@@ -79,7 +79,7 @@ def train(model, dataloaders, opts):
             n_examples += targets.size(0)
 
             with autocast():
-                loss = model(**batch, compute_loss=True)
+                _, loss, _ = model(**batch, compute_loss=True)
                 loss = loss.mean()
 
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
