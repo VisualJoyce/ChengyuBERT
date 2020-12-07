@@ -231,7 +231,7 @@ def validate(opts, model, val_loader, split, global_step):
                     # start = tokens.index(val_loader.dataset.tokenizer.mask_token)
                     # tokens[position:position + len(idiom)] = list(idiom)
                     tokens = list(idiom)
-                    print(tokens)
+                    print(tokens, s_masks)
                     tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
                     print(TreePrettyPrinter(tree).text(unicodelines=True))
 
