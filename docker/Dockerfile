@@ -1,8 +1,8 @@
-FROM pytorch/pytorch:1.6.0-cuda10.1-cudnn7-devel
+FROM pytorch/pytorch:1.7.0-cuda11.0-cudnn8-devel
 
 ENV OPENMPI_VERSION=4.0.5
-ENV CUDA_HOME=/usr/local/cuda-10.1
-ENV TORCH_CUDA_ARCH_LIST="6.0;6.1;6.2;7.0;7.5"
+ENV CUDA_HOME=/usr/local/cuda-11.0
+ENV TORCH_CUDA_ARCH_LIST="6.0;6.1;6.2;7.0;7.5;8.0"
 
 RUN apt-get update
 RUN apt-get install -y wget libibverbs-dev libsysfs-dev cmake libboost-all-dev libeigen3-dev libbz2-dev liblzma-dev ssh git
