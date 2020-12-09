@@ -203,7 +203,7 @@ def validate(opts, model, val_loader, split, global_step):
             del batch['targets']
             del batch['qids']
 
-            scores, over_logits, select_masks = model(**batch, targets=None, compute_loss=False)
+            scores, over_logits, composition = model(**batch, targets=None, compute_loss=False)
             loss = F.cross_entropy(scores, targets, reduction='sum')
             val_loss += loss.item()
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
@@ -225,13 +225,15 @@ def validate(opts, model, val_loader, split, global_step):
                           val_loader.dataset.id2idiom[target.item()],
                           idiom,
                           options)
+                    select_masks, atts, composition_gates = composition
                     s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
+                    s_att = [att[j].long().cpu().numpy().tolist() for att in atts]
 
                     # tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(inp)
                     # start = tokens.index(val_loader.dataset.tokenizer.mask_token)
                     # tokens[position:position + len(idiom)] = list(idiom)
                     tokens = list(idiom)
-                    print(tokens, s_masks)
+                    print(tokens, s_masks, s_att, composition_gates[j].sum())
                     try:
                         tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
                         print(TreePrettyPrinter(tree).text(unicodelines=True))

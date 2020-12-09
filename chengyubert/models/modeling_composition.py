@@ -1,5 +1,4 @@
 import torch
-import torch.functional as F
 from torch import nn
 from transformers import BertModel, BertPreTrainedModel
 
@@ -422,9 +421,27 @@ class AttentionPool(nn.Module):
         if mask is not None:
             mask = mask.to(dtype=input_.dtype) * -1e4
             score = score + mask
-        norm_score = self.dropout(F.softmax(score, dim=1))
+        norm_score = self.dropout(torch.softmax(score, dim=1))
         output = norm_score.unsqueeze(1).matmul(input_).squeeze(1)
-        return output
+        return output, norm_score
+
+
+class CompositionGate(nn.Module):
+    """Apply the context gate to both contexts"""
+
+    def __init__(self, input_size, output_size):
+        super().__init__()
+        self.gate = nn.Linear(input_size * 3, output_size, bias=True)
+        self.sig = nn.Sigmoid()
+        self.literal_proj = nn.Linear(input_size * 2, output_size)
+        self.contextual_proj = nn.Linear(input_size, output_size)
+        self.tanh = nn.Tanh()
+
+    def forward(self, literal_state, contextual_state):
+        z = self.sig(self.gate(torch.cat((literal_state, contextual_state), dim=1)))
+        proj_literal = self.literal_proj(literal_state)
+        proj_contextual = self.contextual_proj(contextual_state)
+        return self.tanh((1. - z) * proj_contextual + z * proj_literal), z
 
 
 @register_model('chengyubert-composition-paired')
@@ -469,6 +486,10 @@ class ChengyuBertCompositionPaired(BertPreTrainedModel):
         self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
         self.LayerNorm = nn.LayerNorm(emb_hidden_size, eps=config.layer_norm_eps)
+
+        self.context_pool = AttentionPool(config.hidden_size, config.hidden_dropout_prob)
+
+        self.composition_gate = CompositionGate(config.hidden_size, config.hidden_size)
 
         self.init_weights()
 
@@ -612,11 +633,12 @@ class ChengyuBertCompositionPaired(BertPreTrainedModel):
         assert h.size(1) == 1 and c.size(1) == 1
         return h.squeeze(1), c.squeeze(1), select_masks
 
-    def vocab(self, blank_states):
+    def vocab(self, over_states):
         idiom_embeddings = self.LayerNorm(self.idiom_embedding(self.enlarged_candidates))
-        return torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
+        return torch.einsum('bd,nd->bn', [over_states, idiom_embeddings])  # (b, 256, 10)
 
-    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
+                gather_index, context_gather_index,
                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
         batch_size, length = input_ids.shape
         encoded_outputs = self.bert(input_ids,
@@ -630,8 +652,16 @@ class ChengyuBertCompositionPaired(BertPreTrainedModel):
         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
 
         span = gather_index.size(1)
-        blank_states, _, select_masks = self.idiom_compose(idiom_states,
-                                                           torch.tensor([span] * batch_size).type_as(input_ids))
+        literal_states, _, select_masks = self.idiom_compose(idiom_states,
+                                                             torch.tensor([span] * batch_size).type_as(input_ids))
+
+        context_gather_index = context_gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
+            input_ids)
+        context_windowed = torch.gather(encoded_context, dim=1, index=context_gather_index)
+
+        contextual_states, att = self.context_pool(context_windowed)
+
+        over_states, composition_gates = self.composition_gate(literal_states, contextual_states)
 
         if option_ids is None and options_embeds is None:
             raise ValueError('Either option_ids or options_embeds should be given.')
@@ -640,7 +670,7 @@ class ChengyuBertCompositionPaired(BertPreTrainedModel):
         else:
             encoded_options = self.idiom_embedding(option_ids)  # (b, 10, 768)
 
-        over_logits = self.vocab(self.over_linear(blank_states))
+        over_logits = self.vocab(over_states)
         cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
 
         if self.model_name.endswith('context'):
@@ -655,6 +685,6 @@ class ChengyuBertCompositionPaired(BertPreTrainedModel):
             loss = loss_fct(logits, targets)
             target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1))
             over_loss = loss_fct(over_logits, target.squeeze(1))
-            return loss, over_loss, select_masks
+            return loss, over_loss, (select_masks, att, composition_gates)
         else:
-            return logits, over_logits, select_masks
+            return logits, over_logits, (select_masks, att, composition_gates)
