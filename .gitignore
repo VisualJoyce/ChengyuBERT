@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 
 .idea/
-data/
 *.ipynb
+/data
