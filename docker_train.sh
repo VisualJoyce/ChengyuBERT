@@ -25,9 +25,9 @@ fi
 HOROVOD_PARA=""
 if [ $N_GPU -gt 1 ];
 then
-  HOROVOD_PARA="horovodrun -np $N_GPU  -H localhost:$N_GPU"
+  HOROVOD_PARA="HOROVOD_CACHE_CAPACITY=0 horovodrun -np $N_GPU -H localhost:$N_GPU"
 fi
-
+#HOROVOD_STALL_CHECK_TIME_SECONDS=120
 echo "Training using ${N_GPU} GPUs: ${CUDA_VISIBLE_DEVICES}!"
 
 if [ -z "$CONFIG_FILE" ]; then

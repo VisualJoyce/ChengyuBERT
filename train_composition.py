@@ -209,12 +209,14 @@ def validate(opts, model, val_loader, split, global_step):
             tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
             max_prob, max_idx = scores.max(dim=-1, keepdim=False)
 
+            select_masks, atts, composition_gates = composition
+
             input_ids = torch.gather(batch['input_ids'], dim=1, index=batch['gather_index'])
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
             for j, (qid, target, inp, option_ids, position, answer) in enumerate(zip(qids, targets, input_ids,
-                                                                           batch['option_ids'],
-                                                                           batch['positions'],
-                                                                           max_idx)):
+                                                                                     batch['option_ids'],
+                                                                                     batch['positions'],
+                                                                                     max_idx)):
                 g = over_logits[j].cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
@@ -225,9 +227,9 @@ def validate(opts, model, val_loader, split, global_step):
                           val_loader.dataset.id2idiom[target.item()],
                           idiom,
                           options)
-                    select_masks, atts, composition_gates = composition
+                    print(len(select_masks), atts.size())
                     s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
-                    s_att = [att[j].long().cpu().numpy().tolist() for att in atts]
+                    s_att = atts[j].cpu().numpy().tolist()
 
                     # tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(inp)
                     # start = tokens.index(val_loader.dataset.tokenizer.mask_token)

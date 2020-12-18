@@ -431,7 +431,7 @@ class CompositionGate(nn.Module):
 
     def __init__(self, input_size, output_size):
         super().__init__()
-        self.gate = nn.Linear(input_size * 3, output_size, bias=True)
+        self.gate = nn.Linear(input_size * 3, 1, bias=True)
         self.sig = nn.Sigmoid()
         self.literal_proj = nn.Linear(input_size * 2, output_size)
         self.contextual_proj = nn.Linear(input_size, output_size)
@@ -445,10 +445,10 @@ class CompositionGate(nn.Module):
 
 
 @register_model('chengyubert-composition-paired')
-class ChengyuBertCompositionPaired(BertPreTrainedModel):
+class ChengyuBertCompositionPaired(ChengyuBertComposition):
 
     def __init__(self, config, len_idiom_vocab, model_name):
-        super().__init__(config)
+        BertPreTrainedModel.__init__(self, config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
@@ -492,146 +492,6 @@ class ChengyuBertCompositionPaired(BertPreTrainedModel):
         self.composition_gate = CompositionGate(config.hidden_size, config.hidden_size)
 
         self.init_weights()
-
-    @staticmethod
-    def update_state(old_state, new_state, done_mask):
-        old_h, old_c = old_state
-        new_h, new_c = new_state
-        done_mask = done_mask.type_as(old_h).unsqueeze(1).unsqueeze(2)
-        h = done_mask * new_h + (1 - done_mask) * old_h[:, :-1, :]
-        c = done_mask * new_c + (1 - done_mask) * old_c[:, :-1, :]
-        return h, c
-
-    def select_composition(self, old_state, new_state, mask):
-        new_h, new_c = new_state
-        old_h, old_c = old_state
-        old_h_left, old_h_right = old_h[:, :-1, :], old_h[:, 1:, :]
-        old_c_left, old_c_right = old_c[:, :-1, :], old_c[:, 1:, :]
-        # comp_weights = (self.comp_query * new_h).sum(-1)
-        # comp_weights = comp_weights / math.sqrt(self.config.hidden_size)
-        comp_weights = self.comp_query_linear(new_h).sum(-1).squeeze(dim=-1)
-        if self.training:
-            # select_mask = st_gumbel_softmax(
-            #     logits=comp_weights, temperature=self.gumbel_temperature,
-            #     mask=mask)
-            select_mask = torch.nn.functional.gumbel_softmax(logits=comp_weights,
-                                                             tau=self.gumbel_temperature,
-                                                             hard=True)
-        else:
-            select_mask = greedy_select(logits=comp_weights, mask=mask)
-
-        select_mask = select_mask.type_as(old_h)
-        select_mask_expand = select_mask.unsqueeze(2).expand_as(new_h)
-        select_mask_cumsum = select_mask.cumsum(1)
-
-        left_mask = 1 - select_mask_cumsum
-        left_mask_expand = left_mask.unsqueeze(2).expand_as(old_h_left)
-        right_mask = select_mask_cumsum - select_mask
-        right_mask_expand = right_mask.unsqueeze(2).expand_as(old_h_right)
-
-        new_h = (select_mask_expand * new_h
-                 + left_mask_expand * old_h_left
-                 + right_mask_expand * old_h_right)
-        new_c = (select_mask_expand * new_c
-                 + left_mask_expand * old_c_left
-                 + right_mask_expand * old_c_right)
-
-        selected_h = (select_mask_expand * new_h).sum(1)
-        return new_h, new_c, select_mask, selected_h
-
-    def idiom_compose(self, input, length):
-        max_depth = input.size(1)
-        length_mask = sequence_mask(sequence_length=length,
-                                    max_length=max_depth)
-        select_masks = []
-
-        if self.use_leaf_rnn:
-            hs = []
-            cs = []
-            batch_size, max_length, _ = input.size()
-            zero_state = torch.zeros(batch_size, self.config.hidden_size).type_as(input)
-            # input.data.new_zeros(batch_size, self.config.hidden_size)
-            h_prev = c_prev = zero_state
-            for i in range(max_length):
-                h, c = self.leaf_rnn_cell(input=input[:, i, :], hx=(h_prev, c_prev))
-                hs.append(h)
-                cs.append(c)
-                h_prev = h
-                c_prev = c
-            hs = torch.stack(hs, dim=1)
-            cs = torch.stack(cs, dim=1)
-
-            if self.bidirectional:
-                hs_bw = []
-                cs_bw = []
-                h_bw_prev = c_bw_prev = zero_state
-                # lengths_list = list(length.data)
-                input_bw = reverse_padded_sequence(
-                    inputs=input, lengths=length, batch_first=True)
-                for i in range(max_length):
-                    h_bw, c_bw = self.leaf_rnn_cell_bw(
-                        input=input_bw[:, i, :], hx=(h_bw_prev, c_bw_prev))
-                    hs_bw.append(h_bw)
-                    cs_bw.append(c_bw)
-                    h_bw_prev = h_bw
-                    c_bw_prev = c_bw
-                hs_bw = torch.stack(hs_bw, dim=1)
-                cs_bw = torch.stack(cs_bw, dim=1)
-                hs_bw = reverse_padded_sequence(
-                    inputs=hs_bw, lengths=length, batch_first=True)
-                cs_bw = reverse_padded_sequence(
-                    inputs=cs_bw, lengths=length, batch_first=True)
-                hs = torch.cat([hs, hs_bw], dim=2)
-                cs = torch.cat([cs, cs_bw], dim=2)
-            state = (hs, cs)
-        else:
-            state = self.word_linear(input)
-            state = state.chunk(chunks=2, dim=2)
-
-        nodes = []
-        if self.intra_attention:
-            nodes.append(state[0])
-
-        for i in range(max_depth - 1):
-            h, c = state
-            l = (h[:, :-1, :], c[:, :-1, :])
-            r = (h[:, 1:, :], c[:, 1:, :])
-            new_state = self.treelstm_layer(l=l, r=r)
-            if i < max_depth - 2:
-                # We don't need to greedily select the composition in the
-                # last iteration, since it has only one option left.
-                new_h, new_c, select_mask, selected_h = self.select_composition(
-                    old_state=state, new_state=new_state,
-                    mask=length_mask[:, i + 1:])
-                new_state = (new_h, new_c)
-                select_masks.append(select_mask)
-                if self.intra_attention:
-                    nodes.append(selected_h)
-            done_mask = length_mask[:, i + 1]
-            state = self.update_state(old_state=state, new_state=new_state,
-                                      done_mask=done_mask)
-            if self.intra_attention and i >= max_depth - 2:
-                nodes.append(state[0])
-
-        h, c = state
-        if self.intra_attention:
-            att_mask = torch.cat([length_mask, length_mask[:, 1:]], dim=1)
-            att_mask = att_mask.type_as(h)
-            # nodes: (batch_size, num_tree_nodes, hidden_dim)
-            nodes = torch.cat(nodes, dim=1)
-            att_mask_expand = att_mask.unsqueeze(2).expand_as(nodes)
-            nodes = nodes * att_mask_expand
-            # nodes_mean: (batch_size, hidden_dim, 1)
-            nodes_mean = nodes.mean(1).squeeze(1).unsqueeze(2)
-            # att_weights: (batch_size, num_tree_nodes)
-            att_weights = torch.bmm(nodes, nodes_mean).squeeze(2)
-            att_weights = masked_softmax(logits=att_weights, mask=att_mask)
-            # att_weights_expand: (batch_size, num_tree_nodes, hidden_dim)
-            att_weights_expand = att_weights.unsqueeze(2).expand_as(nodes)
-            # h: (batch_size, 1, 2 * hidden_dim)
-            h = (att_weights_expand * nodes).sum(1)
-        assert h.size(1) == 1 and c.size(1) == 1
-        return h.squeeze(1), c.squeeze(1), select_masks
 
     def vocab(self, over_states):
         idiom_embeddings = self.LayerNorm(self.idiom_embedding(self.enlarged_candidates))
@@ -688,3 +548,99 @@ class ChengyuBertCompositionPaired(BertPreTrainedModel):
             return loss, over_loss, (select_masks, att, composition_gates)
         else:
             return logits, over_logits, (select_masks, att, composition_gates)
+
+
+@register_model('chengyubert-composition-dual')
+class ChengyuBertCompositionDual(ChengyuBertComposition):
+
+    def __init__(self, config, len_idiom_vocab, model_name):
+        BertPreTrainedModel.__init__(self, config)
+        self.use_leaf_rnn = True
+        self.intra_attention = False
+        self.gumbel_temperature = 1
+        self.bidirectional = True
+
+        self.model_name = model_name
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        assert not (self.bidirectional and not self.use_leaf_rnn)
+
+        word_dim = config.hidden_size
+        hidden_dim = config.hidden_size
+        if self.use_leaf_rnn:
+            self.leaf_rnn_cell = nn.LSTMCell(
+                input_size=word_dim, hidden_size=hidden_dim)
+            if self.bidirectional:
+                self.leaf_rnn_cell_bw = nn.LSTMCell(
+                    input_size=word_dim, hidden_size=hidden_dim)
+        else:
+            self.word_linear = nn.Linear(in_features=word_dim,
+                                         out_features=2 * hidden_dim)
+        if self.bidirectional:
+            self.treelstm_layer = BinaryTreeLSTMLayer(2 * hidden_dim)
+            # self.comp_query = nn.Parameter(torch.FloatTensor(2 * hidden_dim))
+            self.comp_query_linear = nn.Linear(hidden_dim * 2, 1, bias=False)
+        else:
+            self.treelstm_layer = BinaryTreeLSTMLayer(hidden_dim)
+            # self.comp_query = nn.Parameter(torch.FloatTensor(hidden_dim))
+            self.comp_query_linear = nn.Linear(hidden_dim, 1, bias=False)
+
+        self.v_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+
+        emb_hidden_size = config.hidden_size
+        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.idiom_embedding_u = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.idiom_embedding_v = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.LayerNorm_u = nn.LayerNorm(emb_hidden_size, eps=config.layer_norm_eps)
+        self.LayerNorm_v = nn.LayerNorm(emb_hidden_size, eps=config.layer_norm_eps)
+
+        self.context_pool = AttentionPool(config.hidden_size, config.hidden_dropout_prob)
+
+        self.init_weights()
+
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
+                gather_index, context_gather_index,
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
+        batch_size, length = input_ids.shape
+        encoded_outputs = self.bert(input_ids,
+                                    token_type_ids=token_type_ids,
+                                    attention_mask=attention_mask,
+                                    inputs_embeds=inputs_embeds)
+        encoded_context = encoded_outputs[0]
+
+        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
+        # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+
+        span = gather_index.size(1)
+        literal_states, _, select_masks = self.idiom_compose(idiom_states,
+                                                             torch.tensor([span] * batch_size).type_as(input_ids))
+
+        context_gather_index = context_gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
+            input_ids)
+        context_windowed = torch.gather(encoded_context, dim=1, index=context_gather_index)
+
+        contextual_states, att = self.context_pool(context_windowed)
+        
+        idiom_embeddings_u = self.LayerNorm_u(self.idiom_embedding_u(self.enlarged_candidates))
+        u_logits = torch.einsum('bd,nd->bn', [contextual_states, idiom_embeddings_u])  # (b, 256, 10)
+        
+        literal_states = self.v_linear(literal_states)
+        idiom_embeddings_v = self.LayerNorm_v(self.idiom_embedding_v(self.enlarged_candidates))
+        v_logits = torch.einsum('bd,nd->bn', [literal_states,
+            idiom_embeddings_v])  # (b, 256, 10)
+        
+        over_logits = u_logits + v_logits
+        composition_similarity = torch.einsum('bd,bd->b', [literal_states, contextual_states])  # (b, 256, 10)
+        cond_logits = torch.gather(over_logits, dim=1, index=option_ids)
+
+        if compute_loss:
+            loss_fct = nn.CrossEntropyLoss()
+            target = torch.gather(option_ids, dim=1, index=targets.unsqueeze(1)).squeeze(1)
+            u_loss = loss_fct(u_logits, target)
+            v_loss = loss_fct(v_logits, target)
+            over_loss = u_loss + v_loss
+            return None, over_loss, (select_masks, att, composition_similarity)
+        else:
+            return cond_logits, over_logits, (select_masks, att, composition_similarity)

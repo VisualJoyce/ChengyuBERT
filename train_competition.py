@@ -5,9 +5,11 @@ Licensed under the MIT license.
 import argparse
 import json
 import os
+import shutil
 from os.path import exists, join
 from time import time
 
+import glob
 import numpy as np
 import torch
 from horovod import torch as hvd
@@ -97,6 +99,7 @@ def main(opts):
     while True:
         for step, batch in enumerate(dataloaders['train']):
             targets = batch['targets']
+            del batch['gather_index']
             n_examples += targets.size(0)
 
             with autocast():
@@ -178,6 +181,8 @@ def main(opts):
         n_epoch += 1
         LOGGER.info(f"Step {global_step}: finished {n_epoch} epochs")
 
+    sum(all_gather_list(opts.rank))
+
     best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
     model.load_state_dict(torch.load(best_pt), strict=False)
     evaluation(model,
@@ -191,8 +196,7 @@ def evaluation(model, data_loaders: dict, opts, global_step):
     for split, loader in data_loaders.items():
         LOGGER.info(f"Step {global_step}: start running "
                     f"validation on {split} split...")
-        out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{opts.rank}.csv'
-        log.update(validate(opts, model, loader, split, out_file))
+        log.update(validate(opts, model, loader, split, global_step))
     TB_LOGGER.log_scaler_dict(log)
     model.train()
     return log
@@ -212,7 +216,7 @@ def optimize_answer(example_logits):
 
 
 @torch.no_grad()
-def validate(opts, model, val_loader, split, out_file):
+def validate(opts, model, val_loader, split, global_step):
     val_loss = 0
     tot_score = 0
     n_ex = 0
@@ -227,6 +231,7 @@ def validate(opts, model, val_loader, split, out_file):
             qids = batch['qids']
             targets = batch['targets']
             del batch['targets']
+            del batch['gather_index']
             del batch['qids']
 
             scores, over_logits = model(**batch, targets=None, compute_loss=False)
@@ -247,15 +252,24 @@ def validate(opts, model, val_loader, split, out_file):
             n_ex += len(qids)
             tq.update(len(qids))
 
+    out_file = f'{opts.output_dir}/results/{split}_results_{global_step}_rank{opts.rank}.csv'
+    with open(out_file, 'w') as f:
+        for id_, ans in optimize_answer(example_logits):
+            f.write(f'{id_},{ans}\n')
+
     val_loss = sum(all_gather_list(val_loss))
     n_ex = sum(all_gather_list(n_ex))
     tot_time = time() - st
     val_loss /= n_ex
     val_mrr = val_mrr / n_ex
 
-    with open(out_file, 'w') as f:
-        for id_, ans in optimize_answer(example_logits):
-            f.write(f'{id_},{ans}\n')
+    out_file = f'{opts.output_dir}/results/{split}_results_{global_step}.csv'
+    if not os.path.isfile(out_file):
+        with open(out_file, 'wb') as g:
+            for f in glob.glob(f'{opts.output_dir}/results/{split}_results_{global_step}_rank*.csv'):
+                shutil.copyfileobj(open(f, 'rb'), g)
+
+    sum(all_gather_list(opts.rank))
 
     txt_db = getattr(opts, f'{split}_txt_db')
     val_acc = judge(out_file, f'{txt_db}/answer.csv')
@@ -404,10 +418,12 @@ if __name__ == "__main__":
 
     args = parse_with_config(parser)
 
+    enlarged = "_enlarged" if args.enlarged_candidates else ""
+
     args.output_dir = os.path.join(args.output_dir,
                                    args.model,
                                    os.path.basename(args.pretrained_model_name_or_path),
-                                   f'competition_{args.num_train_steps}_{args.learning_rate}')
+                                   f'competition_{args.num_train_steps}_{args.learning_rate}{enlarged}')
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/ckpt'):
         raise ValueError("Output directory ({}) already exists and is not "
                          "empty.".format(args.output_dir))

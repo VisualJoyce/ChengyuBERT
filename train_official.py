@@ -175,8 +175,8 @@ def validate(opts, model, val_loader, split, global_step):
             loss = F.cross_entropy(logits, targets, reduction='sum')
             val_loss += loss.item()
 
-            prediction = logits + cond_logits if opts.enlarged_candidates else logits
-            max_prob, max_idx = prediction.max(dim=-1, keepdim=False)
+            logits = logits + cond_logits if opts.enlarged_candidates else logits
+            max_prob, max_idx = logits.max(dim=-1, keepdim=False)
             tot_score += torch.eq(max_idx, targets).sum().item()
             answers = max_idx.cpu().tolist()
 
@@ -292,8 +292,13 @@ def main(opts):
     else:
         best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
 
+    sum(all_gather_list(opts.rank))
+
     best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
     model.load_state_dict(torch.load(best_pt), strict=False)
+
+    sum(all_gather_list(opts.rank))
+
     evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
 
 
