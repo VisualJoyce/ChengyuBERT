@@ -86,7 +86,7 @@ def train(model, dataloaders, opts):
                     loss = original_loss
                 elif opts.candidates == 'enlarged':
                     loss = enlarged_loss
-                elif opts.candidate == 'combined':
+                elif opts.candidates == 'combined':
                     loss = original_loss + enlarged_loss
                 else:
                     raise AssertionError("No such loss!")
@@ -191,7 +191,7 @@ def validate(opts, model, val_loader, split, global_step):
                 logits = logits
             elif opts.candidates == 'enlarged':
                 logits = cond_logits
-            elif opts.candidate == 'combined':
+            elif opts.candidates == 'combined':
                 logits = logits + cond_logits
             else:
                 raise AssertionError("No such loss!")
