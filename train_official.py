@@ -142,7 +142,7 @@ def train(model, dataloaders, opts):
                     # monitor training throughput
                     tot_ex = sum(all_gather_list(n_examples))
                     ex_per_sec = int(tot_ex / (time() - start))
-                    LOGGER.info(f'{opts.model}: {n_epoch}-{global_step}: '
+                    LOGGER.info(f'{opts.model}-{opts.candidates}: {n_epoch}-{global_step}: '
                                 f'{tot_ex} examples trained at '
                                 f'{ex_per_sec} ex/s '
                                 f'best_acc@{best_ckpt}-{best_eval * 100:.2f}')
@@ -156,7 +156,8 @@ def train(model, dataloaders, opts):
                     if log['val/acc'] > best_eval:
                         best_ckpt = global_step
                         best_eval = log['val/acc']
-                        pbar.set_description(f'{opts.model}: {n_epoch}-{best_ckpt} best_acc-{best_eval * 100:.2f}')
+                        pbar.set_description(
+                            f'{opts.model}-{opts.candidates}: {n_epoch}-{best_ckpt} best_acc-{best_eval * 100:.2f}')
                     model_saver.save(model, global_step)
             if global_step >= opts.num_train_steps:
                 break
