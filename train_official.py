@@ -65,6 +65,12 @@ def train(model, dataloaders, opts):
     best_ckpt = 0
     best_eval = 0
     start = time()
+
+    # There are three choices for the loss
+    # 1. enlarged-candidates
+    # 2. original-candidates
+    # 3. combined-candidates
+
     # quick hack for amp delay_unscale bug
     optimizer.zero_grad()
     optimizer.step()
@@ -75,9 +81,15 @@ def train(model, dataloaders, opts):
             n_examples += targets.size(0)
 
             with autocast():
-                loss, vocab_loss = model(**batch, compute_loss=True)
-                if opts.enlarged_candidates:
-                    loss += vocab_loss
+                original_loss, enlarged_loss = model(**batch, compute_loss=True)
+                if opts.candidates == 'original':
+                    loss = original_loss
+                elif opts.candidates == 'enlarged':
+                    loss = enlarged_loss
+                elif opts.candidate == 'combined':
+                    loss = original_loss + enlarged_loss
+                else:
+                    raise AssertionError("No such loss!")
 
                 loss = loss.mean()
 
@@ -409,7 +421,7 @@ if __name__ == "__main__":
     args.output_dir = os.path.join(args.output_dir,
                                    args.model,
                                    os.path.basename(args.pretrained_model_name_or_path),
-                                   f'{args.model}-{args.enlarged_candidates}',
+                                   f'{args.model}-{args.candidates}',
                                    f'official_{args.num_train_steps}_{args.learning_rate}')
 
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/ckpt'):

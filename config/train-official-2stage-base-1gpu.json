@@ -10,7 +10,7 @@
     "dataset_cls": "chengyu-masked",
     "eval_dataset_cls": "chengyu-masked-eval",
     "output_dir": "/storage",
-    "enlarged_candidates": false,
+    "candidates": "original",
     "len_idiom_vocab": 33237,
     "max_txt_len": 128,
     "conf_th": 0.2,
