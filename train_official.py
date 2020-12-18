@@ -187,7 +187,14 @@ def validate(opts, model, val_loader, split, global_step):
             loss = F.cross_entropy(logits, targets, reduction='sum')
             val_loss += loss.item()
 
-            logits = logits + cond_logits if opts.enlarged_candidates else logits
+            if opts.candidates == 'original':
+                logits = logits
+            elif opts.candidates == 'enlarged':
+                logits = cond_logits
+            elif opts.candidate == 'combined':
+                logits = logits + cond_logits
+            else:
+                raise AssertionError("No such loss!")
             max_prob, max_idx = logits.max(dim=-1, keepdim=False)
             tot_score += torch.eq(max_idx, targets).sum().item()
             answers = max_idx.cpu().tolist()
