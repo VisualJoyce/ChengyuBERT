@@ -297,7 +297,7 @@ class ChengyuBertTwoStageWindow(BertPreTrainedModel):
 
         if self.window_size > length:
             logits, _ = torch.max(mo_logits, dim=1)
-        elif self.window_size == 1:
+        elif self.window_size == 0:
             new_logits = []
             for i, p in enumerate(positions):
                 new_logits.append(mo_logits[i, p])
