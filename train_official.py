@@ -318,7 +318,7 @@ def main(opts):
     sum(all_gather_list(opts.rank))
 
     log = evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
-    splits = ['dev', 'test', 'ran', 'sim', 'out']
+    splits = ['val', 'test', 'ran', 'sim', 'out']
     LOGGER.info('\t'.join(splits))
     LOGGER.info('\t'.join([format(log[split], "0.6f") for split in splits]))
 
