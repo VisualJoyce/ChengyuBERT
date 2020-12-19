@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 from collections import Counter
+from itertools import chain
 from os.path import exists, join
 from time import time
 
@@ -320,7 +321,10 @@ def main(opts):
     log = evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
     splits = ['val', 'test', 'ran', 'sim', 'out']
     LOGGER.info('\t'.join(splits))
-    LOGGER.info('\t'.join([format(log[split], "0.6f") for split in splits]))
+    LOGGER.info('\t'.join(chain(
+        [format(log[f'{split}/acc'], "0.6f") for split in splits],
+        [format(log[f'{split}/mrr'], "0.6f") for split in splits]
+    )))
 
 
 if __name__ == "__main__":
