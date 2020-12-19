@@ -14,6 +14,8 @@ def build_model(opts):
     elif opts.model.startswith('chengyubert-contrastive'):
         ModelCls = MODEL_REGISTRY['chengyubert-contrastive']
         opts.evaluate_embedding = True
+    elif opts.model.startswith('chengyubert-2stage-stage2-window'):
+        ModelCls = MODEL_REGISTRY['chengyubert-2stage-stage2-window']
     else:
         ModelCls = MODEL_REGISTRY[opts.model]
     return ModelCls.from_pretrained(opts.pretrained_model_name_or_path,

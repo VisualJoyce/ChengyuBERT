@@ -253,15 +253,18 @@ class ChengyuBertTwoStageWindow(BertPreTrainedModel):
     def __init__(self, config, len_idiom_vocab, model_name):
         super().__init__(config)
         self.model_name = model_name
+        self.window_size = int(self.model_name.split('-')[-1])
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.over_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
         self.init_weights()
 
     def vocab(self, over_states):
-        c_mo_logits = torch.einsum('bd,nd->bn', [over_states, self.idiom_embedding.weight])  # (b, 256, 10)
+        idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        c_mo_logits = torch.einsum('bd,nd->bn', [over_states, idiom_embeddings])  # (b, 256, 10)
         return c_mo_logits
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
@@ -291,25 +294,24 @@ class ChengyuBertTwoStageWindow(BertPreTrainedModel):
 
         encoded_context = encoded_layer
         mo_logits = torch.einsum('bld,bnd->bln', [encoded_context, encoded_options])  # (b, 256, 10)
-        window_size = int(self.model_name.split('-')[-1])
-        if window_size > length:
+
+        if self.window_size > length:
             logits, _ = torch.max(mo_logits, dim=1)
-        elif window_size == 1:
+        elif self.window_size == 1:
             new_logits = []
             for i, p in enumerate(positions):
                 new_logits.append(mo_logits[i, p])
             logits = torch.stack(new_logits, dim=0)
         else:
-            assert window_size % 2 == 0
-            half_window_size = window_size // 2
+            window_size = self.window_size
             new_logits = []
             for i, p in enumerate(positions):
-                if p >= half_window_size and p + half_window_size >= length:
-                    new_logits.append(mo_logits[i, (length - window_size):])
-                elif p >= half_window_size and p + half_window_size < length:
-                    new_logits.append(mo_logits[i, (p - half_window_size): (p + half_window_size)])
-                elif p < half_window_size:
-                    new_logits.append(mo_logits[i, 0: 2 * half_window_size])
+                if p >= window_size and p + window_size >= length:
+                    new_logits.append(mo_logits[i, p - window_size:])
+                elif p >= window_size and p + window_size < length:
+                    new_logits.append(mo_logits[i, (p - window_size): (p + window_size) + 1])
+                elif p < window_size:
+                    new_logits.append(mo_logits[i, : (p + window_size) + 1])
             logits, _ = torch.max(torch.stack(new_logits, dim=0), dim=1)
 
         if compute_loss:
