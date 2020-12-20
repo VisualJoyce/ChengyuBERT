@@ -307,12 +307,12 @@ class ChengyuBertTwoStageWindow(BertPreTrainedModel):
             new_logits = []
             for i, p in enumerate(positions):
                 if p >= window_size and p + window_size >= length:
-                    new_logits.append(torch.max(mo_logits[i, p - window_size:], dim=0))
+                    new_logits.append(torch.max(mo_logits[i, p - window_size:], dim=0)[0])
                 elif p >= window_size and p + window_size < length:
-                    new_logits.append(torch.max(mo_logits[i, (p - window_size): (p + window_size) + 1], dim=0))
+                    new_logits.append(torch.max(mo_logits[i, (p - window_size): (p + window_size) + 1], dim=0)[0])
                 elif p < window_size:
-                    new_logits.append(torch.max(mo_logits[i, : (p + window_size) + 1], dim=0))
-            logits, _ = torch.stack(new_logits, dim=0)
+                    new_logits.append(torch.max(mo_logits[i, : (p + window_size) + 1], dim=0)[0])
+            logits = torch.stack(new_logits, dim=0)
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss()
