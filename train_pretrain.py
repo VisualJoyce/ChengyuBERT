@@ -433,8 +433,6 @@ if __name__ == "__main__":
 
     args = parse_with_config(parser)
 
-    checkpoint = os.path.basename(args.pretrained_model_name_or_path)
-
     hvd.init()
     n_gpu = hvd.size()
     args.n_gpu = n_gpu

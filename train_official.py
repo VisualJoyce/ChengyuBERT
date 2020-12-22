@@ -277,12 +277,9 @@ def get_best_ckpt(val_data_dir, opts):
 
 
 def main(opts):
-    hvd.init()
-    n_gpu = hvd.size()
     device = torch.device("cuda", hvd.local_rank())
     torch.cuda.set_device(hvd.local_rank())
     rank = hvd.rank()
-    opts.n_gpu = n_gpu
     opts.rank = rank
     opts.size = hvd.size()
     LOGGER.info("device: {} n_gpu: {}, rank: {}, "
@@ -430,6 +427,10 @@ if __name__ == "__main__":
     parser.add_argument('--config', help='JSON config files')
 
     args = parse_with_config(parser)
+
+    hvd.init()
+    n_gpu = hvd.size()
+    args.n_gpu = n_gpu
 
     args.output_dir = os.path.join(args.output_dir,
                                    f'{args.model}-{args.candidates}',
