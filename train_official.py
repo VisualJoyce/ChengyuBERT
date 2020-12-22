@@ -432,10 +432,9 @@ if __name__ == "__main__":
     args = parse_with_config(parser)
 
     args.output_dir = os.path.join(args.output_dir,
-                                   args.model,
-                                   os.path.basename(args.pretrained_model_name_or_path),
                                    f'{args.model}-{args.candidates}',
-                                   f'official_{args.num_train_steps}_{args.learning_rate}')
+                                   os.path.basename(args.pretrained_model_name_or_path),
+                                   f'official_{args.n_gpu}_{args.num_train_steps}_{args.learning_rate}')
 
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/ckpt'):
         if args.mode == 'train':
