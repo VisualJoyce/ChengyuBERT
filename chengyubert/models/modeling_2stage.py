@@ -17,11 +17,12 @@ class ChengyuBertTwoStagePretrain(BertPreTrainedModel):
 
         self.over_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, blank_states):
-        idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        idiom_embeddings = self.LayerNorm(self.idiom_embedding(self.enlarged_candidates))
         return torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
@@ -60,11 +61,12 @@ class ChengyuBertTwoStageMaskPretrain(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, blank_states):
-        idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        idiom_embeddings = self.LayerNorm(self.idiom_embedding(self.enlarged_candidates))
         return torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
@@ -98,11 +100,12 @@ class ChengyuBertTwoStageCLSPretrain(BertPreTrainedModel):
 
         self.over_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, blank_states):
-        idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        idiom_embeddings = self.LayerNorm(self.idiom_embedding(self.enlarged_candidates))
         return torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids,
