@@ -349,7 +349,7 @@ if __name__ == "__main__":
                         choices=['snlive'],
                         help="choose from 2 model architecture")
     parser.add_argument("--mode", default='train',
-                        choices=['train', 'infer'],
+                        choices=['train', 'infer', 'eval'],
                         help="choose from 2 mode")
 
     parser.add_argument("--output_dir", default=None, type=str,
