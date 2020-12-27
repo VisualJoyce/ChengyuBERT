@@ -142,9 +142,10 @@ def train(model, dataloaders, opts):
                     log = evaluation(model,
                                      dict(filter(lambda x: x[0].startswith('val'), dataloaders.items())),
                                      opts, global_step)
-                    if log['val/acc'] > best_eval:
+                    log_eval = log['val/acc']
+                    if log_eval > best_eval:
                         best_ckpt = global_step
-                        best_eval = log['val/acc']
+                        best_eval = log_eval
                         pbar.set_description(f'{opts.model}: {n_epoch}-{best_ckpt} best_acc-{best_eval * 100:.2f}')
                     model_saver.save(model, global_step)
             if global_step >= opts.num_train_steps:
@@ -319,13 +320,16 @@ def main(opts):
 
     if opts.mode == 'train':
         best_ckpt = train(model, dataloaders, opts)
+    elif opts.mode == 'eval':
+        best_ckpt = None
     else:
         best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
 
     sum(all_gather_list(opts.rank))
 
-    best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
-    model.load_state_dict(torch.load(best_pt), strict=False)
+    if best_ckpt is not None:
+        best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
+        model.load_state_dict(torch.load(best_pt), strict=False)
     evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
 
 
