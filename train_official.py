@@ -305,13 +305,20 @@ def main(opts):
     model = build_model(opts)
     model.to(device)
 
-    best_ckpt = train(model, dataloaders, opts) if opts.mode == 'train' else get_best_ckpt(
-        dataloaders['val'].dataset.db_dir, opts)
+    if opts.mode == 'train':
+        best_ckpt = train(model, dataloaders, opts)
+    elif opts.mode == 'eval':
+        best_ckpt = None
+        if opts.rank == 0:
+            os.makedirs(join(opts.output_dir, 'results'), exist_ok=True)  # store val predictions
+    else:
+        best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
 
     sum(all_gather_list(opts.rank))
 
-    best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
-    model.load_state_dict(torch.load(best_pt), strict=False)
+    if best_ckpt is not None:
+        best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
+        model.load_state_dict(torch.load(best_pt), strict=False)
 
     sum(all_gather_list(opts.rank))
 
@@ -340,7 +347,7 @@ if __name__ == "__main__":
                         choices=['snlive'],
                         help="choose from 2 model architecture")
     parser.add_argument("--mode", default='train',
-                        choices=['train', 'infer'],
+                        choices=['train', 'infer', 'eval'],
                         help="choose from 2 mode")
 
     parser.add_argument("--output_dir", default=None, type=str,
