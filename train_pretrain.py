@@ -322,6 +322,8 @@ def main(opts):
         best_ckpt = train(model, dataloaders, opts)
     elif opts.mode == 'eval':
         best_ckpt = None
+        if opts.rank == 0:
+            os.makedirs(join(opts.output_dir, 'results'), exist_ok=True)  # store val predictions
     else:
         best_ckpt = get_best_ckpt(dataloaders['val'].dataset.db_dir, opts)
 
