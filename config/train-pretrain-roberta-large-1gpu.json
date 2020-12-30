@@ -18,7 +18,7 @@
     "num_bb": 36,
     "train_batch_size": 3000,
     "val_batch_size": 20000,
-    "gradient_accumulation_steps": 1,
+    "gradient_accumulation_steps": 12,
     "learning_rate": 5e-05,
     "valid_steps": 5000,
     "num_train_epochs": 5,

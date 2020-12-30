@@ -27,7 +27,7 @@
     "adam_epsilon": 1e-08,
     "dropout": 0.1,
     "weight_decay": 0.01,
-    "grad_norm": 2.0,
+    "grad_norm": 1.0,
     "warmup_steps": 800,
     "seed": 77,
     "fp16": true,
