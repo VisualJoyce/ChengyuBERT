@@ -332,7 +332,13 @@ def main(opts):
     if best_ckpt is not None:
         best_pt = f'{opts.output_dir}/ckpt/model_step_{best_ckpt}.pt'
         model.load_state_dict(torch.load(best_pt), strict=False)
-    evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
+    log = evaluation(model, dict(filter(lambda x: x[0] != 'train', dataloaders.items())), opts, best_ckpt)
+    splits = ['val', 'test', 'ran', 'sim', 'out']
+    LOGGER.info('\t'.join(splits))
+    LOGGER.info('\t'.join(chain(
+        [format(log[f'{split}/acc'], "0.6f") for split in splits],
+        [format(log[f'{split}/mrr'], "0.6f") for split in splits]
+    )))
 
 
 if __name__ == "__main__":
