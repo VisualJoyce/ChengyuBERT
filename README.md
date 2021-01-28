@@ -95,6 +95,13 @@ CONFIG_FILE="train-official-bert-base-1gpu.json" bash docker_preprocess.sh $PWD/
 CONFIG_FILE="train-official-bert-base-1gpu.json" bash docker_preprocess.sh $PWD/data/annotations official_out
 ```
 ### Training
+To run the baseline BL-IdmEmb (w/o EC)
+```shell script
+CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="train-official-bert-base-1gpu.json" \
+bash docker_train.sh official \
+"MODEL=chengyubert-cloze ENLARGED_CANDIDATES=0 LEARNING_RATE=0.0001 NUM_TRAIN_STEPS=15003 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
+```
+To run the dual model CP+DE
 ```shell script
 CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="train-official-bert-base-1gpu.json" \
 bash docker_train.sh official \
