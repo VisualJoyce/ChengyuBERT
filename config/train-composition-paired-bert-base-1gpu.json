@@ -5,7 +5,7 @@
     "out_txt_db": "/txt/official_out.db",
     "sim_txt_db": "/txt/official_sim.db",
     "ran_txt_db": "/txt/official_ran.db",
-    "pretrained_model_name_or_path": "/pretrain/wwm_ext",
+    "pretrained_model_name_or_path": "hfl/chinese-bert-wwm-ext",
     "model": "chengyubert-composition-paired",
     "dataset_cls": "chengyu-contextual",
     "eval_dataset_cls": "chengyu-contextual-eval",

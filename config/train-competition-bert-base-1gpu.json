@@ -3,7 +3,7 @@
     "val_txt_db": "/txt/competition_dev.db",
     "test_txt_db": "/txt/competition_test.db",
     "out_txt_db": "/txt/competition_out.db",
-    "pretrained_model_name_or_path": "/pretrain/wwm_ext",
+    "pretrained_model_name_or_path": "hfl/chinese-bert-wwm-ext",
     "model": "bert",
     "dataset_cls": "chengyu-masked",
     "eval_dataset_cls": "chengyu-masked-eval",

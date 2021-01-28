@@ -3,7 +3,7 @@
     "val_txt_db": "/txt/competition_dev.db",
     "test_txt_db": "/txt/competition_test.db",
     "out_txt_db": "/txt/competition_out.db",
-    "pretrained_model_name_or_path": "/pretrain/chengyubert_2stage_stage1_wwm_ext",
+    "pretrained_model_name_or_path": "visualjoyce/chengyubert_2stage_stage1_wwm_ext",
     "model": "chengyubert-2stage-stage2",
     "dataset_cls": "chengyu-masked",
     "eval_dataset_cls": "chengyu-masked-eval",
