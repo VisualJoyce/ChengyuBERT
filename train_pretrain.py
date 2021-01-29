@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 from collections import Counter
+from itertools import chain
 from os.path import exists, join
 from time import time
 

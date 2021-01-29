@@ -17,8 +17,6 @@ class ChengyuMaskedDataset(TxtTokLmdb):
         self.config = opts
         self.chengyu_vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
         self.idiom_ids = list(range(opts.len_idiom_vocab))
-        with open('/annotations/synonyms/chengyu_synonyms_recall_filter.json') as f:
-            self.chengyu_synonyms_dict = json.load(f)
         self.tokenizer = AutoTokenizer.from_pretrained(opts.pretrained_model_name_or_path)
         self.reverse_index = {int(k): v for k, v in json.load(open(f'{db_dir}/reverse_index.json')).items() if
                               int(k) < opts.len_idiom_vocab}
