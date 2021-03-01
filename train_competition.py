@@ -340,15 +340,6 @@ if __name__ == "__main__":
     # Prepro parameters
     parser.add_argument('--max_txt_len', type=int, default=60,
                         help='max number of tokens in text (BERT BPE)')
-    parser.add_argument('--conf_th', type=float, default=0.2,
-                        help='threshold for dynamic bounding boxes '
-                             '(-1 for fixed)')
-    parser.add_argument('--max_bb', type=int, default=100,
-                        help='max number of bounding boxes')
-    parser.add_argument('--min_bb', type=int, default=10,
-                        help='min number of bounding boxes')
-    parser.add_argument('--num_bb', type=int, default=36,
-                        help='static number of bounding boxes')
 
     # training parameters
     parser.add_argument("--train_batch_size",
@@ -418,19 +409,12 @@ if __name__ == "__main__":
 
     args = parse_with_config(parser)
 
-    enlarged = "_enlarged" if args.enlarged_candidates else ""
-
     args.output_dir = os.path.join(args.output_dir,
-                                   args.model,
+                                   f'{args.model}-{args.candidates}',
                                    os.path.basename(args.pretrained_model_name_or_path),
-                                   f'competition_{args.num_train_steps}_{args.learning_rate}{enlarged}')
+                                   f'official_{args.n_gpu}_{args.num_train_steps}_{args.learning_rate}')
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/ckpt'):
         raise ValueError("Output directory ({}) already exists and is not "
                          "empty.".format(args.output_dir))
-
-    if args.conf_th == -1:
-        assert args.max_bb + args.max_txt_len + 2 <= 512
-    else:
-        assert args.num_bb + args.max_txt_len + 2 <= 512
 
     main(args)

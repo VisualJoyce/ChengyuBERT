@@ -14,7 +14,7 @@ if [ ! -d "${TXT_DB}" ]; then
 fi
 
 if [ -z "$CONFIG_FILE" ]; then
-  CONFIG_FILE="train-chengyubert-base-1gpu.json"
+  CONFIG_FILE="dual_embedding/bert-wwm-ext_official.json"
 fi
 
 CONFIG_DIR=/src/config
