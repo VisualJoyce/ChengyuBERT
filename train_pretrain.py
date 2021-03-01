@@ -442,7 +442,7 @@ if __name__ == "__main__":
     args.n_gpu = n_gpu
 
     args.output_dir = os.path.join(args.output_dir,
-                                   f'{args.model}-{args.candidates}',
+                                   {args.model},
                                    os.path.basename(args.pretrained_model_name_or_path),
                                    f'pretrain_{args.n_gpu}_{args.num_train_steps}_{args.learning_rate}')
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/ckpt'):
