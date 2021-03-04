@@ -118,11 +118,60 @@ def chengyu_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
     return chengyu_vocab
 
 
-def create_dataloader(txt_path, batch_size, is_train, dset_cls, opts):
-    dset = dset_cls(txt_path, opts.max_txt_len, opts)
+calo_mapping = {
+    'sentiment': {'中性': 0, '褒义': 1, '贬义': 2, '褒贬兼有': 3},
+    'emotion': {
+        'PA': {'main': '乐', 'sub': '快乐', 'id': 0, 'main_id': 0, 'binary': 1},
+        'PE': {'main': '乐', 'sub': '安心', 'id': 1, 'main_id': 0, 'binary': 1},
+        'PD': {'main': '好', 'sub': '尊敬', 'id': 2, 'main_id': 1, 'binary': 1},
+        'PH': {'main': '好', 'sub': '赞扬', 'id': 3, 'main_id': 1, 'binary': 1},
+        'PG': {'main': '好', 'sub': '相信', 'id': 4, 'main_id': 1, 'binary': 1},
+        'PB': {'main': '好', 'sub': '喜爱', 'id': 5, 'main_id': 1, 'binary': 1},
+        'PK': {'main': '好', 'sub': '祝愿', 'id': 6, 'main_id': 1, 'binary': 1},
+        'NA': {'main': '怒', 'sub': '愤怒', 'id': 7, 'main_id': 2, 'binary': 2},
+        'NB': {'main': '哀', 'sub': '悲伤', 'id': 8, 'main_id': 3, 'binary': 2},
+        'NJ': {'main': '哀', 'sub': '失望', 'id': 9, 'main_id': 3, 'binary': 2},
+        'NH': {'main': '哀', 'sub': '疚', 'id': 10, 'main_id': 3, 'binary': 2},
+        'PF': {'main': '哀', 'sub': '思', 'id': 11, 'main_id': 3, 'binary': 2},
+        'NI': {'main': '惧', 'sub': '慌', 'id': 12, 'main_id': 4, 'binary': 2},
+        'NC': {'main': '惧', 'sub': '恐惧', 'id': 13, 'main_id': 4, 'binary': 2},
+        'NG': {'main': '惧', 'sub': '羞', 'id': 14, 'main_id': 4, 'binary': 2},
+        'NE': {'main': '恶', 'sub': '烦闷', 'id': 15, 'main_id': 5, 'binary': 2},
+        'ND': {'main': '恶', 'sub': '憎恶', 'id': 16, 'main_id': 5, 'binary': 2},
+        'NN': {'main': '恶', 'sub': '贬责', 'id': 17, 'main_id': 5, 'binary': 2},
+        'NK': {'main': '恶', 'sub': '妒忌', 'id': 18, 'main_id': 5, 'binary': 2},
+        'NL': {'main': '恶', 'sub': '怀疑', 'id': 19, 'main_id': 5, 'binary': 2},
+        'PC': {'main': '惊', 'sub': '惊奇', 'id': 20, 'main_id': 6, 'binary': 1}
+    }
+}
+
+
+def calo_process(chengyu_vocab, calo_file):
+    # calo_file = '情感词汇本体.xlsx'
+    df_sentiment = pda.read_excel(calo_file, keep_default_na=False)
+    df_sentiment['情感分类'] = df_sentiment['情感分类'].str.strip()
+    df_sentiment = df_sentiment[df_sentiment['词语'].isin(chengyu_vocab.keys())]
+
+    calo_vocab = {}
+    for item in df_sentiment.itertuples():
+        w = getattr(item, '词语')
+        k = getattr(item, '情感分类')
+
+        v = chengyu_vocab[w]
+        calo_vocab[v] = {
+            'coarse_emotion': calo_mapping['emotion'][k]['main_id'],
+            'fine_emotion': calo_mapping['emotion'][k]['id'],
+            'sentiment': calo_mapping['sentiment'][getattr(item, '极性')],
+            'strength': getattr(item, '强度')
+        }
+    return calo_vocab
+
+
+def create_dataloader(txt_path, batch_size, split, dset_cls, opts):
+    dset = dset_cls(txt_path, opts.max_txt_len, opts, split)
     sampler = DistributedTokenBucketSampler(
         opts.size, opts.rank, dset.lens,
-        bucket_size=BUCKET_SIZE, batch_size=batch_size, droplast=is_train)
+        bucket_size=BUCKET_SIZE, batch_size=batch_size, droplast='train' == split)
     loader = DataLoader(dset, batch_sampler=sampler,
                         num_workers=opts.n_workers, pin_memory=opts.pin_mem,
                         collate_fn=dset_cls.collate_fn)
@@ -166,5 +215,5 @@ def create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, opts, splits=None):
         batch_size = getattr(opts, f'{split}_batch_size') if split in ['pretrain', 'train'] else opts.val_batch_size
         dataset_cls = DatasetCls if split in ['pretrain', 'train'] else EvalDatasetCls
         # create_dataloader_fn = create_dataloader_fn_dict.get(split, create_dataloader)
-        dataloaders[split] = create_dataloader(txt_db, batch_size, 'train' == split, dataset_cls, opts)
+        dataloaders[split] = create_dataloader(txt_db, batch_size, split, dataset_cls, opts)
     return splits, dataloaders

@@ -21,7 +21,7 @@ from tqdm import tqdm
 
 from chengyubert.data import create_dataloaders
 from chengyubert.data.dataset import DATA_REGISTRY
-from chengyubert.data.dataset.masked import judge
+from chengyubert.data.evaluation import judge
 from chengyubert.models import build_model
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
@@ -33,8 +33,6 @@ from chengyubert.utils.save import ModelSaver, save_training_meta
 
 
 def main(opts):
-    hvd.init()
-    n_gpu = hvd.size()
     device = torch.device("cuda", hvd.local_rank())
     torch.cuda.set_device(hvd.local_rank())
     rank = hvd.rank()
@@ -103,11 +101,17 @@ def main(opts):
             n_examples += targets.size(0)
 
             with autocast():
-                loss, vocab_loss = model(**batch, compute_loss=True)
-                if opts.enlarged_candidates:
-                    loss += vocab_loss
+                original_loss, enlarged_loss = model(**batch, compute_loss=True)
+                if opts.candidates == 'original':
+                    loss = original_loss
+                elif opts.candidates == 'enlarged':
+                    loss = enlarged_loss
+                elif opts.candidates == 'combined':
+                    loss = original_loss + enlarged_loss
+                else:
+                    raise AssertionError("No such loss!")
 
-            loss = loss.mean()
+                loss = loss.mean()
 
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
             scaler.scale(loss).backward()
@@ -234,13 +238,28 @@ def validate(opts, model, val_loader, split, global_step):
             del batch['gather_index']
             del batch['qids']
 
-            scores, over_logits = model(**batch, targets=None, compute_loss=False)
-            loss = F.cross_entropy(scores, targets, reduction='sum')
+            logits, over_logits, cond_logits = model(**batch, targets=None, compute_loss=False)
+            loss = F.cross_entropy(logits, targets, reduction='sum')
             val_loss += loss.item()
-            tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
+
+            if opts.candidates == 'original':
+                logits = logits
+            elif opts.candidates == 'enlarged':
+                logits = cond_logits
+            elif opts.candidates == 'combined':
+                logits = logits + cond_logits
+            else:
+                raise AssertionError("No such loss!")
+
+            # scores, over_logits = model(**batch, targets=None, compute_loss=False)
+            # loss = F.cross_entropy(scores, targets, reduction='sum')
+            # val_loss += loss.item()
+            max_prob, max_idx = logits.max(dim=-1, keepdim=False)
+            tot_score += torch.eq(max_idx, targets).sum().item()
+            # tot_score += (scores.max(dim=-1, keepdim=False)[1] == targets).sum().item()
 
             targets = torch.gather(batch['option_ids'], dim=1, index=targets.unsqueeze(1)).cpu().numpy()
-            for j, (qid, target, score, over_logit) in enumerate(zip(qids, targets, scores, over_logits)):
+            for j, (qid, target, score, over_logit) in enumerate(zip(qids, targets, logits, over_logits)):
                 g = over_logit.cpu().numpy()
                 top_k = np.argsort(-g)
                 val_mrr += 1 / (1 + np.argwhere(top_k == target).item())
@@ -408,6 +427,10 @@ if __name__ == "__main__":
     parser.add_argument('--config', help='JSON config files')
 
     args = parse_with_config(parser)
+
+    hvd.init()
+    n_gpu = hvd.size()
+    args.n_gpu = n_gpu
 
     args.output_dir = os.path.join(args.output_dir,
                                    f'{args.model}-{args.candidates}',

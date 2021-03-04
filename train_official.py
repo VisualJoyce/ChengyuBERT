@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 from chengyubert.data import create_dataloaders
 from chengyubert.data.dataset import DATA_REGISTRY
-from chengyubert.data.dataset.masked import judge
+from chengyubert.data.evaluation import judge
 from chengyubert.models import build_model
 from chengyubert.optim import get_lr_sched
 from chengyubert.optim.misc import build_optimizer
