@@ -165,8 +165,7 @@ bash docker_train.sh pretrain \
 "MODEL=chengyubert-2stage-stage1 CANDIDATES=combined LEARNING_RATE=0.0001 NUM_TRAIN_STEPS=250000 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
 ```
 
-### Stage Two
-To run the pretraining
+### Stage Two for Official
 ```shell script
 CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="two_stage/stage2-wwm-ext_official.json" \
 bash docker_train.sh official \
@@ -174,7 +173,6 @@ bash docker_train.sh official \
 ```
 
 ### Stage Two for Competition
-To run the pretraining
 ```shell script
 CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="two_stage/stage2-wwm-ext_competition.json" \
 bash docker_train.sh competition \
