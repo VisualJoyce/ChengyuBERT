@@ -133,7 +133,7 @@ bash docker_train.sh competition \
 ```shell script
 CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="dual_embedding/bert-wwm-ext_official.json" \
 bash docker_infer.sh official \
-"MODEL=chengyubert-dual CANDIDATES=combined LEARNING_RATE=0.0001 NUM_TRAIN_STEPS=15003 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
+"MODEL=chengyubert-dual CANDIDATES=combined LEARNING_RATE=0.00005 NUM_TRAIN_STEPS=15003 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
 ```
 
 ## Two Stage
@@ -162,7 +162,7 @@ To run the pretraining
 ```shell script
 CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="two_stage/stage1-wwm-ext.json" \
 bash docker_train.sh pretrain \
-"MODEL=chengyubert-2stage-stage1 CANDIDATES=combined LEARNING_RATE=0.0001 NUM_TRAIN_STEPS=250000 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
+"MODEL=chengyubert-2stage-stage1 CANDIDATES=combined LEARNING_RATE=0.00005 NUM_TRAIN_STEPS=250000 GRADIENT_ACCUMULATION_STEPS=12 VALID_STEPS=100 GRAD_NORM=1"
 ```
 
 ### Stage Two for Official
