@@ -86,6 +86,7 @@ data/pretrained
 
 ### Preprocessing
 
+On the ChID official released dataset
 ```shell script
 CONFIG_FILE="dual_embedding/bert-wwm-ext_official.json" bash docker_preprocess.sh $PWD/data/annotations official_train
 CONFIG_FILE="dual_embedding/bert-wwm-ext_official.json" bash docker_preprocess.sh $PWD/data/annotations official_dev
@@ -95,20 +96,36 @@ CONFIG_FILE="dual_embedding/bert-wwm-ext_official.json" bash docker_preprocess.s
 CONFIG_FILE="dual_embedding/bert-wwm-ext_official.json" bash docker_preprocess.sh $PWD/data/annotations official_out
 ```
 
+On the ChID competition dataset, 
+```shell script
+CONFIG_FILE="dual_embedding/roberta-wwm-ext-large_competition.json" bash docker_preprocess.sh $PWD/data/annotations competition_train
+CONFIG_FILE="dual_embedding/roberta-wwm-ext-large_competition.json" bash docker_preprocess.sh $PWD/data/annotations competition_dev
+CONFIG_FILE="dual_embedding/roberta-wwm-ext-large_competition.json" bash docker_preprocess.sh $PWD/data/annotations competition_test
+CONFIG_FILE="dual_embedding/roberta-wwm-ext-large_competition.json" bash docker_preprocess.sh $PWD/data/annotations competition_out
+```
+For more information about the competition, please refer to [Chinese Idiom Understanding Contest](https://www.biendata.xyz/competition/idiom/).
+
 ### Training
 
 To run the baseline BL-IdmEmb (w/o EC)
 ```shell script
 CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="dual_embedding/bert-wwm-ext_official.json" \
 bash docker_train.sh official \
-"MODEL=chengyubert-cloze CANDIDATES=original LEARNING_RATE=0.0001 NUM_TRAIN_STEPS=15003 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
+"MODEL=chengyubert-cloze CANDIDATES=original LEARNING_RATE=0.00005 NUM_TRAIN_STEPS=15003 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
 ```
 
 To run the dual model CP+DE
 ```shell script
 CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="dual_embedding/bert-wwm-ext_official.json" \
 bash docker_train.sh official \
-"MODEL=chengyubert-dual CANDIDATES=combined LEARNING_RATE=0.0001 NUM_TRAIN_STEPS=15003 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
+"MODEL=chengyubert-dual CANDIDATES=combined LEARNING_RATE=0.00005 NUM_TRAIN_STEPS=15003 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
+```
+
+To run the dual model for the competition
+```shell script
+CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="dual_embedding/roberta-wwm-ext-large_competition.json" \
+bash docker_train.sh competition \
+"MODEL=chengyubert-dual CANDIDATES=combined LEARNING_RATE=0.00005 NUM_TRAIN_STEPS=5003 GRADIENT_ACCUMULATION_STEPS=5 VALID_STEPS=100 GRAD_NORM=1"
 ```
 
 ### Evaluation  
@@ -140,11 +157,28 @@ For the collected pretraining corpus, we can process as following:
 CONFIG_FILE="two_stage/stage1-wwm-ext.json" bash docker_preprocess.sh $PWD/data/annotations external_pretrain
 ```
 
+### Stage One 
 To run the pretraining
 ```shell script
 CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="two_stage/stage1-wwm-ext.json" \
 bash docker_train.sh pretrain \
 "MODEL=chengyubert-2stage-stage1 CANDIDATES=combined LEARNING_RATE=0.0001 NUM_TRAIN_STEPS=250000 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
+```
+
+### Stage Two
+To run the pretraining
+```shell script
+CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="two_stage/stage2-wwm-ext_official.json" \
+bash docker_train.sh official \
+"MODEL=chengyubert-2stage-stage2 CANDIDATES=combined LEARNING_RATE=0.00005 NUM_TRAIN_STEPS=25000 GRADIENT_ACCUMULATION_STEPS=1 VALID_STEPS=100 GRAD_NORM=1"
+```
+
+### Stage Two for Competition
+To run the pretraining
+```shell script
+CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="two_stage/stage2-wwm-ext_competition.json" \
+bash docker_train.sh competition \
+"MODEL=chengyubert-2stage-stage2 CANDIDATES=combined LEARNING_RATE=0.00005 NUM_TRAIN_STEPS=5000 GRADIENT_ACCUMULATION_STEPS=5 VALID_STEPS=100 GRAD_NORM=1"
 ```
 
 ## Acknowledgement
