@@ -435,7 +435,7 @@ if __name__ == "__main__":
     args.output_dir = os.path.join(args.output_dir,
                                    f'{args.model}-{args.candidates}',
                                    os.path.basename(args.pretrained_model_name_or_path),
-                                   f'official_{args.n_gpu}_{args.num_train_steps}_{args.learning_rate}')
+                                   f'competition_{args.n_gpu}_{args.num_train_steps}_{args.learning_rate}')
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/ckpt'):
         raise ValueError("Output directory ({}) already exists and is not "
                          "empty.".format(args.output_dir))

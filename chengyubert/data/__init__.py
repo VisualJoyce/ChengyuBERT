@@ -145,6 +145,12 @@ calo_mapping = {
     }
 }
 
+calo_inverse_mapping = {
+    'sentiment': {v: k for k, v in calo_mapping['sentiment'].items()},
+    'coarse_emotion': {v['main_id']: v['main'] for k, v in calo_mapping['emotion'].items()},
+    'fine_emotion': {v['id']: (v['main'], k, v['sub']) for k, v in calo_mapping['emotion'].items()}
+}
+
 
 def calo_process(chengyu_vocab, calo_file):
     # calo_file = '情感词汇本体.xlsx'
@@ -161,7 +167,7 @@ def calo_process(chengyu_vocab, calo_file):
         calo_vocab[v] = {
             'coarse_emotion': calo_mapping['emotion'][k]['main_id'],
             'fine_emotion': calo_mapping['emotion'][k]['id'],
-            'sentiment': calo_mapping['sentiment'][getattr(item, '极性')],
+            'sentiment': getattr(item, '极性'),
             'strength': getattr(item, '强度')
         }
     return calo_vocab
