@@ -4,21 +4,16 @@ import random
 import torch
 from more_itertools import unzip
 from torch.nn.utils.rnn import pad_sequence
-from transformers import AutoTokenizer
 
-from chengyubert.data import TxtTokLmdb, chengyu_process
+from chengyubert.data import ChengyuLmdb
 from chengyubert.data.dataset import register_dataset
 
 
 @register_dataset('chengyu-masked')
-class ChengyuMaskedDataset(TxtTokLmdb):
-    def __init__(self, db_dir, max_txt_len, opts, split):
-        super().__init__(db_dir, max_txt_len)
-        self.config = opts
-        self.chengyu_vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
-        self.idiom_ids = list(range(opts.len_idiom_vocab))
-        self.tokenizer = AutoTokenizer.from_pretrained(opts.pretrained_model_name_or_path)
-        self.reverse_index = {int(k): v for k, v in json.load(open(f'{db_dir}/reverse_index.json')).items() if
+class ChengyuMaskedDataset(ChengyuLmdb):
+    def __init__(self, split, max_txt_len, opts):
+        super().__init__(split, max_txt_len, opts)
+        self.reverse_index = {int(k): v for k, v in json.load(open(f'{self.db_dir}/reverse_index.json')).items() if
                               int(k) < opts.len_idiom_vocab}
         self.allowed = set()
         [self.allowed.update(v) for _, v in self.reverse_index.items()]

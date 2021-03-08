@@ -1,8 +1,8 @@
 {
-    "train_txt_db": "/txt/competition_train.db",
-    "val_txt_db": "/txt/competition_dev.db",
-    "test_txt_db": "/txt/competition_test.db",
-    "out_txt_db": "/txt/competition_out.db",
+    "train_txt_db": "competition_train.db",
+    "val_txt_db": "competition_dev.db",
+    "test_txt_db": "competition_test.db",
+    "out_txt_db": "competition_out.db",
     "pretrained_model_name_or_path": "visualjoyce/chengyubert_2stage_stage1_wwm_ext",
     "model": "chengyubert-2stage-stage2",
     "dataset_cls": "chengyu-masked",

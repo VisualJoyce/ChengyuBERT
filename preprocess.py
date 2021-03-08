@@ -10,7 +10,7 @@ from cytoolz import curry
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from chengyubert.data import open_lmdb, chengyu_process
+from chengyubert.data import open_lmdb, chengyu_process, intermediate_dir
 from chengyubert.utils.misc import parse_with_config
 
 
@@ -392,7 +392,12 @@ def main(opts):
         txt_db = 'train_txt_db'
     else:
         txt_db = f'{split}_txt_db'
-    opts.output = getattr(opts, txt_db)
+    opts.output = os.path.join('/txt',
+                               intermediate_dir(opts.pretrained_model_name_or_path),
+                               getattr(opts, txt_db))
+
+    os.makedirs(opts.output)
+
     # train_db_dir = os.path.join(os.path.dirname(opts.output), f'{source}_{split}.db')
     # meta = vars(opts)
     # meta['tokenizer'] = opts.toker

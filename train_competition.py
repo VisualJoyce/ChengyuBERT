@@ -3,13 +3,13 @@ Copyright (c) VisualJoyce.
 Licensed under the MIT license.
 """
 import argparse
+import glob
 import json
 import os
 import shutil
 from os.path import exists, join
 from time import time
 
-import glob
 import numpy as np
 import torch
 from horovod import torch as hvd
@@ -19,7 +19,7 @@ from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 
-from chengyubert.data import create_dataloaders
+from chengyubert.data import create_dataloaders, intermediate_dir
 from chengyubert.data.dataset import DATA_REGISTRY
 from chengyubert.data.evaluation import judge
 from chengyubert.models import build_model
@@ -52,7 +52,7 @@ def main(opts):
     # data loaders
     DatasetCls = DATA_REGISTRY[opts.dataset_cls]
     EvalDatasetCls = DATA_REGISTRY[opts.eval_dataset_cls]
-    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, opts)
+    splits, dataloaders = create_dataloaders(DatasetCls, EvalDatasetCls, opts)
 
     # Prepare model
     model = build_model(opts)
@@ -290,7 +290,9 @@ def validate(opts, model, val_loader, split, global_step):
 
     sum(all_gather_list(opts.rank))
 
-    txt_db = getattr(opts, f'{split}_txt_db')
+    txt_db = os.path.join('/txt',
+                          intermediate_dir(opts.pretrained_model_name_or_path),
+                          getattr(opts, f'{split}_txt_db'))
     val_acc = judge(out_file, f'{txt_db}/answer.csv')
 
     val_log = {f'{split}/loss': val_loss,
