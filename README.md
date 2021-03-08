@@ -105,6 +105,23 @@ CONFIG_FILE="dual_embedding/roberta-wwm-ext-large_competition.json" bash docker_
 ```
 For more information about the competition, please refer to [Chinese Idiom Understanding Contest](https://www.biendata.xyz/competition/idiom/).
 
+Since our `txt_db` may be preprocessed via different tokenizers, we use the model path or name as part of the db's path.
+If the user is sure that the models sharing the same tokenizer and vocabulary, one can use relative soft link to avoid repeated preprocessing.
+```shell script
+└── txt_db
+    ├── hfl
+    │   └── chinese-bert-wwm-ext
+    │       ├── external_pretrain.db
+    │       ├── official_dev.db
+    │       ├── official_out.db
+    │       ├── official_ran.db
+    │       ├── official_sim.db
+    │       ├── official_test.db
+    │       └── official_train.db
+    └── visualjoyce
+        └── chengyubert_2stage_stage1_wwm_ext -> ../hfl/chinese-bert-wwm-ext
+```
+
 ### Training
 
 To run the baseline BL-IdmEmb (w/o EC)
