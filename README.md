@@ -1,10 +1,29 @@
-![ZhugeBERT](chengyubert1.png)
+![ChengyuBERT](chengyubert1.png)
 
 # ChengyuBERT
 
 A repository for Chinese Idiom/Chengyu Recommendation.
 
 In this repo, we release code for the two papers on Chengyu Recommendation.
+
+Table of Contents
+=================
+
+   * [ChengyuBERT](#chengyubert)
+      * [Data](#data)
+      * [Pretrained Models](#pretrained-models)
+      * [Dual Embeddings](#dual-embeddings)
+         * [Preprocessing](#preprocessing)
+         * [Training](#training)
+         * [Evaluation](#evaluation)
+      * [Two Stage](#two-stage)
+         * [Preprocessing](#preprocessing-1)
+         * [Stage One](#stage-one)
+         * [Stage Two for Official](#stage-two-for-official)
+         * [Stage Two for Competition](#stage-two-for-competition)
+      * [Acknowledgement](#acknowledgement)
+
+Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 
 ## Data
 We used the newly released dataset [ChID](https://github.com/zhengcj1/ChID-Dataset).
