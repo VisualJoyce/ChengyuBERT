@@ -338,7 +338,8 @@ class ChidAffectionParser(ChidParser):
         self.annotation_dir = annotation_dir
         with open(self.data_file) as fd:
             self.filtered = json.load(fd)
-
+        with open(self.unlabelled_file) as fd:
+            self.unlabelled = json.load(fd)
 
     @property
     def data_dir(self):
@@ -348,6 +349,10 @@ class ChidAffectionParser(ChidParser):
     def data_file(self):
         return os.path.join(self.data_dir, '{}.json'.format(self.split))
 
+    @property
+    def unlabelled_file(self):
+        return os.path.join(self.data_dir, 'unlabelled.json')
+
     def _read_data_file(self, data_file):
         with tqdm(total=os.path.getsize(data_file), desc=self.split,
                   bar_format="{desc}: {percentage:.3f}%|{bar}| {n:.2f}/{total_fmt} [{elapsed}<{remaining}]") as pbar:
@@ -355,6 +360,31 @@ class ChidAffectionParser(ChidParser):
                 for idx, data_str in enumerate(f):
                     pbar.update(len(data_str))
                     yield data_str
+
+    @staticmethod
+    def _construct_example(i, idiom, tag, new_tag, context, data):
+        tag_str = "#idiom%06d#" % new_tag
+
+        tmp_context = context
+        tmp_context = "".join((tmp_context[:tag.start(0)], tag_str, tmp_context[tag.end(0):]))
+        tmp_context = tmp_context.replace("#idiom#", "[UNK]")
+
+        if 'candidates' not in data:
+            options, label = [], -1
+        else:
+            options = data['candidates'][i]
+            if len(options) != 7:
+                print(data)
+                assert len(options) == 7
+            label = options.index(idiom)
+        return Example(
+            idx=new_tag,
+            tag=tag_str,
+            context=tmp_context,
+            idiom=idiom,
+            options=options,
+            label=label
+        )
 
     def read_examples(self):
         for idx, data_str in enumerate(chain(self._read_data_file(os.path.join(self.data_dir, 'data.jsonl')),
@@ -366,29 +396,12 @@ class ChidAffectionParser(ChidParser):
                 if idiom not in self.filtered and self.split != 'train':
                     continue
 
-                tag_str = "#idiom%06d#" % new_tag
-
-                tmp_context = context
-                tmp_context = "".join((tmp_context[:tag.start(0)], tag_str, tmp_context[tag.end(0):]))
-                tmp_context = tmp_context.replace("#idiom#", "[UNK]")
-
-                if 'candidates' not in data:
-                    options, label = [], -1
+                if self.split == 'train':
+                    if idiom in self.filtered or idiom in self.unlabelled:
+                        yield self._construct_example(i, idiom, tag, new_tag, context, data)
                 else:
-                    options = data['candidates'][i]
-                    if len(options) != 7:
-                        print(data)
-                        assert len(options) == 7
-                    label = options.index(idiom)
-
-                yield Example(
-                    idx=new_tag,
-                    tag=tag_str,
-                    context=tmp_context,
-                    idiom=idiom,
-                    options=options,
-                    label=label
-                )
+                    if idiom in self.filtered:
+                        yield self._construct_example(i, idiom, tag, new_tag, context, data)
 
 
 def process_chid(opts, db, tokenizer):
@@ -463,6 +476,8 @@ def process_chid(opts, db, tokenizer):
     if source.startswith('affection'):
         with open(f'{opts.output}/{split}.json', 'w') as f:
             json.dump([parser.vocab[v] for v in parser.filtered], f)
+        with open(f'{opts.output}/unlabelled.json', 'w') as f:
+            json.dump([parser.vocab[v] for v in parser.unlabelled], f)
 
     return id2len
 

@@ -189,12 +189,13 @@ def calo_process(chengyu_vocab, calo_file):
         k = getattr(item, '情感分类')
 
         v = chengyu_vocab[w]
-        calo_vocab[v] = {
+        calo_vocab.setdefault(v, [])
+        calo_vocab[v].append({
             'coarse_emotion': calo_mapping['emotion'][k]['main_id'],
             'fine_emotion': calo_mapping['emotion'][k]['id'],
             'sentiment': getattr(item, '极性'),
             'strength': getattr(item, '强度')
-        }
+        })
     return calo_vocab
 
 

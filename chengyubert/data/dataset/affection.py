@@ -422,7 +422,7 @@ class ChengyuCALOComposeOnlyDataset(ChengyuLmdb):
             idx, -100, -100, -100, 0
         ]
         if idiom in self.calo_vocab and idiom in self.filtered:
-            affections = self.calo_vocab[idiom]
+            affections = self.calo_vocab[idiom][0]
             target = [
                 idx,
                 affections['coarse_emotion'],
@@ -519,7 +519,9 @@ class ChengyuCALOComposeOnlyMaskedDataset(ChengyuLmdb):
         super().__init__(split, max_txt_len, opts)
         with open(f'{self.db_dir}/{"dev" if split == "val" else split}.json') as f:
             self.filtered = json.load(f)
-        self.unlabeled_idiom = opts.unlabeled_idiom
+        with open(f'{self.db_dir}/unlabelled.json') as f:
+            self.unlabeled = json.load(f)
+        self.use_unlabeled = opts.use_unlabeled
         self.calo_vocab = calo_process(self.chengyu_vocab, self.config.calo_file)
         self.allowed, self.reverse_index = self.get_allowed_examples(split, opts)
 
@@ -527,7 +529,7 @@ class ChengyuCALOComposeOnlyMaskedDataset(ChengyuLmdb):
         self.lens, self.ids, self.st_ed = self.get_ids_and_lens()
 
         if split == 'train':
-            if not self.unlabeled_idiom:
+            if not self.use_unlabeled:
                 self.enlarged_candidates = [i for i in range(opts.len_idiom_vocab) if i in self.filtered]
             else:
                 # all the idioms without CALO labels are all considered
@@ -549,8 +551,9 @@ class ChengyuCALOComposeOnlyMaskedDataset(ChengyuLmdb):
             k = int(k)
             if k < opts.len_idiom_vocab:
                 if split == 'train':
-                    if self.unlabeled_idiom:
-                        reverse_index[k] = v
+                    if self.use_unlabeled:
+                        if k in self.filtered or k in self.unlabeled:
+                            reverse_index[k] = v
                     else:
                         if k in self.filtered:
                             reverse_index[k] = v
@@ -610,7 +613,7 @@ class ChengyuCALOComposeOnlyMaskedDataset(ChengyuLmdb):
             idx, -100, -100, -100, 0
         ]
         if idiom in self.calo_vocab and idiom in self.filtered:
-            affections = self.calo_vocab[idiom]
+            affections = self.calo_vocab[idiom][0]
             target = [
                 idx,
                 affections['coarse_emotion'],
