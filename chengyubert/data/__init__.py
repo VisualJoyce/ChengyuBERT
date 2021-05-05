@@ -240,7 +240,7 @@ def create_dataloaders(dataset_cls, eval_dataset_cls, opts, splits=None):
     print(splits)
 
     dataloaders = {}
-    for split in splits:
+    for split in ['train'] + [s for s in splits if s != 'train']:
         # txt_db = getattr(opts, f'{split}_txt_db')
         batch_size = getattr(opts, f'{split}_batch_size') if split == 'train' else opts.val_batch_size
         DatasetCls = dataset_cls if split == 'train' else eval_dataset_cls

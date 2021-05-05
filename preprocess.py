@@ -4,6 +4,7 @@ import os
 import random
 import re
 from abc import abstractmethod
+from itertools import chain
 
 import pandas as pda
 from cytoolz import curry
@@ -266,7 +267,7 @@ class ChidOfficialParser(ChidParser):
             return os.path.join(self.data_dir, 'test_data_ord.txt')
 
 
-class ChidCompetitionDataset(object):
+class ChidCompetitionParser(object):
     """Dataset wrapping tensors.
 
     Each sample will be retrieved by indexing tensors along the first dimension.
@@ -321,10 +322,80 @@ class ChidCompetitionDataset(object):
                             )
 
 
+class ChidAffectionParser(ChidParser):
+    """Dataset wrapping tensors.
+
+    Each sample will be retrieved by indexing tensors along the first dimension.
+
+    Arguments:
+        *tensors (Tensor): tensors that have the same size of the first dimension.
+    """
+    splits = ['train', 'dev', 'test']
+
+    def __init__(self, split, vocab, annotation_dir='/annotations'):
+        self.split = split
+        self.vocab = vocab
+        self.annotation_dir = annotation_dir
+        with open(self.data_file) as fd:
+            self.filtered = json.load(fd)
+
+
+    @property
+    def data_dir(self):
+        return f'/{self.annotation_dir}/affection'
+
+    @property
+    def data_file(self):
+        return os.path.join(self.data_dir, '{}.json'.format(self.split))
+
+    def _read_data_file(self, data_file):
+        with tqdm(total=os.path.getsize(data_file), desc=self.split,
+                  bar_format="{desc}: {percentage:.3f}%|{bar}| {n:.2f}/{total_fmt} [{elapsed}<{remaining}]") as pbar:
+            with open(data_file, mode='rb') as f:
+                for idx, data_str in enumerate(f):
+                    pbar.update(len(data_str))
+                    yield data_str
+
+    def read_examples(self):
+        for idx, data_str in enumerate(chain(self._read_data_file(os.path.join(self.data_dir, 'data.jsonl')),
+                                             self._read_data_file(os.path.join(self.data_dir, 'extra.jsonl')))):
+            data = eval(data_str.decode('utf8'))
+            context = data['content']
+            for i, (tag, idiom) in enumerate(zip(re.finditer("#idiom#", context), data['groundTruth'])):
+                new_tag = idx * 20 + i
+                if idiom not in self.filtered and self.split != 'train':
+                    continue
+
+                tag_str = "#idiom%06d#" % new_tag
+
+                tmp_context = context
+                tmp_context = "".join((tmp_context[:tag.start(0)], tag_str, tmp_context[tag.end(0):]))
+                tmp_context = tmp_context.replace("#idiom#", "[UNK]")
+
+                if 'candidates' not in data:
+                    options, label = [], -1
+                else:
+                    options = data['candidates'][i]
+                    if len(options) != 7:
+                        print(data)
+                        assert len(options) == 7
+                    label = options.index(idiom)
+
+                yield Example(
+                    idx=new_tag,
+                    tag=tag_str,
+                    context=tmp_context,
+                    idiom=idiom,
+                    options=options,
+                    label=label
+                )
+
+
 def process_chid(opts, db, tokenizer):
     source, split = opts.annotation.split('_')
 
     vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
+    limit = None
 
     if source == 'official':
         assert split in ['train', 'dev', 'test', 'ran', 'sim', 'out']
@@ -338,9 +409,17 @@ def process_chid(opts, db, tokenizer):
     elif source == 'balancedfix':
         assert split in ['train', 'val']
         parser = ChidBalancedFixParser(split, vocab)
-    else:
+    elif source == 'competition':
         assert split in ['train', 'dev', 'test', 'out']
-        parser = ChidCompetitionDataset(split, vocab)
+        parser = ChidCompetitionParser(split, vocab)
+    elif source.startswith('affection'):
+        assert split in ['train', 'dev', 'test']
+        # We only use train split of ChID for affection
+        if source != 'affection':
+            limit = int(source.replace('affection', ''))
+        parser = ChidAffectionParser(split, vocab)
+    else:
+        raise ValueError("No such source!")
 
     def parse_example(example):
         input_ids, position = tokenize(tokenizer, example)
@@ -358,14 +437,15 @@ def process_chid(opts, db, tokenizer):
     reverse_index = {}
     for ex in parser.read_examples():
         exa = parse_example(ex)
+        idiom_id = parser.vocab[ex.idiom]
+        reverse_index.setdefault(idiom_id, [])
+        if limit and len(reverse_index[idiom_id]) >= limit:
+            continue
 
         db[ex.tag] = exa
         id2len[ex.tag] = len(exa['input_ids'])
         ans_dict[ex.tag] = ex.label
         id2eid[ex.tag] = ex.idx
-
-        idiom_id = parser.vocab[ex.idiom]
-        reverse_index.setdefault(idiom_id, [])
         reverse_index[idiom_id].append(ex.tag)
 
     assert len(id2len) == len(ans_dict)
@@ -379,6 +459,10 @@ def process_chid(opts, db, tokenizer):
 
     with open(f'{opts.output}/reverse_index.json', 'w') as f:
         json.dump(reverse_index, f)
+
+    if source.startswith('affection'):
+        with open(f'{opts.output}/{split}.json', 'w') as f:
+            json.dump([parser.vocab[v] for v in parser.filtered], f)
 
     return id2len
 
