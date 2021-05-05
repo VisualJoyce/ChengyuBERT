@@ -876,10 +876,14 @@ class ChengyuBertAffectionComposeOnly(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.idiom_compose = LatentComposition(config.hidden_size)
-        self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
-
-        # Idiom Predictor
+        # self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
         emotion_hidden_size = config.hidden_size
+        self.compose_linear = nn.Sequential(nn.Linear(2 * config.hidden_size, config.hidden_size),
+                                            nn.SELU(),
+                                            nn.Dropout(p=0.1),
+                                            nn.Linear(config.hidden_size, emotion_hidden_size),
+                                            nn.SELU())
+
         # Emotion-7 Predictor
         self.fine_emotion_classifier = WeightNormClassifier(emotion_hidden_size,
                                                             21,
