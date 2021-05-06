@@ -86,7 +86,10 @@ def train(model, dataloaders, opts):
                  coarse_emotion_loss,
                  fine_emotion_loss,
                  sentiment_emotion_loss) = model(**batch, compute_loss=True)
-                loss = (over_loss + coarse_emotion_loss + fine_emotion_loss + sentiment_emotion_loss).mean()
+                if over_loss is not None:
+                    loss = (over_loss + coarse_emotion_loss + fine_emotion_loss + sentiment_emotion_loss).mean()
+                else:
+                    loss = (coarse_emotion_loss + fine_emotion_loss + sentiment_emotion_loss).mean()
 
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
             scaler.scale(loss).backward()
@@ -140,7 +143,7 @@ def train(model, dataloaders, opts):
                     LOGGER.info(f'{opts.model}: {n_epoch}-{global_step}: '
                                 f'{tot_ex} examples trained at '
                                 f'{ex_per_sec} ex/s \n'
-                                f'over loss: {over_loss} \n'
+                                f'over loss: {over_loss.mean() if over_loss is not None else over_loss} \n'
                                 f'coarse emotion loss: {coarse_emotion_loss.mean()} \n'
                                 f'fine emotion loss: {fine_emotion_loss.mean()} \n'
                                 f'sentiment loss: {sentiment_emotion_loss.mean()} \n'
@@ -242,29 +245,35 @@ def validate(opts, model, val_loader, split, global_step):
             sentiment_score += (
                     sentiment_logits.max(dim=-1, keepdim=False)[1] == sentiment_targets).sum().item()
 
-            options = [val_loader.dataset.id2idiom[o] for o in val_loader.dataset.enlarged_candidates]
             if over_logits is not None:
                 loss = F.cross_entropy(over_logits, idiom_targets, reduction='sum')
                 val_loss += loss.item()
                 # tot_score += (scores.max(dim=-1, keepdim=False)[1] == idiom_targets).sum().item()
                 max_prob, max_idx = over_logits.max(dim=-1, keepdim=False)
 
-                for j, (qid, target, inp, position, answer) in enumerate(zip(qids, idiom_targets, input_ids,
-                                                                             # batch['option_ids'],
-                                                                             batch['positions'],
-                                                                             max_idx)):
-                    g = over_logits[j].cpu().numpy()
-                    top_k = np.argsort(-g)
-                    val_mrr += 1 / (1 + np.argwhere(top_k == target.item()).item())
+                options = [val_loader.dataset.id2idiom[o] for o in val_loader.dataset.enlarged_candidates]
+                for j, (qid, inp, position, answer) in enumerate(zip(qids,
+                                                                     # idiom_targets,
+                                                                     input_ids,
+                                                                     # batch['option_ids'],
+                                                                     batch['positions'],
+                                                                     max_idx)):
+                    # g = over_logits[j].cpu().numpy()
+                    # top_k = np.argsort(-g)
+                    # val_mrr += 1 / (1 + np.argwhere(top_k == target.item()).item())
 
-                    idiom = options[target.item()]
+                    example = val_loader.dataset.db[qid]
+                    idiom = val_loader.dataset.id2idiom[example['idiom']]
+                    # idiom = options[target.item()]
                     affection_results.append(
                         [idiom] + coarse_emotion_logits[j].cpu().numpy().tolist() + fine_emotion_logits[
                             j].cpu().numpy().tolist() + sentiment_logits[j].cpu().numpy().tolist()
                     )
                     if i % 1000 == 0 and select_masks is not None:
+                        g = over_logits[j].cpu().numpy()
+                        top_k = np.argsort(-g)[:5]
                         print(qid,
-                              options[answer.item()],
+                              [options[k] for k in top_k],
                               idiom)
                         # print(len(select_masks), atts.size())
                         s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
@@ -401,7 +410,7 @@ def validate(opts, model, val_loader, split, global_step):
         for item in new_affection_results_df.groupby('idiom').mean().reset_index().to_dict(orient='records'):
             idiom = item['idiom']
             idiom_id = val_loader.dataset.chengyu_vocab[idiom]
-            affections = val_loader.dataset.calo_vocab[idiom_id]
+            affections = val_loader.dataset.calo_vocab[idiom_id][0]
             for sub_type in ['coarse_emotion', 'fine_emotion', 'sentiment']:
                 d = {k: v for k, v in item.items() if k.startswith(sub_type)}
                 key = max(d, key=d.get)

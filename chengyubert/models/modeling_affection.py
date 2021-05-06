@@ -786,7 +786,7 @@ class ChengyuBertAffectionMaxPooling(BertPreTrainedModel):
             coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
             fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
             sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
-            return 0, 0, None, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
+            return None, None, None, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
         else:
             return None, None, None, coarse_emotion_logits, fine_emotion_logits, sentiment_logits
 
@@ -856,7 +856,7 @@ class ChengyuBertAffectionMaxPoolingMasked(BertPreTrainedModel):
             coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
             fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
             sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
-            return 0, 0, None, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
+            return None, None, None, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
         else:
             return None, None, None, coarse_emotion_logits, fine_emotion_logits, sentiment_logits
 
@@ -929,7 +929,7 @@ class ChengyuBertAffectionComposeOnly(BertPreTrainedModel):
             coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
             fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
             sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
-            return 0, 0, select_masks, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
+            return None, None, select_masks, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
         else:
             return None, None, select_masks, coarse_emotion_logits, fine_emotion_logits, sentiment_logits
 
@@ -1006,7 +1006,7 @@ class ChengyuBertAffectionComposeOnlyMasked(BertPreTrainedModel):
             coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
             fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
             sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
-            return 0, 0, select_masks, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
+            return None, None, select_masks, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
         else:
             return None, None, select_masks, coarse_emotion_logits, fine_emotion_logits, sentiment_logits
 
@@ -1092,7 +1092,7 @@ class ChengyuBertAffectionLatentEmotionMasked(BertPreTrainedModel):
             coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
             fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
             sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
-            return (0, 0, select_masks,
+            return (None, None, select_masks,
                     coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss)
         else:
             return (None, None, select_masks,
@@ -1193,7 +1193,7 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
             coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
             fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
             sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
-            return (0, over_loss, select_masks,
+            return (None, over_loss, select_masks,
                     coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss)
         else:
             return (None, over_logits, select_masks,
