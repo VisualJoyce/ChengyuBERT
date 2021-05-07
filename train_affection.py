@@ -83,13 +83,13 @@ def train(model, dataloaders, opts):
             with autocast():
                 (_, over_loss,
                  select_masks,
-                 coarse_emotion_loss,
+                 # coarse_emotion_loss,
                  fine_emotion_loss,
                  sentiment_emotion_loss) = model(**batch, compute_loss=True)
                 if over_loss is not None:
-                    loss = (over_loss + coarse_emotion_loss + fine_emotion_loss + sentiment_emotion_loss).mean()
+                    loss = (over_loss + fine_emotion_loss + sentiment_emotion_loss).mean()
                 else:
-                    loss = (coarse_emotion_loss + fine_emotion_loss + sentiment_emotion_loss).mean()
+                    loss = (fine_emotion_loss + sentiment_emotion_loss).mean()
 
             delay_unscale = (step + 1) % opts.gradient_accumulation_steps != 0
             scaler.scale(loss).backward()
@@ -144,7 +144,7 @@ def train(model, dataloaders, opts):
                                 f'{tot_ex} examples trained at '
                                 f'{ex_per_sec} ex/s \n'
                                 f'over loss: {over_loss.mean() if over_loss is not None else over_loss} \n'
-                                f'coarse emotion loss: {coarse_emotion_loss.mean()} \n'
+                                # f'coarse emotion loss: {coarse_emotion_loss.mean()} \n'
                                 f'fine emotion loss: {fine_emotion_loss.mean()} \n'
                                 f'sentiment loss: {sentiment_emotion_loss.mean()} \n'
                                 f'best_acc-{best_eval * 100:.2f}')
@@ -204,7 +204,6 @@ def idiom2tree(idiom, select_masks):
 @torch.no_grad()
 def validate(opts, model, val_loader, split, global_step):
     val_loss = 0
-    coarse_emotion_score = 0
     fine_emotion_score = 0
     sentiment_score = 0
     n_ex = 0
@@ -230,7 +229,7 @@ def validate(opts, model, val_loader, split, global_step):
             else:
                 input_ids = torch.gather(batch['input_ids'], dim=1, index=batch['gather_index'])
 
-            _, over_logits, select_masks, coarse_emotion_logits, fine_emotion_logits, sentiment_logits = model(
+            _, over_logits, select_masks, fine_emotion_logits, sentiment_logits = model(
                 **batch, targets=None, compute_loss=False)
 
             idiom_targets = targets[:, 0]
@@ -238,8 +237,6 @@ def validate(opts, model, val_loader, split, global_step):
             fine_emotion_targets = targets[:, 2]
             sentiment_targets = targets[:, 3]
 
-            coarse_emotion_score += (
-                    coarse_emotion_logits.max(dim=-1, keepdim=False)[1] == coarse_emotion_targets).sum().item()
             fine_emotion_score += (
                     fine_emotion_logits.max(dim=-1, keepdim=False)[1] == fine_emotion_targets).sum().item()
             sentiment_score += (
@@ -266,7 +263,7 @@ def validate(opts, model, val_loader, split, global_step):
                     idiom = val_loader.dataset.id2idiom[example['idiom']]
                     # idiom = options[target.item()]
                     affection_results.append(
-                        [idiom] + coarse_emotion_logits[j].cpu().numpy().tolist() + fine_emotion_logits[
+                        [idiom] + fine_emotion_logits[
                             j].cpu().numpy().tolist() + sentiment_logits[j].cpu().numpy().tolist()
                     )
                     if i % 1000 == 0 and select_masks is not None:
@@ -292,12 +289,12 @@ def validate(opts, model, val_loader, split, global_step):
                             pass
 
                         predictions = {
-                            "coarse emotion": {
-                                "target": calo_inverse_mapping['coarse_emotion'].get(coarse_emotion_targets[j].item(),
-                                                                                     '无'),
-                                "predictions": {calo_inverse_mapping['coarse_emotion'][k]: v for k, v in
-                                                enumerate(coarse_emotion_logits[j].cpu().numpy().tolist())}
-                            },
+                            # "coarse emotion": {
+                            #     "target": calo_inverse_mapping['coarse_emotion'].get(coarse_emotion_targets[j].item(),
+                            #                                                          '无'),
+                            #     "predictions": {calo_inverse_mapping['coarse_emotion'][k]: v for k, v in
+                            #                     enumerate(coarse_emotion_logits[j].cpu().numpy().tolist())}
+                            # },
                             "fine emotion": {
                                 "target": calo_inverse_mapping['fine_emotion'].get(fine_emotion_targets[j].item(), '无'),
                                 "predictions": {calo_inverse_mapping['fine_emotion'][k]: v for k, v in
@@ -322,7 +319,7 @@ def validate(opts, model, val_loader, split, global_step):
                     example = val_loader.dataset.db[qid]
                     idiom = val_loader.dataset.id2idiom[example['idiom']]
                     affection_results.append(
-                        [idiom] + coarse_emotion_logits[j].cpu().numpy().tolist() + fine_emotion_logits[
+                        [idiom] + fine_emotion_logits[
                             j].cpu().numpy().tolist() + sentiment_logits[j].cpu().numpy().tolist()
                     )
                     if i % 1000 == 0 and select_masks is not None:
@@ -339,12 +336,12 @@ def validate(opts, model, val_loader, split, global_step):
                             pass
 
                         predictions = {
-                            "coarse emotion": {
-                                "target": calo_inverse_mapping['coarse_emotion'].get(coarse_emotion_targets[j].item(),
-                                                                                     '无'),
-                                "predictions": {calo_inverse_mapping['coarse_emotion'][k]: v for k, v in
-                                                enumerate(coarse_emotion_logits[j].cpu().numpy().tolist())}
-                            },
+                            # "coarse emotion": {
+                            #     "target": calo_inverse_mapping['coarse_emotion'].get(coarse_emotion_targets[j].item(),
+                            #                                                          '无'),
+                            #     "predictions": {calo_inverse_mapping['coarse_emotion'][k]: v for k, v in
+                            #                     enumerate(coarse_emotion_logits[j].cpu().numpy().tolist())}
+                            # },
                             "fine emotion": {
                                 "target": calo_inverse_mapping['fine_emotion'].get(fine_emotion_targets[j].item(), '无'),
                                 "predictions": {calo_inverse_mapping['fine_emotion'][k]: v for k, v in
@@ -367,7 +364,7 @@ def validate(opts, model, val_loader, split, global_step):
             for id_, ans in results:
                 f.write(f'{id_},{ans}\n')
 
-    header = ['idiom'] + get_header('coarse_emotion') + get_header('fine_emotion') + get_header('sentiment')
+    header = ['idiom'] + get_header('fine_emotion') + get_header('sentiment')
     if affection_results:
         out_file = f'{opts.output_dir}/results/{split}_affection_results_{global_step}_rank{opts.rank}.csv'
         pd.DataFrame(affection_results, columns=header).to_csv(out_file)
@@ -375,7 +372,7 @@ def validate(opts, model, val_loader, split, global_step):
     val_loss = sum(all_gather_list(val_loss))
     val_mrr = sum(all_gather_list(val_mrr))
 
-    val_coarse_emotion_score = sum(all_gather_list(coarse_emotion_score))
+    # val_coarse_emotion_score = sum(all_gather_list(coarse_emotion_score))
     val_fine_emotion_score = sum(all_gather_list(fine_emotion_score))
     val_sentiment_score = sum(all_gather_list(sentiment_score))
 
@@ -384,7 +381,7 @@ def validate(opts, model, val_loader, split, global_step):
 
     val_loss /= n_ex
     val_mrr = val_mrr / n_ex
-    val_coarse_emotion_score = val_coarse_emotion_score / n_ex
+    # val_coarse_emotion_score = val_coarse_emotion_score / n_ex
     val_fine_emotion_score = val_fine_emotion_score / n_ex
     val_sentiment_score = val_sentiment_score / n_ex
 
@@ -411,7 +408,7 @@ def validate(opts, model, val_loader, split, global_step):
             idiom = item['idiom']
             idiom_id = val_loader.dataset.chengyu_vocab[idiom]
             affections = val_loader.dataset.calo_vocab[idiom_id][0]
-            for sub_type in ['coarse_emotion', 'fine_emotion', 'sentiment']:
+            for sub_type in ['fine_emotion', 'sentiment']:
                 d = {k: v for k, v in item.items() if k.startswith(sub_type)}
                 key = max(d, key=d.get)
                 _, pred = key.rsplit('_', 1)
@@ -419,15 +416,20 @@ def validate(opts, model, val_loader, split, global_step):
                 idiom_wise_accs.setdefault(sub_type, 0)
                 idiom_wise_accs[sub_type] += (int(pred) == target) / idiom_num * 100
 
-        val_acc = (val_coarse_emotion_score + val_fine_emotion_score + val_sentiment_score) / 3
+        val_acc = (val_fine_emotion_score + val_sentiment_score) / 2
 
         val_log = {f'{split}/loss': val_loss,
                    f'{split}/acc': val_acc,
+                   f'{split}/fine_emotion': val_fine_emotion_score * 100,
+                   f'{split}/sentiment': val_sentiment_score * 100,
                    f'{split}/mrr': val_mrr,
                    f'{split}/ex_per_s': n_ex / tot_time}
 
+        for k, v in idiom_wise_accs.items():
+            val_log[f'{split}/{k}'] = v
+
         LOGGER.info(f"validation finished in {int(tot_time)} seconds, \n"
-                    f"coarse emotion score: {val_coarse_emotion_score * 100:.2f}, \n"
+                    # f"coarse emotion score: {val_coarse_emotion_score * 100:.2f}, \n"
                     f"fine emotion score: {val_fine_emotion_score * 100:.2f}, \n"
                     f"sentiment score: {val_sentiment_score * 100:.2f}, \n"
                     f"score: {val_acc * 100:.2f}, \n"
