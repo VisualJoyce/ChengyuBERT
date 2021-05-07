@@ -24,10 +24,10 @@ def save_training_meta(args):
     with open(join(args.output_dir, 'log', 'hps.json'), 'w') as writer:
         json.dump(vars(args), writer, indent=4)
 
-    if os.path.isfile(args.model_config):
-        model_config = json.load(open(args.model_config))
-        with open(join(args.output_dir, 'log', 'model.json'), 'w') as writer:
-            json.dump(model_config, writer, indent=4)
+    # if os.path.isfile(args.model_config):
+    #     model_config = json.load(open(args.model_config))
+    #     with open(join(args.output_dir, 'log', 'model.json'), 'w') as writer:
+    #         json.dump(model_config, writer, indent=4)
     # git info
     try:
         LOGGER.info("Waiting on git info....")

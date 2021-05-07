@@ -48,8 +48,8 @@ def parse_with_config(parser):
                     new_v = bool(new_v)
                 setattr(args, k, new_v)
 
-    del args.config
-    args.model_config = os.path.join(args.pretrained_model_name_or_path, 'config.json')
+    # del args.config
+    # args.model_config = os.path.join(args.pretrained_model_name_or_path, 'config.json')
     return args
 
 

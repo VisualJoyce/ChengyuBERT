@@ -609,6 +609,7 @@ if __name__ == "__main__":
     args.output_dir = os.path.join(args.output_dir,
                                    args.model,
                                    os.path.basename(args.pretrained_model_name_or_path),
+                                   os.path.basename(args.config),
                                    base_dir)
 
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/ckpt'):
