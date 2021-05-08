@@ -115,7 +115,7 @@ if __name__ == '__main__':
                             content = d['content'][d['_id']].replace('<em>', '').replace('</em>', '')
 
                         span_text = d['groundTruth'][0]
-                        if content.count(span_text) == 1 and is_substring(span_text, item.Idiom):
+                        if content.count(span_text) == 1 and len(span_text) - len(item.Idiom) < len(item.Idiom):
                             d['idiom'] = item.Idiom
                             d['content'] = content.replace(span_text, "#idiom#")
                             if ' #idiom# ' in d['content']:
