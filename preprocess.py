@@ -499,7 +499,11 @@ class SlideParser(object):
 def process(opts, db, tokenizer):
     source, split = opts.annotation.split('_')
 
-    vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
+    if source.startswith('slide'):
+        vocab = idioms_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
+    else:
+        vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
+
     limit = None
 
     if source == 'official':
@@ -527,7 +531,6 @@ def process(opts, db, tokenizer):
         assert split in ['train', 'dev', 'test']
         if source != 'slide':
             limit = int(source.replace('slide', ''))
-        vocab = idioms_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
         parser = SlideParser(split, vocab)
     else:
         raise ValueError("No such source!")
