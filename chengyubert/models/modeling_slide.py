@@ -400,7 +400,7 @@ class ChengyuBertSlideComposeOnly(BertPreTrainedModel):
         #                                                       config.hidden_dropout_prob)
         # Sentiment Predictor
         self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
-                                                         4,
+                                                         3,
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
@@ -463,7 +463,7 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
         # Idiom Predictor
         # Sentiment Predictor
         self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
-                                                         4,
+                                                         3,
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
@@ -530,7 +530,7 @@ class ChengyuBertSlideLatentEmotionMasked(BertPreTrainedModel):
         # Idiom Predictor
         # Sentiment Predictor
         self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
-                                                         4,
+                                                         3,
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
@@ -609,7 +609,7 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
         # Idiom Predictor
         # Sentiment Predictor
         self.sentiment_classifier = WeightNormClassifier(config.hidden_size,
-                                                         4,
+                                                         3,
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 

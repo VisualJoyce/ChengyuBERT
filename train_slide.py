@@ -337,7 +337,7 @@ def validate(opts, model, val_loader, split, global_step):
             for id_, ans in results:
                 f.write(f'{id_},{ans}\n')
 
-    header = ['idiom'] + get_header('fine_emotion') + get_header('sentiment')
+    header = ['idiom'] + get_header('sentiment')
     if affection_results:
         out_file = f'{opts.output_dir}/results/{split}_affection_results_{global_step}_rank{opts.rank}.csv'
         pd.DataFrame(affection_results, columns=header).to_csv(out_file)
