@@ -228,7 +228,7 @@ def validate(opts, model, val_loader, split, global_step):
                 **batch, targets=None, compute_loss=False)
 
             idiom_targets = targets[:, 0]
-            sentiment_targets = targets[:, 3]
+            sentiment_targets = targets[:, 1]
 
             sentiment_score += (
                     sentiment_logits.max(dim=-1, keepdim=False)[1] == sentiment_targets).sum().item()

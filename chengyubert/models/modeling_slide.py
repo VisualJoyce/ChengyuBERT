@@ -431,7 +431,7 @@ class ChengyuBertSlideComposeOnly(BertPreTrainedModel):
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
             # fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
             return None, None, select_masks, sentiment_emotion_loss
         else:
             return None, None, select_masks, sentiment_logits
@@ -494,7 +494,7 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
             return None, None, select_masks, sentiment_emotion_loss
         else:
             return None, None, select_masks, sentiment_logits
@@ -562,23 +562,17 @@ class ChengyuBertSlideLatentEmotionMasked(BertPreTrainedModel):
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
         emotion_state = self.compose_linear(torch.cat([composed_states, composed_states_masked], dim=-1))
 
-        fine_emotion_logits, _ = self.emotion(emotion_state)
-
         # slide prediction
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # loss = loss_fct(logits, targets[:, 0])
-            # target = torch.gather(option_ids, dim=1, index=targets[:, 0].unsqueeze(1))
-            # over_loss = loss_fct(over_logits, target.squeeze(1))
-            fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
             return (None, None, select_masks,
-                    fine_emotion_loss, sentiment_emotion_loss)
+                    sentiment_emotion_loss)
         else:
             return (None, None, select_masks,
-                    fine_emotion_logits, sentiment_logits)
+                    sentiment_logits)
 
 
 @register_model('chengyubert-slide-latent-idiom-masked')
@@ -656,11 +650,8 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # loss = loss_fct(logits, targets[:, 0])
-            # target = torch.gather(option_ids, dim=1, index=targets[:, 0].unsqueeze(1))
             over_loss = loss_fct(over_logits, targets[:, 0])
-            # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
             return (None, over_loss, select_masks,
                     sentiment_emotion_loss)
         else:
