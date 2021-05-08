@@ -500,7 +500,7 @@ def process(opts, db, tokenizer):
     source, split = opts.annotation.split('_')
 
     if source.startswith('slide'):
-        vocab = idioms_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
+        vocab, _ = idioms_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
     else:
         vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
 
