@@ -11,7 +11,7 @@ from cytoolz import curry
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from chengyubert.data import open_lmdb, chengyu_process, intermediate_dir
+from chengyubert.data import open_lmdb, chengyu_process, intermediate_dir, idioms_process
 from chengyubert.utils.misc import parse_with_config
 
 
@@ -113,6 +113,9 @@ class ChidParser(object):
     @property
     def answer_file(self):
         return os.path.join(self.data_dir, '{}_answer.csv'.format(self.split))
+
+    def get_idiom_id(self, idiom):
+        return self.vocab[idiom]
 
     def read_examples(self):
         with tqdm(total=os.path.getsize(self.data_file), desc=self.split,
@@ -404,7 +407,96 @@ class ChidAffectionParser(ChidParser):
                         yield self._construct_example(i, idiom, tag, new_tag, context, data)
 
 
-def process_chid(opts, db, tokenizer):
+class SlideParser(object):
+    """Dataset wrapping tensors.
+
+    Each sample will be retrieved by indexing tensors along the first dimension.
+
+    Arguments:
+        *tensors (Tensor): tensors that have the same size of the first dimension.
+    """
+
+    def __init__(self, split, vocab, annotation_dir='/annotation'):
+        self.split = split
+        self.vocab = vocab
+        self.annotation_dir = annotation_dir
+        with open(self.data_file) as fd:
+            self.filtered = json.load(fd)
+        with open(self.mapping_file) as fd:
+            self.mapping = json.load(fd)
+
+    @property
+    def data_dir(self):
+        return f'/{self.annotation_dir}/slide'
+
+    @property
+    def data_file(self):
+        return os.path.join(self.data_dir, '{}.json'.format(self.split))
+
+    @property
+    def mapping_file(self):
+        return os.path.join(self.data_dir, 'idiom_span_mapping.json')
+
+    @property
+    def answer_file(self):
+        return os.path.join(self.data_dir, '{}_answer.csv'.format(self.split))
+
+    def get_idiom_id(self, idiom):
+        idiom = self.mapping[idiom]
+        return self.vocab[idiom]
+
+    def _read_data_file(self, data_file):
+        with tqdm(total=os.path.getsize(data_file), desc=self.split,
+                  bar_format="{desc}: {percentage:.3f}%|{bar}| {n:.2f}/{total_fmt} [{elapsed}<{remaining}]") as pbar:
+            with open(data_file, mode='rb') as f:
+                for idx, data_str in enumerate(f):
+                    pbar.update(len(data_str))
+                    yield data_str
+
+    @staticmethod
+    def _construct_example(i, idiom, tag, new_tag, context, data):
+        tag_str = "#idiom%06d#" % new_tag
+
+        tmp_context = context
+        tmp_context = "".join((tmp_context[:tag.start(0)], tag_str, tmp_context[tag.end(0):]))
+        tmp_context = tmp_context.replace("#idiom#", "[UNK]")
+
+        if 'candidates' not in data:
+            options, label = [], -1
+        else:
+            options = data['candidates'][i]
+            if len(options) != 7:
+                print(data)
+                assert len(options) == 7
+            label = options.index(idiom)
+        return Example(
+            idx=new_tag,
+            tag=tag_str,
+            context=tmp_context,
+            idiom=idiom,
+            options=options,
+            label=label
+        )
+
+    def read_examples(self):
+        for idx, data_str in enumerate(self._read_data_file(os.path.join(self.data_dir, 'data.jsonl'))):
+            data = eval(data_str.decode('utf8'))
+            context = data['content']
+            for i, (tag, span_text) in enumerate(zip(re.finditer("#idiom#", context), data['groundTruth'])):
+                new_tag = idx * 20 + i
+                idiom = self.mapping[span_text]
+                if idiom not in self.filtered and self.split != 'train':
+                    continue
+
+                if self.split == 'train':
+                    if idiom in self.filtered:
+                        yield self._construct_example(i, span_text, tag, new_tag, context, data)
+                else:
+                    if idiom in self.filtered:
+                        yield self._construct_example(i, span_text, tag, new_tag, context, data)
+
+
+def process(opts, db, tokenizer):
     source, split = opts.annotation.split('_')
 
     vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
@@ -431,6 +523,10 @@ def process_chid(opts, db, tokenizer):
         if source != 'affection':
             limit = int(source.replace('affection', ''))
         parser = ChidAffectionParser(split, vocab)
+    elif source.startswith('slide'):
+        assert split in ['train', 'dev', 'test']
+        vocab = idioms_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
+        parser = SlideParser(split, vocab)
     else:
         raise ValueError("No such source!")
 
@@ -439,18 +535,19 @@ def process_chid(opts, db, tokenizer):
         return {
             'input_ids': input_ids,
             'position': position,
-            'idiom': parser.vocab[example.idiom],
+            'idiom': parser.get_idiom_id(example.idiom),
             'target': example.label,
-            'options': [parser.vocab[o] for o in example.options]
+            'options': [parser.get_idiom_id(o) for o in example.options]
         }
 
     id2len = {}
     ans_dict = {}
     id2eid = {}
     reverse_index = {}
+    span_texts = {}
     for ex in parser.read_examples():
         exa = parse_example(ex)
-        idiom_id = parser.vocab[ex.idiom]
+        idiom_id = parser.get_idiom_id(ex.idiom)
         reverse_index.setdefault(idiom_id, [])
         if limit and len(reverse_index[idiom_id]) >= limit:
             continue
@@ -460,6 +557,7 @@ def process_chid(opts, db, tokenizer):
         ans_dict[ex.tag] = ex.label
         id2eid[ex.tag] = ex.idx
         reverse_index[idiom_id].append(ex.tag)
+        span_texts[ex.tag] = ex.idiom
 
     assert len(id2len) == len(ans_dict)
 
@@ -475,9 +573,15 @@ def process_chid(opts, db, tokenizer):
 
     if source.startswith('affection'):
         with open(f'{opts.output}/{split}.json', 'w') as f:
-            json.dump([parser.vocab[v] for v in parser.filtered], f)
+            json.dump([parser.get_idiom_id(v) for v in parser.filtered], f)
         with open(f'{opts.output}/unlabelled.json', 'w') as f:
-            json.dump([parser.vocab[v] for v in parser.unlabelled], f)
+            json.dump([parser.get_idiom_id(v) for v in parser.unlabelled], f)
+
+    if source.startswith('slide'):
+        with open(f'{opts.output}/{split}.json', 'w') as f:
+            json.dump([parser.get_idiom_id(v) for v in parser.filtered], f)
+        with open(f'{opts.output}/span_idiom_mapping.json', 'w') as f:
+            json.dump(span_texts, f)
 
     return id2len
 
@@ -504,7 +608,7 @@ def main(opts):
 
     open_db = curry(open_lmdb, opts.output, readonly=False)
     with open_db() as db:
-        id2lens = process_chid(opts, db, tokenizer)
+        id2lens = process(opts, db, tokenizer)
 
     with open(f'{opts.output}/id2len.json', 'w') as f:
         json.dump(id2lens, f)
