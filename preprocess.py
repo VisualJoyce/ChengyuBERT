@@ -416,7 +416,7 @@ class SlideParser(object):
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
 
-    def __init__(self, split, vocab, annotation_dir='/annotation'):
+    def __init__(self, split, vocab, annotation_dir='/annotations'):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
