@@ -525,6 +525,8 @@ def process(opts, db, tokenizer):
         parser = ChidAffectionParser(split, vocab)
     elif source.startswith('slide'):
         assert split in ['train', 'dev', 'test']
+        if source != 'slide':
+            limit = int(source.replace('slide', ''))
         vocab = idioms_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
         parser = SlideParser(split, vocab)
     else:
