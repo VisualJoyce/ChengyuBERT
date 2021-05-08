@@ -210,7 +210,7 @@ def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
         'negative': '贬义',
         # '褒贬兼有': 3
     }
-    df_sentiment = pda.read_csv(f"{annotation_dir}/idiomLexicon.tsv", sep="\t")
+    df_sentiment = pda.read_csv(f"{annotation_dir}/slide/idiomLexicon.tsv", sep="\t")
     df_sentiment = df_sentiment[df_sentiment['Maj. Label'] != 'inappropriate']
     df_sentiment = df_sentiment.assign(label=df_sentiment['Maj. Label'].map(sentiment_mapping))
 
