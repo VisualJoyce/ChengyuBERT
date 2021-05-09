@@ -490,11 +490,20 @@ class SlideParser(object):
         )
 
     def read_examples(self):
+        def hook(obj):
+            value = obj.get("features")
+            if value:
+                pbar = tqdm(value)
+            for item in pbar:
+                pass
+                pbar.set_description("Loading")
+            return obj
+
         with open(os.path.join(self.data_dir, 'data.json')) as f:
-            examples = json.load(f)
+            examples = json.load(f, object_hook=hook)
 
         idx = 0
-        for idiom, data_list in tqdm(examples.items(), total=examples):
+        for idiom, data_list in examples.items():
             if idiom not in self.filtered and self.split != 'train':
                 continue
             data_list = random.sample(data_list, k=self.limit) if self.limit and len(
