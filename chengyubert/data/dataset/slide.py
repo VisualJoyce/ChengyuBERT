@@ -18,7 +18,7 @@ class ChengyuSlideDataset(IdiomsLmdb):
         # load labelled idioms for the split
         with open(f'{self.db_dir}/{"dev" if split == "val" else split}.json') as f:
             self.filtered = json.load(f)
-        with open(f'{self.db_dir}/span_idiom_mapping.json', 'w') as f:
+        with open(f'{self.db_dir}/span_idiom_mapping.json') as f:
             self.span_idiom_mapping = json.load(f)
         self.allowed, self.reverse_index = self.get_allowed_examples(split, opts)
 
