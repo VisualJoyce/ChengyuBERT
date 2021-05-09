@@ -99,6 +99,7 @@ class ChidParser(object):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
+        self.reverse_index = {}
 
     @property
     @abstractmethod
@@ -142,6 +143,9 @@ class ChidParser(object):
                                 assert len(options) == 7
                             label = options.index(idiom)
 
+                        idiom_id = self.get_idiom_id(idiom)
+                        self.reverse_index.setdefault(idiom_id, [])
+                        self.reverse_index[idiom_id].append(tag_str)
                         yield Example(
                             idx=new_tag,
                             tag=tag_str,
@@ -285,6 +289,7 @@ class ChidCompetitionParser(object):
         self.vocab = vocab
         self.annotation_dir = annotation_dir
         self.data_dir = f'{self.annotation_dir}/competition'
+        self.reverse_index = {}
 
     @property
     def answer_file(self):
@@ -293,6 +298,9 @@ class ChidCompetitionParser(object):
     @property
     def data_file(self):
         return os.path.join(self.data_dir, '{}.txt'.format(self.split))
+
+    def get_idiom_id(self, idiom):
+        return self.vocab[idiom]
 
     def read_examples(self):
         ans_dict = {}
@@ -315,6 +323,9 @@ class ChidCompetitionParser(object):
                             for other_tag in tags:
                                 if other_tag != tag:
                                     tmp_context = tmp_context.replace(other_tag, "[UNK]")
+                            idiom_id = self.get_idiom_id(options[ans_dict[tag]])
+                            self.reverse_index.setdefault(idiom_id, [])
+                            self.reverse_index[idiom_id].append(tag)
                             yield Example(
                                 idx=idx,
                                 tag=tag,
@@ -335,7 +346,7 @@ class ChidAffectionParser(ChidParser):
     """
     splits = ['train', 'dev', 'test']
 
-    def __init__(self, split, vocab, annotation_dir='/annotations'):
+    def __init__(self, split, vocab, annotation_dir='/annotations', limit=None):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
@@ -343,6 +354,8 @@ class ChidAffectionParser(ChidParser):
             self.filtered = json.load(fd)
         with open(self.unlabelled_file) as fd:
             self.unlabelled = json.load(fd)
+        self.limit = limit
+        self.reverse_index = {}
 
     @property
     def data_dir(self):
@@ -364,8 +377,7 @@ class ChidAffectionParser(ChidParser):
                     pbar.update(len(data_str))
                     yield data_str
 
-    @staticmethod
-    def _construct_example(i, idiom, tag, new_tag, context, data):
+    def _construct_example(self, i, idiom, tag, new_tag, context, data):
         tag_str = "#idiom%06d#" % new_tag
 
         tmp_context = context
@@ -380,6 +392,9 @@ class ChidAffectionParser(ChidParser):
                 print(data)
                 assert len(options) == 7
             label = options.index(idiom)
+        idiom_id = self.get_idiom_id(idiom)
+        self.reverse_index.setdefault(idiom_id, [])
+        self.reverse_index[idiom_id].append(tag_str)
         return Example(
             idx=new_tag,
             tag=tag_str,
@@ -416,7 +431,7 @@ class SlideParser(object):
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
 
-    def __init__(self, split, vocab, annotation_dir='/annotations'):
+    def __init__(self, split, vocab, annotation_dir='/annotations', limit=None):
         self.split = split
         self.vocab = vocab
         self.annotation_dir = annotation_dir
@@ -424,6 +439,8 @@ class SlideParser(object):
             self.filtered = json.load(fd)
         with open(self.mapping_file) as fd:
             self.mapping = json.load(fd)
+        self.limit = limit
+        self.reverse_index = {}
 
     @property
     def data_dir(self):
@@ -445,8 +462,7 @@ class SlideParser(object):
         idiom = self.mapping[idiom]
         return self.vocab[idiom]
 
-    @staticmethod
-    def _construct_example(i, idiom, tag, new_tag, context, data):
+    def _construct_example(self, i, idiom, tag, new_tag, context, data):
         tag_str = "#idiom%06d#" % new_tag
 
         tmp_context = context
@@ -461,6 +477,9 @@ class SlideParser(object):
                 print(data)
                 assert len(options) == 7
             label = options.index(idiom)
+        idiom_id = self.get_idiom_id(idiom)
+        self.reverse_index.setdefault(idiom_id, [])
+        self.reverse_index[idiom_id].append(tag_str)
         return Example(
             idx=new_tag,
             tag=tag_str,
@@ -475,16 +494,16 @@ class SlideParser(object):
             examples = json.load(f)
 
         idx = 0
-        for idiom, data_list in examples.items():
+        for idiom, data_list in tqdm(examples.items(), total=examples):
+            if idiom not in self.filtered and self.split != 'train':
+                continue
+            data_list = random.sample(data_list, k=self.limit) if self.limit and len(
+                data_list) > self.limit else data_list
             for data in data_list:
                 idx += 1
                 context = data['content']
                 for i, (tag, span_text) in enumerate(zip(re.finditer("#idiom#", context), data['groundTruth'])):
                     new_tag = idx * 20 + i
-                    idiom = self.mapping[span_text]
-                    if idiom not in self.filtered and self.split != 'train':
-                        continue
-
                     if self.split == 'train':
                         if idiom in self.filtered:
                             yield self._construct_example(i, span_text, tag, new_tag, context, data)
@@ -500,8 +519,6 @@ def process(opts, db, tokenizer):
         vocab, _ = idioms_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
     else:
         vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
-
-    limit = None
 
     if source == 'official':
         assert split in ['train', 'dev', 'test', 'ran', 'sim', 'out']
@@ -523,12 +540,12 @@ def process(opts, db, tokenizer):
         # We only use train split of ChID for affection
         if source != 'affection':
             limit = int(source.replace('affection', ''))
-        parser = ChidAffectionParser(split, vocab)
+        parser = ChidAffectionParser(split, vocab, limit)
     elif source.startswith('slide'):
         assert split in ['train', 'dev', 'test']
         if source != 'slide':
             limit = int(source.replace('slide', ''))
-        parser = SlideParser(split, vocab)
+        parser = SlideParser(split, vocab, limit)
     else:
         raise ValueError("No such source!")
 
@@ -545,22 +562,16 @@ def process(opts, db, tokenizer):
     id2len = {}
     ans_dict = {}
     id2eid = {}
-    reverse_index = {}
     span_texts = {}
     for i, ex in enumerate(parser.read_examples()):
         exa = parse_example(ex)
         if i % 1000 == 0:
             print(exa)
-        idiom_id = parser.get_idiom_id(ex.idiom)
-        reverse_index.setdefault(idiom_id, [])
-        if limit and len(reverse_index[idiom_id]) >= limit:
-            continue
 
         db[ex.tag] = exa
         id2len[ex.tag] = len(exa['input_ids'])
         ans_dict[ex.tag] = ex.label
         id2eid[ex.tag] = ex.idx
-        reverse_index[idiom_id].append(ex.tag)
         span_texts[ex.tag] = ex.idiom
 
     assert len(id2len) == len(ans_dict)
@@ -573,7 +584,7 @@ def process(opts, db, tokenizer):
         json.dump(id2eid, f)
 
     with open(f'{opts.output}/reverse_index.json', 'w') as f:
-        json.dump(reverse_index, f)
+        json.dump(parser.reverse_index, f)
 
     if source.startswith('affection'):
         with open(f'{opts.output}/{split}.json', 'w') as f:
