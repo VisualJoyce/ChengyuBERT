@@ -2,7 +2,7 @@
     "train_txt_db": "slide10_train.db",
     "val_txt_db": "slide10_dev.db",
     "test_txt_db": "slide10_test.db",
-    "pretrained_model_name_or_path": "hfl/chinese-bert-wwm-ext",
+    "pretrained_model_name_or_path": "bert-base-uncased",
     "model": "chengyubert-slide-compose-only",
     "dataset_cls": "chengyu-slide-compose-only",
     "eval_dataset_cls": "chengyu-slide-compose-only-eval",
