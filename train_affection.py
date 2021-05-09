@@ -605,7 +605,7 @@ if __name__ == "__main__":
     n_gpu = hvd.size()
     args.n_gpu = n_gpu
 
-    base_dir = f'affection_{args.n_gpu * args.gradient_accumulation_steps}_{args.num_train_steps}_{args.learning_rate}'
+    base_dir = f'affection_{args.n_gpu * args.gradient_accumulation_steps}_{args.num_train_steps}_{args.learning_rate}_{args.dropout}'
     args.output_dir = os.path.join(args.output_dir,
                                    args.model,
                                    os.path.basename(args.pretrained_model_name_or_path),
