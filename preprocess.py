@@ -445,14 +445,6 @@ class SlideParser(object):
         idiom = self.mapping[idiom]
         return self.vocab[idiom]
 
-    def _read_data_file(self, data_file):
-        with tqdm(total=os.path.getsize(data_file), desc=self.split,
-                  bar_format="{desc}: {percentage:.3f}%|{bar}| {n:.2f}/{total_fmt} [{elapsed}<{remaining}]") as pbar:
-            with open(data_file, mode='rb') as f:
-                for idx, data_str in enumerate(f):
-                    pbar.update(len(data_str))
-                    yield data_str
-
     @staticmethod
     def _construct_example(i, idiom, tag, new_tag, context, data):
         tag_str = "#idiom%06d#" % new_tag
@@ -479,21 +471,26 @@ class SlideParser(object):
         )
 
     def read_examples(self):
-        for idx, data_str in enumerate(self._read_data_file(os.path.join(self.data_dir, 'data.jsonl'))):
-            data = eval(data_str.decode('utf8'))
-            context = data['content']
-            for i, (tag, span_text) in enumerate(zip(re.finditer("#idiom#", context), data['groundTruth'])):
-                new_tag = idx * 20 + i
-                idiom = self.mapping[span_text]
-                if idiom not in self.filtered and self.split != 'train':
-                    continue
+        with open(os.path.join(self.data_dir, 'data.json')) as f:
+            examples = json.load(f)
 
-                if self.split == 'train':
-                    if idiom in self.filtered:
-                        yield self._construct_example(i, span_text, tag, new_tag, context, data)
-                else:
-                    if idiom in self.filtered:
-                        yield self._construct_example(i, span_text, tag, new_tag, context, data)
+        idx = 0
+        for idiom, data_list in examples.items():
+            for data in data_list:
+                idx += 1
+                context = data['content']
+                for i, (tag, span_text) in enumerate(zip(re.finditer("#idiom#", context), data['groundTruth'])):
+                    new_tag = idx * 20 + i
+                    idiom = self.mapping[span_text]
+                    if idiom not in self.filtered and self.split != 'train':
+                        continue
+
+                    if self.split == 'train':
+                        if idiom in self.filtered:
+                            yield self._construct_example(i, span_text, tag, new_tag, context, data)
+                    else:
+                        if idiom in self.filtered:
+                            yield self._construct_example(i, span_text, tag, new_tag, context, data)
 
 
 def process(opts, db, tokenizer):

@@ -81,7 +81,7 @@ if __name__ == '__main__':
     # We want to use 580 for evaluation, so avoid adding these idioms to training and validation
     df_idioms_580 = pda.read_csv(f'{annotation_dir}/idioms_580.csv')
 
-    intersections = (df_sentiment.Idiom.tolist()).intersection(df_idioms_580.idiom.tolist())
+    intersections = set(df_sentiment.Idiom.tolist()).intersection(set(df_idioms_580.idiom.tolist()))
 
     total = df_sentiment.shape[0]
     df_sentiment_no_intersection = df_sentiment[~df_sentiment.Idiom.isin(intersections)]
@@ -98,15 +98,15 @@ if __name__ == '__main__':
 
     train = [k for k in X_train.tolist()]
     dev = [k for k in X_dev.tolist()]
-    test = [k for k in X_test.tolist()] + intersections
+    test = [k for k in X_test.tolist()] + list(intersections)
 
     idiom_span_mapping = {}
+    data = {}
     for item in tqdm(df_sentiment.itertuples(), total=df_sentiment.shape[0]):
         dump_files = [
             f'{annotation_dir}/bnc_dumped/{item.Idiom}.jsonl',
             f'{annotation_dir}/1billion_dumped/{item.Idiom}.jsonl',
         ]
-        data = []
         for dump_file in dump_files:
             if os.path.isfile(dump_file) and os.stat(dump_file).st_size > 0:
                 with jsonlines.open(dump_file) as f:
@@ -129,12 +129,12 @@ if __name__ == '__main__':
                                 if span_text in idiom_span_mapping and idiom_span_mapping[span_text] != d['idiom']:
                                     print("Error:", d, span_text, idiom_span_mapping[span_text])
                                 else:
-                                    data.append(d)
+                                    data.setdefault(item.Idiom, [])
+                                    data[item.Idiom].append(d)
                                     idiom_span_mapping[span_text] = d['idiom']
 
-        with open(f'{annotation_dir}/dumped/{item.Idiom}.jsonl', mode='w') as fp:
-            with jsonlines.Writer(fp) as writer:
-                writer.write_all(data)
+    with open(f'{annotation_dir}/data.json', mode='w') as fp:
+        json.dump(data, fp, ensure_ascii=False, indent=2)
 
     with open(f'{annotation_dir}/train.json', mode='w') as f:
         json.dump(train, f, ensure_ascii=False, indent=2)
