@@ -540,12 +540,12 @@ def process(opts, db, tokenizer):
         # We only use train split of ChID for affection
         if source != 'affection':
             limit = int(source.replace('affection', ''))
-        parser = ChidAffectionParser(split, vocab, limit)
+        parser = ChidAffectionParser(split, vocab, limit=limit)
     elif source.startswith('slide'):
         assert split in ['train', 'dev', 'test']
         if source != 'slide':
             limit = int(source.replace('slide', ''))
-        parser = SlideParser(split, vocab, limit)
+        parser = SlideParser(split, vocab, limit=limit)
     else:
         raise ValueError("No such source!")
 
