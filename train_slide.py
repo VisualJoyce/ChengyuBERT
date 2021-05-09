@@ -377,13 +377,12 @@ def validate(opts, model, val_loader, split, global_step):
         idiom_wise_accs = {}
         for item in new_affection_results_df.groupby('idiom').mean().reset_index().to_dict(orient='records'):
             idiom = item['idiom']
-            idiom_id = val_loader.dataset.chengyu_vocab[idiom]
-            affections = val_loader.dataset.calo_vocab[idiom_id][0]
-            for sub_type in ['fine_emotion', 'sentiment']:
+            idiom_id = val_loader.dataset.vocab[idiom]
+            for sub_type in ['sentiment']:
                 d = {k: v for k, v in item.items() if k.startswith(sub_type)}
                 key = max(d, key=d.get)
                 _, pred = key.rsplit('_', 1)
-                target = affections[sub_type]
+                target = val_loader.dataset.sentiments[idiom_id]
                 idiom_wise_accs.setdefault(sub_type, 0)
                 idiom_wise_accs[sub_type] += (int(pred) == target) / idiom_num * 100
 
