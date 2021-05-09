@@ -197,7 +197,7 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
         self.allowed, self.reverse_index = self.get_allowed_examples(split, opts)
 
         if split == 'train':
-            if not self.use_unlabeled:
+            if not opts.use_unlabeled:
                 self.enlarged_candidates = [i for i in range(opts.len_idiom_vocab) if i in self.filtered]
             else:
                 # all the idioms without Slide labels are all considered

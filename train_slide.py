@@ -185,7 +185,7 @@ def idiom2tree(idiom, select_masks):
                 else:
                     c1_label = c1
 
-                ans.insert(idx, Tree(c0_label + c1_label, (c0, c1)))
+                ans.insert(idx, Tree(f'{c0_label} {c1_label}', (c0, c1)))
             else:
                 c = ans.pop(idx)
                 if isinstance(c, Tree):
