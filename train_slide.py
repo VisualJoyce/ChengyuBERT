@@ -269,7 +269,8 @@ def validate(opts, model, val_loader, split, global_step):
                         # tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(inp)
                         # start = tokens.index(val_loader.dataset.tokenizer.mask_token)
                         # tokens[position:position + len(idiom)] = list(idiom)
-                        tokens = list(idiom)
+                        tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(
+                            val_loader.dataset.idiom_input_ids[qid])
                         # print(tokens, s_masks, s_att, composition_gates[j].sum())
                         print(tokens, s_masks)
                         try:
@@ -310,7 +311,8 @@ def validate(opts, model, val_loader, split, global_step):
                         print(qid,
                               idiom)
                         s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
-                        tokens = list(idiom)
+                        tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(
+                            val_loader.dataset.idiom_input_ids[qid])
                         # print(tokens, s_masks, s_att, composition_gates[j].sum())
                         print(tokens, s_masks)
                         try:

@@ -20,6 +20,7 @@ class ChengyuSlideDataset(IdiomsLmdb):
             self.filtered = json.load(f)
         with open(f'{self.db_dir}/span_idiom_mapping.json') as f:
             self.span_idiom_mapping = json.load(f)
+        self.unlabeled = []
         self.allowed, self.reverse_index = self.get_allowed_examples(split, opts)
 
         self.idiom_input_ids = self.tokenize_idioms()
@@ -193,8 +194,6 @@ class ChengyuSlideComposeOnlyEvalDataset(ChengyuSlideComposeOnlyDataset):
 class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
     def __init__(self, split, max_txt_len, opts):
         super().__init__(split, max_txt_len, opts)
-        self.use_unlabeled = opts.use_unlabeled
-        self.unlabeled = []
         self.allowed, self.reverse_index = self.get_allowed_examples(split, opts)
 
         if split == 'train':
@@ -220,7 +219,7 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
             k = int(k)
             if k < opts.len_idiom_vocab:
                 if split == 'train':
-                    if self.use_unlabeled:
+                    if opts.use_unlabeled:
                         if k in self.filtered or k in self.unlabeled:
                             reverse_index[k] = v
                     else:
