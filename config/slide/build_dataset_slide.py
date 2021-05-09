@@ -78,10 +78,17 @@ def is_substring(s_text, idiom):
 
 
 if __name__ == '__main__':
-    X_train, X_test, y_train, y_test = train_test_split(df_sentiment.Idiom,
-                                                        df_sentiment['Maj. Label'],
-                                                        test_size=0.2,
-                                                        stratify=df_sentiment['Maj. Label'],
+    # We want to use 580 for evaluation, so avoid adding these idioms to training and validation
+    df_idioms_580 = pda.read_csv(f'{annotation_dir}/idioms_580.csv')
+
+    intersections = (df_sentiment.Idiom.tolist()).intersection(df_idioms_580.idiom.tolist())
+
+    total = df_sentiment.shape[0]
+    df_sentiment_no_intersection = df_sentiment[~df_sentiment.Idiom.isin(intersections)]
+    X_train, X_test, y_train, y_test = train_test_split(df_sentiment_no_intersection.Idiom,
+                                                        df_sentiment_no_intersection['Maj. Label'],
+                                                        test_size=int(0.2 * total - len(intersections)),
+                                                        stratify=df_sentiment_no_intersection['Maj. Label'],
                                                         random_state=random_state)
     X_train, X_dev, y_train, y_dev = train_test_split(X_train,
                                                       y_train,
@@ -91,15 +98,15 @@ if __name__ == '__main__':
 
     train = [k for k in X_train.tolist()]
     dev = [k for k in X_dev.tolist()]
-    test = [k for k in X_test.tolist()]
+    test = [k for k in X_test.tolist()] + intersections
 
-    data = []
     idiom_span_mapping = {}
     for item in tqdm(df_sentiment.itertuples(), total=df_sentiment.shape[0]):
         dump_files = [
             f'{annotation_dir}/bnc_dumped/{item.Idiom}.jsonl',
             f'{annotation_dir}/1billion_dumped/{item.Idiom}.jsonl',
         ]
+        data = []
         for dump_file in dump_files:
             if os.path.isfile(dump_file) and os.stat(dump_file).st_size > 0:
                 with jsonlines.open(dump_file) as f:
@@ -125,9 +132,9 @@ if __name__ == '__main__':
                                     data.append(d)
                                     idiom_span_mapping[span_text] = d['idiom']
 
-    with open(f'{annotation_dir}/data.jsonl', mode='w') as fp:
-        with jsonlines.Writer(fp) as writer:
-            writer.write_all(data)
+        with open(f'{annotation_dir}/dumped/{item.Idiom}.jsonl', mode='w') as fp:
+            with jsonlines.Writer(fp) as writer:
+                writer.write_all(data)
 
     with open(f'{annotation_dir}/train.json', mode='w') as f:
         json.dump(train, f, ensure_ascii=False, indent=2)
