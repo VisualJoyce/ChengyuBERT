@@ -251,7 +251,7 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
 
         context_ids = example['input_ids'][st: ed]
         idiom_start = context_ids.index(self.tokenizer.mask_token_id)
-        idiom_input_ids = self.idiom_input_ids[idiom]
+        idiom_input_ids = self.idiom_input_ids[id_]
         idiom_len = len(idiom_input_ids)
         # target = idiom
 
