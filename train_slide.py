@@ -208,7 +208,8 @@ def validate(opts, model, val_loader, split, global_step):
 
     def get_header(key):
         d = calo_inverse_mapping[key]
-        return [f'{key}_{d[v]}_{v}' if isinstance(d[v], str) else f'{key}_{d[v][-1]}_{v}' for v in range(len(d))]
+        return [f'{key}_{d[v]}_{v}' if isinstance(d[v], str) else f'{key}_{d[v][-1]}_{v}' for v in range(len(d)) if
+                v < 4]
 
     affection_results = []
     with tqdm(range(len(val_loader.dataset) // opts.size), desc=f'{split}-{opts.rank}') as tq:
