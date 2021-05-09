@@ -23,7 +23,7 @@ from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 
-from chengyubert.data import create_dataloaders, calo_inverse_mapping, intermediate_dir
+from chengyubert.data import create_dataloaders, intermediate_dir, idioms_inverse_mapping
 from chengyubert.data.dataset import DATA_REGISTRY
 from chengyubert.data.evaluation import judge
 from chengyubert.models import build_model
@@ -207,9 +207,8 @@ def validate(opts, model, val_loader, split, global_step):
     results = []
 
     def get_header(key):
-        d = calo_inverse_mapping[key]
-        return [f'{key}_{d[v]}_{v}' if isinstance(d[v], str) else f'{key}_{d[v][-1]}_{v}' for v in range(len(d)) if
-                v < 4]
+        d = idioms_inverse_mapping[key]
+        return [f'{key}_{d[v]}_{v}' if isinstance(d[v], str) else f'{key}_{d[v][-1]}_{v}' for v in range(len(d))]
 
     affection_results = []
     with tqdm(range(len(val_loader.dataset) // opts.size), desc=f'{split}-{opts.rank}') as tq:
@@ -288,8 +287,8 @@ def validate(opts, model, val_loader, split, global_step):
                             #                     enumerate(coarse_emotion_logits[j].cpu().numpy().tolist())}
                             # },
                             "sentiment": {
-                                "target": calo_inverse_mapping['sentiment'].get(sentiment_targets[j].item(), '无'),
-                                "predictions": {calo_inverse_mapping['sentiment'][k]: v for k, v in
+                                "target": idioms_inverse_mapping['sentiment'].get(sentiment_targets[j].item(), '无'),
+                                "predictions": {idioms_inverse_mapping['sentiment'][k]: v for k, v in
                                                 enumerate(sentiment_logits[j].cpu().numpy().tolist())}
                             }
                         }
@@ -324,8 +323,8 @@ def validate(opts, model, val_loader, split, global_step):
 
                         predictions = {
                             "sentiment": {
-                                "target": calo_inverse_mapping['sentiment'].get(sentiment_targets[j].item(), '无'),
-                                "predictions": {calo_inverse_mapping['sentiment'][k]: v for k, v in
+                                "target": idioms_inverse_mapping['sentiment'].get(sentiment_targets[j].item(), '无'),
+                                "predictions": {idioms_inverse_mapping['sentiment'][k]: v for k, v in
                                                 enumerate(sentiment_logits[j].cpu().numpy().tolist())}
                             }
                         }

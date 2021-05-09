@@ -199,6 +199,14 @@ def calo_process(chengyu_vocab, calo_file):
     return calo_vocab
 
 
+idioms_mapping = {
+    'sentiment': {'中性': 0, '褒义': 1, '贬义': 2},
+}
+idioms_inverse_mapping = {
+    'sentiment': {v: k for k, v in idioms_mapping['sentiment'].items()},
+}
+
+
 def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
     """
     Load idioms to vocab with explanation
