@@ -550,8 +550,10 @@ def process(opts, db, tokenizer):
     id2eid = {}
     reverse_index = {}
     span_texts = {}
-    for ex in parser.read_examples():
+    for i, ex in enumerate(parser.read_examples()):
         exa = parse_example(ex)
+        if i % 1000 == 0:
+            print(exa)
         idiom_id = parser.get_idiom_id(ex.idiom)
         reverse_index.setdefault(idiom_id, [])
         if limit and len(reverse_index[idiom_id]) >= limit:
