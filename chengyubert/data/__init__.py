@@ -220,7 +220,7 @@ def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
         if i < len_idiom_vocab:
             sentiment = getattr(item, 'label')
             idioms_vocab[item.Idiom] = i
-            sentiment_vocab[i] = sentiment
+            sentiment_vocab[i] = calo_mapping['sentiment'][sentiment]
     return idioms_vocab, sentiment_vocab
 
 

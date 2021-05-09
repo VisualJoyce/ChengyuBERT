@@ -193,6 +193,7 @@ class ChengyuSlideComposeOnlyEvalDataset(ChengyuSlideComposeOnlyDataset):
 class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
     def __init__(self, split, max_txt_len, opts):
         super().__init__(split, max_txt_len, opts)
+        self.use_unlabeled = opts.use_unlabeled
         self.unlabeled = []
         self.allowed, self.reverse_index = self.get_allowed_examples(split, opts)
 
