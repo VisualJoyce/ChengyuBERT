@@ -70,15 +70,10 @@ class ChengyuSlideDataset(IdiomsLmdb):
         return lens, ids, st_ed
 
     def _decide_target(self, idiom, idx):
-        target = [
-            idx, -100, -100, -100, 0
-        ]
+        target = [idx, -100]
         if idiom in self.sentiments and idiom in self.filtered:
             sentiment = self.sentiments[idiom]
-            target = [
-                idx,
-                sentiment
-            ]
+            target = [idx, sentiment]
         return target
 
 
