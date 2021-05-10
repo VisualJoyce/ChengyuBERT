@@ -78,10 +78,23 @@ def is_substring(s_text, idiom):
 
 
 if __name__ == '__main__':
+    from more_itertools import chunked
+
+    idioms_set = set(df_sentiment.Idiom.tolist())
+
+    idiom_definitions = {}
+    for _, idiom, explanation in chunked(open(f'{annotation_dir}/idioms_dataset_2432').read().split('\n'), 3):
+        idiom_definitions[idiom] = explanation
+
+    idioms_extra_set = set(idiom_definitions.keys())
+
     # We want to use 580 for evaluation, so avoid adding these idioms to training and validation
     df_idioms_580 = pda.read_csv(f'{annotation_dir}/idioms_580.csv')
+    idioment_set = set(df_idioms_580.idiom.tolist())
 
-    intersections = set(df_sentiment.Idiom.tolist()).intersection(set(df_idioms_580.idiom.tolist()))
+    intersections = set(idioms_set).intersection(idioment_set)
+
+    unlabeled = idioms_extra_set.difference(idioms_set.union(idioment_set))
 
     total = df_sentiment.shape[0]
     df_sentiment_no_intersection = df_sentiment[~df_sentiment.Idiom.isin(intersections)]
@@ -102,10 +115,11 @@ if __name__ == '__main__':
 
     idiom_span_mapping = {}
     data = {}
-    for item in tqdm(df_sentiment.itertuples(), total=df_sentiment.shape[0]):
+    all_idioms = idioms_set.union(idioment_set).union(idioms_extra_set)
+    for idiom in tqdm(all_idioms):
         dump_files = [
-            f'{annotation_dir}/bnc_dumped/{item.Idiom}.jsonl',
-            f'{annotation_dir}/1billion_dumped/{item.Idiom}.jsonl',
+            f'{annotation_dir}/bnc_dumped/{idiom}.jsonl',
+            f'{annotation_dir}/1billion_dumped/{idiom}.jsonl',
         ]
         for dump_file in dump_files:
             if os.path.isfile(dump_file) and os.stat(dump_file).st_size > 0:
@@ -122,15 +136,15 @@ if __name__ == '__main__':
                             content = d['content'][d['_id']].replace('<em>', '').replace('</em>', '')
 
                         span_text = d['groundTruth'][0]
-                        if content.count(span_text) == 1 and len(span_text) - len(item.Idiom) < len(item.Idiom):
-                            d['idiom'] = item.Idiom
+                        if content.count(span_text) == 1 and len(span_text) - len(idiom) < len(idiom):
+                            d['idiom'] = idiom
                             d['content'] = content.replace(span_text, "#idiom#")
                             if ' #idiom# ' in d['content']:
                                 if span_text in idiom_span_mapping and idiom_span_mapping[span_text] != d['idiom']:
                                     print("Error:", d, span_text, idiom_span_mapping[span_text])
                                 else:
-                                    data.setdefault(item.Idiom, [])
-                                    data[item.Idiom].append(d)
+                                    data.setdefault(idiom, [])
+                                    data[idiom].append(d)
                                     idiom_span_mapping[span_text] = d['idiom']
 
     with open(f'{annotation_dir}/data.json', mode='w') as fp:
@@ -142,5 +156,7 @@ if __name__ == '__main__':
         json.dump(dev, f, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/test.json', mode='w') as f:
         json.dump(test, f, ensure_ascii=False, indent=2)
+    with open(f'{annotation_dir}/unlabeled.json', mode='w') as f:
+        json.dump(list(unlabeled), f, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/idiom_span_mapping.json', mode='w') as f:
         json.dump(idiom_span_mapping, f, ensure_ascii=False, indent=2)

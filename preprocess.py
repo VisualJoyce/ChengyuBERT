@@ -439,6 +439,8 @@ class SlideParser(object):
             self.filtered = json.load(fd)
         with open(self.mapping_file) as fd:
             self.mapping = json.load(fd)
+        with open(self.unlabelled_file) as fd:
+            self.unlabelled = json.load(fd)
         self.limit = limit
         self.reverse_index = {}
 
@@ -457,6 +459,10 @@ class SlideParser(object):
     @property
     def answer_file(self):
         return os.path.join(self.data_dir, '{}_answer.csv'.format(self.split))
+
+    @property
+    def unlabelled_file(self):
+        return os.path.join(self.data_dir, 'unlabelled.json')
 
     def get_idiom_id(self, idiom):
         idiom = self.mapping[idiom]
@@ -504,12 +510,13 @@ class SlideParser(object):
                 context = data['content']
                 for i, (tag, span_text) in enumerate(zip(re.finditer("#idiom#", context), data['groundTruth'])):
                     new_tag = idx * 20 + i
+
                     if self.split == 'train':
-                        if idiom in self.filtered:
-                            yield self._construct_example(i, span_text, tag, new_tag, context, data)
+                        if idiom in self.filtered or idiom in self.unlabelled:
+                            yield self._construct_example(i, idiom, tag, new_tag, context, data)
                     else:
                         if idiom in self.filtered:
-                            yield self._construct_example(i, span_text, tag, new_tag, context, data)
+                            yield self._construct_example(i, idiom, tag, new_tag, context, data)
 
 
 def process(opts, db, tokenizer):

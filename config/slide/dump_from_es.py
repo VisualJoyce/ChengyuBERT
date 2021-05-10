@@ -225,11 +225,17 @@ def get_contexts(hit_id):
 
 if __name__ == '__main__':
     import sys
+    from more_itertools import chunked
 
     index = sys.argv[1]
 
     df_sentiment = pda.read_csv("idiomLexicon.tsv", sep="\t")
-    idioms = df_sentiment.Idiom.tolist()
+
+    idiom_definitions = {}
+    for _, idiom, explanation in chunked(open('../Paraphrases_Idiom/idioms_dataset_2432').read().split('\n'), 3):
+        idiom_definitions[idiom] = explanation
+
+    idioms = set(df_sentiment.Idiom.tolist()).union(set(idiom_definitions.keys()))
 
     pbar = tqdm(list(idioms)[::-1])
     for word in pbar:
