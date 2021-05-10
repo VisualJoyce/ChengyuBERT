@@ -160,8 +160,10 @@ class ChengyuSlideComposeOnlyDataset(ChengyuSlideDataset):
 
         width_max = max(widths)
         gather_index = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
-        for i, (p, w) in enumerate(zip(positions, widths)):
-            gather_index.data[i, :w] = torch.arange(p, p + w, dtype=torch.long).data
+        for i, w in enumerate(widths):
+            gather_index.data[i, :w] = torch.arange(1, 1 + w, dtype=torch.long).data
+        # for i, (p, w) in enumerate(zip(positions, widths)):
+        #     gather_index.data[i, :w] = torch.arange(p, p + w, dtype=torch.long).data
 
         batch = {'input_ids': input_ids,
                  'token_type_ids': token_type_ids,
