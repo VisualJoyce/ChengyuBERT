@@ -223,7 +223,7 @@ def validate(opts, model, val_loader, split, global_step):
 
             # select_masks, atts, composition_gates = composition
             if batch['input_ids'].dim() == 3:
-                input_ids = torch.gather(batch['input_ids'][1], dim=1, index=batch['gather_index'])
+                input_ids = torch.gather(batch['input_ids'][1], dim=1, index=batch['gather_index'][0])
             else:
                 input_ids = torch.gather(batch['input_ids'], dim=1, index=batch['gather_index'])
 
