@@ -513,10 +513,10 @@ class SlideParser(object):
 
                     if self.split == 'train':
                         if idiom in self.filtered or idiom in self.unlabelled:
-                            yield self._construct_example(i, idiom, tag, new_tag, context, data)
+                            yield self._construct_example(i, span_text, tag, new_tag, context, data)
                     else:
                         if idiom in self.filtered:
-                            yield self._construct_example(i, idiom, tag, new_tag, context, data)
+                            yield self._construct_example(i, span_text, tag, new_tag, context, data)
 
 
 def process(opts, db, tokenizer):
