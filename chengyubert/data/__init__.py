@@ -225,10 +225,10 @@ def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
 
     idioms_set = set(df_sentiment.Idiom.tolist())
     idiom_definitions = {}
-    for _, idiom, explanation in chunked(open(f'{annotation_dir}/idioms_dataset_2432').read().split('\n'), 3):
+    for _, idiom, explanation in chunked(open(f'{annotation_dir}/slide/idioms_dataset_2432').read().split('\n'), 3):
         idiom_definitions[idiom] = explanation
     idioms_extra_set = set(idiom_definitions.keys())
-    df_idioms_580 = pda.read_csv(f'{annotation_dir}/idioms_580.csv')
+    df_idioms_580 = pda.read_csv(f'{annotation_dir}/slide/idioms_580.csv')
     idioment_set = set(df_idioms_580.idiom.tolist())
 
     all_idioms = idioms_set.union(idioment_set).union(idioms_extra_set)
