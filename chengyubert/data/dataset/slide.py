@@ -133,9 +133,9 @@ class ChengyuSlideComposeOnlyDataset(ChengyuSlideDataset):
 
         input_ids = reduce(operator.add, [
             [self.tokenizer.cls_token_id],
-            context_ids[:idiom_start],
+            # context_ids[:idiom_start],
             idiom_input_ids,
-            context_ids[idiom_start + 1:],
+            # context_ids[idiom_start + 1:],
             [self.tokenizer.sep_token_id]])
         assert len(input_ids) <= self.max_txt_len + idiom_len
 
@@ -263,9 +263,9 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
 
         input_ids = reduce(operator.add, [
             [self.tokenizer.cls_token_id],
-            context_ids[:idiom_start],
+            # context_ids[:idiom_start],
             idiom_input_ids,
-            context_ids[idiom_start + 1:],
+            # context_ids[idiom_start + 1:],
             [self.tokenizer.sep_token_id]])
         input_masked_ids = reduce(operator.add, [
             [self.tokenizer.cls_token_id],
@@ -273,6 +273,8 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
             idiom_masked_input_ids,
             context_ids[idiom_start + 1:],
             [self.tokenizer.sep_token_id]])
+
+        input_ids = input_ids + [self.tokenizer.pad_token_id] * (len(input_masked_ids) - len(input_ids))
         assert len(input_ids) <= self.max_txt_len + idiom_len
 
         position = idiom_start + 1
@@ -298,13 +300,17 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
 
         width_max = max(widths)
         gather_index = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
+        for i, w in enumerate(widths):
+            gather_index.data[i, :w] = torch.arange(1, 1 + w, dtype=torch.long).data
+
+        gather_index_masked = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
         for i, (p, w) in enumerate(zip(positions, widths)):
-            gather_index.data[i, :w] = torch.arange(p, p + w, dtype=torch.long).data
+            gather_index_masked.data[i, :w] = torch.arange(p, p + w, dtype=torch.long).data
 
         batch = {'input_ids': torch.stack([input_ids, input_masked_ids]),
                  'token_type_ids': torch.stack([token_type_ids, token_type_ids]),
                  'attention_mask': torch.stack([attn_masks, attn_masks]),
-                 'gather_index': gather_index,
+                 'gather_index': (gather_index, gather_index_masked),
                  'positions': torch.tensor(positions).long(),
                  'option_ids': torch.tensor(options).long(),
                  'targets': torch.tensor(targets).long()}

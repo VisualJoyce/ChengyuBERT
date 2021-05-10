@@ -478,11 +478,16 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
         encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
 
-        idiom_length = (gather_index > 0).sum(1)
+        gather_index, gather_index_masked = gather_index
+
         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index)
 
+        gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
+
+        idiom_length = (gather_index > 0).sum(1)
         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
         # composed_states_masked, _, select_masks_masked = self.idiom_compose(idiom_states_masked, idiom_length)
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
@@ -630,12 +635,17 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
         encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
 
-        idiom_length = (gather_index > 0).sum(1)
+        gather_index, gather_index_masked = gather_index
+
         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index)
+
+        gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
 
+        idiom_length = (gather_index > 0).sum(1)
         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
 
