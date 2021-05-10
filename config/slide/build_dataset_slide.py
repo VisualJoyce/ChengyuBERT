@@ -77,6 +77,42 @@ def is_substring(s_text, idiom):
         idiom.lower().replace('-', ' ').replace(' ', '')) == 1
 
 
+def parse_data(all_idioms):
+    idiom_span_mapping = {}
+    data = {}
+    for idiom in tqdm(all_idioms):
+        dump_files = [
+            f'{annotation_dir}/bnc_dumped/{idiom}.jsonl',
+            f'{annotation_dir}/1billion_dumped/{idiom}.jsonl',
+        ]
+        for dump_file in dump_files:
+            if os.path.isfile(dump_file) and os.stat(dump_file).st_size > 0:
+                with jsonlines.open(dump_file) as f:
+                    for d in f:
+                        if len(d['content']) > 1:
+                            content = ''
+                            for k in sorted(d['content']):
+                                v = d['content'][k]
+                                if k == d['_id']:
+                                    v = v.replace('<em>', '').replace('</em>', '')
+                                content += v
+                        else:
+                            content = d['content'][d['_id']].replace('<em>', '').replace('</em>', '')
+
+                        span_text = d['groundTruth'][0]
+                        if content.count(span_text) == 1 and len(span_text) - len(idiom) < len(idiom):
+                            d['idiom'] = idiom
+                            d['content'] = content.replace(span_text, "#idiom#")
+                            if ' #idiom# ' in d['content']:
+                                if span_text in idiom_span_mapping and idiom_span_mapping[span_text] != d['idiom']:
+                                    print("Error:", d, span_text, idiom_span_mapping[span_text])
+                                else:
+                                    data.setdefault(idiom, [])
+                                    data[idiom].append(d)
+                                    idiom_span_mapping[span_text] = d['idiom']
+    return data, idiom_span_mapping
+
+
 if __name__ == '__main__':
     from more_itertools import chunked
 
@@ -113,43 +149,6 @@ if __name__ == '__main__':
     dev = [k for k in X_dev.tolist()]
     test = [k for k in X_test.tolist()] + list(intersections)
 
-    idiom_span_mapping = {}
-    data = {}
-    all_idioms = idioms_set.union(idioment_set).union(idioms_extra_set)
-    for idiom in tqdm(all_idioms):
-        dump_files = [
-            f'{annotation_dir}/bnc_dumped/{idiom}.jsonl',
-            f'{annotation_dir}/1billion_dumped/{idiom}.jsonl',
-        ]
-        for dump_file in dump_files:
-            if os.path.isfile(dump_file) and os.stat(dump_file).st_size > 0:
-                with jsonlines.open(dump_file) as f:
-                    for d in f:
-                        if len(d['content']) > 1:
-                            content = ''
-                            for k in sorted(d['content']):
-                                v = d['content'][k]
-                                if k == d['_id']:
-                                    v = v.replace('<em>', '').replace('</em>', '')
-                                content += v
-                        else:
-                            content = d['content'][d['_id']].replace('<em>', '').replace('</em>', '')
-
-                        span_text = d['groundTruth'][0]
-                        if content.count(span_text) == 1 and len(span_text) - len(idiom) < len(idiom):
-                            d['idiom'] = idiom
-                            d['content'] = content.replace(span_text, "#idiom#")
-                            if ' #idiom# ' in d['content']:
-                                if span_text in idiom_span_mapping and idiom_span_mapping[span_text] != d['idiom']:
-                                    print("Error:", d, span_text, idiom_span_mapping[span_text])
-                                else:
-                                    data.setdefault(idiom, [])
-                                    data[idiom].append(d)
-                                    idiom_span_mapping[span_text] = d['idiom']
-
-    with open(f'{annotation_dir}/data.json', mode='w') as fp:
-        json.dump(data, fp, ensure_ascii=False, indent=2)
-
     with open(f'{annotation_dir}/train.json', mode='w') as f:
         json.dump(train, f, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/dev.json', mode='w') as f:
@@ -158,5 +157,10 @@ if __name__ == '__main__':
         json.dump(test, f, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/unlabelled.json', mode='w') as f:
         json.dump(list(unlabelled), f, ensure_ascii=False, indent=2)
+
+    all_idioms = idioms_set.union(idioment_set).union(idioms_extra_set)
+    data, idiom_span_mapping = parse_data(all_idioms)
+    with open(f'{annotation_dir}/data.json', mode='w') as fp:
+        json.dump(data, fp, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/idiom_span_mapping.json', mode='w') as f:
         json.dump(idiom_span_mapping, f, ensure_ascii=False, indent=2)

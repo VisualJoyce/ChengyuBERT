@@ -7,6 +7,7 @@ import lmdb
 import msgpack
 import pandas as pda
 from lz4.frame import compress, decompress
+from more_itertools import chunked
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 
@@ -222,13 +223,25 @@ def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
     df_sentiment = df_sentiment[df_sentiment['Maj. Label'] != 'inappropriate']
     df_sentiment = df_sentiment.assign(label=df_sentiment['Maj. Label'].map(sentiment_mapping))
 
+    idioms_set = set(df_sentiment.Idiom.tolist())
+    idiom_definitions = {}
+    for _, idiom, explanation in chunked(open(f'{annotation_dir}/idioms_dataset_2432').read().split('\n'), 3):
+        idiom_definitions[idiom] = explanation
+    idioms_extra_set = set(idiom_definitions.keys())
+    df_idioms_580 = pda.read_csv(f'{annotation_dir}/idioms_580.csv')
+    idioment_set = set(df_idioms_580.idiom.tolist())
+
+    all_idioms = idioms_set.union(idioment_set).union(idioms_extra_set)
+
     idioms_vocab = {}
-    sentiment_vocab = {}
-    for i, item in enumerate(df_sentiment.itertuples()):
+    for i, idiom in enumerate(all_idioms):
         if i < len_idiom_vocab:
-            sentiment = getattr(item, 'label')
-            idioms_vocab[item.Idiom] = i
-            sentiment_vocab[i] = calo_mapping['sentiment'][sentiment]
+            idioms_vocab[idiom] = i
+
+    sentiment_vocab = {}
+    for item in df_sentiment.itertuples():
+        sentiment = getattr(item, 'label')
+        sentiment_vocab[idioms_vocab[item.Idiom]] = calo_mapping['sentiment'][sentiment]
     return idioms_vocab, sentiment_vocab
 
 
