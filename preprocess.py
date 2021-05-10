@@ -602,6 +602,8 @@ def process(opts, db, tokenizer):
     if source.startswith('slide'):
         with open(f'{opts.output}/{split}.json', 'w') as f:
             json.dump([parser.vocab[v] for v in parser.filtered], f)
+        with open(f'{opts.output}/unlabelled.json', 'w') as f:
+            json.dump([parser.vocab[v] for v in parser.unlabelled], f)
         with open(f'{opts.output}/span_idiom_mapping.json', 'w') as f:
             json.dump(span_texts, f)
 
