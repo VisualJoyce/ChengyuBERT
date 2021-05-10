@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     intersections = set(idioms_set).intersection(idioment_set)
 
-    unlabeled = idioms_extra_set.difference(idioms_set.union(idioment_set))
+    unlabelled = idioms_extra_set.difference(idioms_set.union(idioment_set))
 
     total = df_sentiment.shape[0]
     df_sentiment_no_intersection = df_sentiment[~df_sentiment.Idiom.isin(intersections)]
@@ -156,7 +156,7 @@ if __name__ == '__main__':
         json.dump(dev, f, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/test.json', mode='w') as f:
         json.dump(test, f, ensure_ascii=False, indent=2)
-    with open(f'{annotation_dir}/unlabeled.json', mode='w') as f:
-        json.dump(list(unlabeled), f, ensure_ascii=False, indent=2)
+    with open(f'{annotation_dir}/unlabelled.json', mode='w') as f:
+        json.dump(list(unlabelled), f, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/idiom_span_mapping.json', mode='w') as f:
         json.dump(idiom_span_mapping, f, ensure_ascii=False, indent=2)
