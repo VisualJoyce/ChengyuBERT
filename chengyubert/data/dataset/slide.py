@@ -20,7 +20,8 @@ class ChengyuSlideDataset(IdiomsLmdb):
             self.filtered = json.load(f)
         with open(f'{self.db_dir}/span_idiom_mapping.json') as f:
             self.span_idiom_mapping = json.load(f)
-        self.unlabeled = []
+        with open(f'{self.db_dir}/unlabelled.json') as f:
+            self.unlabeled = json.load(f)
         self.allowed, self.reverse_index = self.get_allowed_examples(split, opts)
 
         self.idiom_input_ids = self.tokenize_idioms()
