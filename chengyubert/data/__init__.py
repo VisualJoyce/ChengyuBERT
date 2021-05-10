@@ -223,20 +223,20 @@ def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
     df_sentiment = df_sentiment[df_sentiment['Maj. Label'] != 'inappropriate']
     df_sentiment = df_sentiment.assign(label=df_sentiment['Maj. Label'].map(sentiment_mapping))
 
-    idioms_set = set(df_sentiment.Idiom.tolist())
-    idiom_definitions = {}
-    for _, idiom, explanation in chunked(open(f'{annotation_dir}/slide/idioms_dataset_2432').read().split('\n'), 3):
-        idiom_definitions[idiom] = explanation
-    idioms_extra_set = set(idiom_definitions.keys())
     df_idioms_580 = pda.read_csv(f'{annotation_dir}/slide/idioms_580.csv')
-    idioment_set = set(df_idioms_580.idiom.tolist())
+    idioment = df_idioms_580.idiom.tolist()
 
-    all_idioms = idioms_set.union(idioment_set).union(idioms_extra_set)
+    idioms_extra = []
+    for _, idiom, explanation in chunked(open(f'{annotation_dir}/slide/idioms_dataset_2432').read().split('\n'), 3):
+        idioms_extra.append(idiom)
 
     idioms_vocab = {}
-    for i, idiom in enumerate(all_idioms):
-        if i < len_idiom_vocab:
-            idioms_vocab[idiom] = i
+    for i, idiom in enumerate(df_sentiment.Idiom.tolist() + idioment + idioms_extra):
+        if idiom not in idioms_vocab:
+            idioms_vocab[idiom] = len(idioms_vocab)
+    idioms_vocab = {k: v for k, v in idioms_vocab.items() if v < len_idiom_vocab}
+
+    print("Total idioms: {}".format(len(idioms_vocab)))
 
     sentiment_vocab = {}
     for item in df_sentiment.itertuples():
