@@ -15,6 +15,7 @@ from chengyubert.data.dataset import register_dataset
 class ChengyuSlideDataset(IdiomsLmdb):
     def __init__(self, split, max_txt_len, opts):
         super().__init__(split, max_txt_len, opts)
+        self.use_context = opts.use_context
         # load labelled idioms for the split
         with open(f'{self.db_dir}/{"dev" if split == "val" else split}.json') as f:
             self.filtered = json.load(f)
@@ -131,15 +132,24 @@ class ChengyuSlideComposeOnlyDataset(ChengyuSlideDataset):
         idx = -100 if idiom not in self.enlarged_candidates else self.enlarged_candidates.index(idiom)
         target = self._decide_target(idiom, idx)
 
-        input_ids = reduce(operator.add, [
-            [self.tokenizer.cls_token_id],
-            # context_ids[:idiom_start],
-            idiom_input_ids,
-            # context_ids[idiom_start + 1:],
-            [self.tokenizer.sep_token_id]])
+        if self.use_context:
+            input_ids = reduce(operator.add, [
+                [self.tokenizer.cls_token_id],
+                context_ids[:idiom_start],
+                idiom_input_ids,
+                context_ids[idiom_start + 1:],
+                [self.tokenizer.sep_token_id]])
+        else:
+            input_ids = reduce(operator.add, [
+                [self.tokenizer.cls_token_id],
+                idiom_input_ids,
+                [self.tokenizer.sep_token_id]])
         assert len(input_ids) <= self.max_txt_len + idiom_len
 
-        position = idiom_start + 1
+        if self.use_context:
+            position = idiom_start + 1
+        else:
+            position = 1
 
         token_type_ids = [0] * len(input_ids)
         attention_mask = [1] * len(input_ids)
@@ -147,7 +157,7 @@ class ChengyuSlideComposeOnlyDataset(ChengyuSlideDataset):
         input_ids = torch.tensor(input_ids)
         token_type_ids = torch.tensor(token_type_ids)
         attention_mask = torch.tensor(attention_mask)
-        return input_ids, token_type_ids, attention_mask, position, idiom_len, options, target
+        return input_ids, token_type_ids, attention_mask, position, idiom_len, options, target, self.use_context
 
     @staticmethod
     def collate_fn(inputs):
@@ -160,10 +170,8 @@ class ChengyuSlideComposeOnlyDataset(ChengyuSlideDataset):
 
         width_max = max(widths)
         gather_index = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
-        for i, w in enumerate(widths):
-            gather_index.data[i, :w] = torch.arange(1, 1 + w, dtype=torch.long).data
-        # for i, (p, w) in enumerate(zip(positions, widths)):
-        #     gather_index.data[i, :w] = torch.arange(p, p + w, dtype=torch.long).data
+        for i, (p, w) in enumerate(zip(positions, widths)):
+            gather_index.data[i, :w] = torch.arange(p, p + w, dtype=torch.long).data
 
         batch = {'input_ids': input_ids,
                  'token_type_ids': token_type_ids,
@@ -263,23 +271,32 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
         idx = -100 if idiom not in self.enlarged_candidates else self.enlarged_candidates.index(idiom)
         target = self._decide_target(idiom, idx)
 
-        input_ids = reduce(operator.add, [
-            [self.tokenizer.cls_token_id],
-            # context_ids[:idiom_start],
-            idiom_input_ids,
-            # context_ids[idiom_start + 1:],
-            [self.tokenizer.sep_token_id]])
         input_masked_ids = reduce(operator.add, [
             [self.tokenizer.cls_token_id],
             context_ids[:idiom_start],
             idiom_masked_input_ids,
             context_ids[idiom_start + 1:],
             [self.tokenizer.sep_token_id]])
+        if self.use_context:
+            input_ids = reduce(operator.add, [
+                [self.tokenizer.cls_token_id],
+                context_ids[:idiom_start],
+                idiom_input_ids,
+                context_ids[idiom_start + 1:],
+                [self.tokenizer.sep_token_id]])
+        else:
+            input_ids = reduce(operator.add, [
+                [self.tokenizer.cls_token_id],
+                idiom_input_ids,
+                [self.tokenizer.sep_token_id]])
+            input_ids = input_ids + [self.tokenizer.pad_token_id] * (len(input_masked_ids) - len(input_ids))
 
-        input_ids = input_ids + [self.tokenizer.pad_token_id] * (len(input_masked_ids) - len(input_ids))
         assert len(input_ids) <= self.max_txt_len + idiom_len
 
-        position = idiom_start + 1
+        if self.use_context:
+            position = (idiom_start + 1, idiom_start + 1)
+        else:
+            position = (1, idiom_start + 1)
 
         token_type_ids = [0] * len(input_ids)
         attention_mask = [1] * len(input_ids)
@@ -302,12 +319,12 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
 
         width_max = max(widths)
         gather_index = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
-        for i, w in enumerate(widths):
-            gather_index.data[i, :w] = torch.arange(1, 1 + w, dtype=torch.long).data
+        for i, (p, w) in enumerate(zip(positions, widths)):
+            gather_index.data[i, :w] = torch.arange(p[0], p[0] + w, dtype=torch.long).data
 
         gather_index_masked = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
         for i, (p, w) in enumerate(zip(positions, widths)):
-            gather_index_masked.data[i, :w] = torch.arange(p, p + w, dtype=torch.long).data
+            gather_index_masked.data[i, :w] = torch.arange(p[1], p[1] + w, dtype=torch.long).data
 
         batch = {'input_ids': torch.stack([input_ids, input_masked_ids]),
                  'token_type_ids': torch.stack([token_type_ids, token_type_ids]),
