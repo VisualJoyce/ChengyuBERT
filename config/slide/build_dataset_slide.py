@@ -2,6 +2,7 @@ import json
 import os
 import random
 import sys
+from itertools import chain
 
 import jsonlines
 import pandas as pda
@@ -77,9 +78,27 @@ def is_substring(s_text, idiom):
         idiom.lower().replace('-', ' ').replace(' ', '')) == 1
 
 
-def parse_data(all_idioms):
-    idiom_span_mapping = {}
+def common_idioms(idioms_0, idioms_1):
+    d_0 = {}
+    for k in idioms_0:
+        d_0[k] = k.lower().replace('-', ' ').replace(' ', '')
+
+    d_1 = {}
+    for k in idioms_1:
+        d_1[k] = k.lower().replace('-', ' ').replace(' ', '')
+
+    commons = set(d_0.values()).intersection(d_1.values())
+
+    s = set()
+    for k, v in chain(d_0.items(), d_1.items()):
+        if v in commons:
+            s.add(k)
+    return s
+
+
+def parse_data(idiom_span_mapping):
     data = {}
+    all_idioms = list(idiom_span_mapping.keys())
     for idiom in tqdm(all_idioms):
         dump_files = [
             f'{annotation_dir}/bnc_dumped/{idiom}.jsonl',
@@ -101,6 +120,7 @@ def parse_data(all_idioms):
 
                         span_text = d['groundTruth'][0]
                         if content.count(span_text) == 1 and len(span_text) - len(idiom) < len(idiom):
+                            idiom = idiom_span_mapping[idiom]
                             d['idiom'] = idiom
                             d['content'] = content.replace(span_text, "#idiom#")
                             if ' #idiom# ' in d['content']:
@@ -113,24 +133,75 @@ def parse_data(all_idioms):
     return data, idiom_span_mapping
 
 
+def get_form(idiom):
+    tmp = idiom.lower()
+    for a, b in [
+        (" someone's ", ' ones '),
+        (' someones ', ' ones '),
+        (' your ', ' ones '),
+        (' my ', ' ones '),
+        (' his ', ' ones '),
+        (' them ', ' someone '),
+        (",", ' '),
+        ("'", ' '),
+        ('-', ' '),
+        (' ', '')
+    ]:
+        tmp = tmp.replace(a, b)
+    return tmp
+
+
 if __name__ == '__main__':
     from more_itertools import chunked
 
-    idioms_set = set(df_sentiment.Idiom.tolist())
+    df_sentiment = pda.read_csv(f"{annotation_dir}/idiomLexicon.tsv", sep="\t")
+    df_sentiment = df_sentiment[df_sentiment['Maj. Label'] != 'inappropriate']
+    # df_sentiment = df_sentiment.assign(label=df_sentiment['Maj. Label'].map(sentiment_mapping))
 
-    idiom_definitions = {}
-    for _, idiom, explanation in chunked(open(f'{annotation_dir}/idioms_dataset_2432').read().split('\n'), 3):
-        idiom_definitions[idiom] = explanation
-
-    idioms_extra_set = set(idiom_definitions.keys())
-
-    # We want to use 580 for evaluation, so avoid adding these idioms to training and validation
     df_idioms_580 = pda.read_csv(f'{annotation_dir}/idioms_580.csv')
-    idioment_set = set(df_idioms_580.idiom.tolist())
+    idioment = df_idioms_580.idiom.tolist()
 
-    intersections = set(idioms_set).intersection(idioment_set)
+    idioms_extra = []
+    for _, idiom, explanation in chunked(open(f'{annotation_dir}/idioms_dataset_2432').read().split('\n'), 3):
+        idioms_extra.append(idiom)
 
-    unlabelled = idioms_extra_set.difference(idioms_set.union(idioment_set))
+    idioms_vocab = {}
+    idioms_forms = {}
+
+    idioms_ids_range = {}
+    for dataset, idioms in [('slide', df_sentiment.Idiom.tolist()),
+                            ('idioment', idioment),
+                            ('idioms2432', idioms_extra)]:
+        start = len(idioms_vocab)
+        for idiom in idioms:
+            idx = idioms_vocab.get(idiom)
+            if not idx:
+                form = get_form(idiom)
+                if form in idioms_forms and idiom not in idioms_forms[form]:
+                    idioms_forms[form].append(idiom)
+                else:
+                    idioms_vocab[idiom] = len(idioms_vocab)
+                    idioms_forms.setdefault(form, [])
+                    idioms_forms[form].append(idiom)
+        idioms_ids_range[dataset] = {
+            'start': start,
+            'end': len(idioms_vocab)
+        }
+
+    idiom_span_mapping = {}
+    for _, idms in idioms_forms.items():
+        for idm in idms:
+            if idm in idioms_vocab:
+                key = idm
+                break
+        for idm in idms:
+            idiom_span_mapping[idm] = key
+
+    intersections = [idm for idm in idioment if idioms_vocab[
+        idiom_span_mapping[idm]] <= idioms_ids_range['slide']['end']]
+
+    unlabelled = [idm for idm in idioms_extra if idioms_vocab[
+        idiom_span_mapping[idm]] >= idioms_ids_range['idioms2432']['start']]
 
     total = df_sentiment.shape[0]
     df_sentiment_no_intersection = df_sentiment[~df_sentiment.Idiom.isin(intersections)]
@@ -158,8 +229,7 @@ if __name__ == '__main__':
     with open(f'{annotation_dir}/unlabelled.json', mode='w') as f:
         json.dump(list(unlabelled), f, ensure_ascii=False, indent=2)
 
-    all_idioms = idioms_set.union(idioment_set).union(idioms_extra_set)
-    data, idiom_span_mapping = parse_data(all_idioms)
+    data, idiom_span_mapping = parse_data(idiom_span_mapping)
     with open(f'{annotation_dir}/data.json', mode='w') as fp:
         json.dump(data, fp, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/idiom_span_mapping.json', mode='w') as f:

@@ -208,6 +208,24 @@ idioms_inverse_mapping = {
 }
 
 
+def get_form(idiom):
+    tmp = idiom.lower()
+    for a, b in [
+        (" someone's ", ' ones '),
+        (' someones ', ' ones '),
+        (' your ', ' ones '),
+        (' my ', ' ones '),
+        (' his ', ' ones '),
+        (' them ', ' someone '),
+        (",", ' '),
+        ("'", ' '),
+        ('-', ' '),
+        (' ', '')
+    ]:
+        tmp = tmp.replace(a, b)
+    return tmp
+
+
 def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
     """
     Load idioms to vocab with explanation
@@ -231,11 +249,30 @@ def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
         idioms_extra.append(idiom)
 
     idioms_vocab = {}
-    for i, idiom in enumerate(df_sentiment.Idiom.tolist() + idioment + idioms_extra):
-        if idiom not in idioms_vocab:
-            idioms_vocab[idiom] = len(idioms_vocab)
-    idioms_vocab = {k: v for k, v in idioms_vocab.items() if v < len_idiom_vocab}
+    idioms_forms = {}
 
+    idioms_ids_range = {}
+    for dataset, idioms in [('slide', df_sentiment.Idiom.tolist()),
+                            ('idioment', idioment),
+                            ('idioms2432', idioms_extra)]:
+        start = len(idioms_vocab)
+        for idiom in idioms:
+            idx = idioms_vocab.get(idiom)
+            if not idx:
+                form = get_form(idiom)
+                if form in idioms_forms and idiom not in idioms_forms[form]:
+                    idioms_forms[form].append(idiom)
+                else:
+                    idioms_vocab[idiom] = len(idioms_vocab)
+                    idioms_forms.setdefault(form, [])
+                    idioms_forms[form].append(idiom)
+        idioms_ids_range[dataset] = {
+            'start': start,
+            'end': len(idioms_vocab)
+        }
+
+    idioms_vocab = {k: v for k, v in idioms_vocab.items() if v < len_idiom_vocab}
+    print(idioms_ids_range)
     print("Total idioms: {}".format(len(idioms_vocab)))
 
     sentiment_vocab = {}
