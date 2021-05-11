@@ -197,15 +197,16 @@ if __name__ == '__main__':
         for idm in idms:
             idiom_span_mapping[idm] = key
 
-    intersections = [idm for idm in idioment if idioms_vocab[
+    intersections = [idiom_span_mapping[idm] for idm in idioment if idioms_vocab[
         idiom_span_mapping[idm]] <= idioms_ids_range['slide']['end']]
+    intersections = [idm for idm in df_sentiment.Idiom.tolist() if idiom_span_mapping[idm] in intersections]
 
-    unlabelled = [idm for idm in idioms_extra if idioms_vocab[
+    unlabelled = [idiom_span_mapping[idm] for idm in idioms_extra if idioms_vocab[
         idiom_span_mapping[idm]] >= idioms_ids_range['idioms2432']['start']]
 
     total = df_sentiment.shape[0]
     df_sentiment_no_intersection = df_sentiment[~df_sentiment.Idiom.isin(intersections)]
-    X_train, X_test, y_train, y_test = train_test_split(df_sentiment_no_intersection.Idiom,
+    X_train, X_test, y_train, y_test = train_test_split(df_sentiment_no_intersection.Idiom.map(idiom_span_mapping),
                                                         df_sentiment_no_intersection['Maj. Label'],
                                                         test_size=int(0.2 * total - len(intersections)),
                                                         stratify=df_sentiment_no_intersection['Maj. Label'],
@@ -218,7 +219,7 @@ if __name__ == '__main__':
 
     train = [k for k in X_train.tolist()]
     dev = [k for k in X_dev.tolist()]
-    test = [k for k in X_test.tolist()] + list(intersections)
+    test = [k for k in X_test.tolist()] + [idiom_span_mapping[idm] for idm in intersections]
 
     with open(f'{annotation_dir}/train.json', mode='w') as f:
         json.dump(train, f, ensure_ascii=False, indent=2)
