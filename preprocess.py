@@ -95,9 +95,9 @@ class ChidParser(object):
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
 
-    def __init__(self, split, vocab, annotation_dir='/annotation'):
+    def __init__(self, split, len_idiom_vocab, annotation_dir='/annotations'):
         self.split = split
-        self.vocab = vocab
+        self.vocab = chengyu_process(len_idiom_vocab=len_idiom_vocab, annotation_dir=annotation_dir)
         self.annotation_dir = annotation_dir
         self.reverse_index = {}
 
@@ -166,9 +166,9 @@ class ChidBalancedParser(ChidParser):
     """
     splits = ['train', 'test']
 
-    def __init__(self, split, vocab, annotation_dir='/annotations'):
+    def __init__(self, split, len_idiom_vocab, annotation_dir='/annotations'):
+        super().__init__(split, len_idiom_vocab, annotation_dir)
         self.split = split
-        self.vocab = vocab
         self.annotation_dir = annotation_dir
 
     @property
@@ -198,7 +198,8 @@ class ChidBalancedFixParser(ChidParser):
                 '语不惊人': '语不惊人死不休',
                 '雨后春笋': '如雨后春笋般'}
 
-    def __init__(self, split, vocab, annotation_dir='/annotations'):
+    def __init__(self, split, len_idiom_vocab, annotation_dir='/annotations'):
+        super().__init__(split, len_idiom_vocab, annotation_dir)
         self.split = split
         self.vocab = {}
         for k, v in vocab.items():
@@ -226,9 +227,9 @@ class ChidExternalParser(ChidParser):
     """
     splits = ['pretrain', 'cct7', 'cct4']
 
-    def __init__(self, split, vocab, annotation_dir='/annotations'):
+    def __init__(self, split, len_idiom_vocab, annotation_dir='/annotations'):
+        super().__init__(split, len_idiom_vocab, annotation_dir)
         self.split = split
-        self.vocab = vocab
         self.annotation_dir = annotation_dir
 
     @property
@@ -253,9 +254,9 @@ class ChidOfficialParser(ChidParser):
     """
     splits = ['train', 'dev', 'test', 'ran', 'sim', 'out']
 
-    def __init__(self, split, vocab, annotation_dir='/annotations'):
+    def __init__(self, split, len_idiom_vocab, annotation_dir='/annotations'):
+        super().__init__(split, len_idiom_vocab, annotation_dir)
         self.split = split
-        self.vocab = vocab
         self.annotation_dir = annotation_dir
 
     @property
@@ -284,9 +285,9 @@ class ChidCompetitionParser(object):
     """
     splits = ['train', 'dev', 'test', 'out']
 
-    def __init__(self, split, vocab, annotation_dir='/annotations'):
+    def __init__(self, split, len_idiom_vocab, annotation_dir='/annotations'):
         self.split = split
-        self.vocab = vocab
+        self.vocab = chengyu_process(len_idiom_vocab=len_idiom_vocab, annotation_dir=annotation_dir)
         self.annotation_dir = annotation_dir
         self.data_dir = f'{self.annotation_dir}/competition'
         self.reverse_index = {}
@@ -346,9 +347,9 @@ class ChidAffectionParser(ChidParser):
     """
     splits = ['train', 'dev', 'test']
 
-    def __init__(self, split, vocab, annotation_dir='/annotations', limit=None):
+    def __init__(self, split, len_idiom_vocab, annotation_dir='/annotations', limit=None):
+        super().__init__(split, len_idiom_vocab, annotation_dir)
         self.split = split
-        self.vocab = vocab
         self.annotation_dir = annotation_dir
         with open(self.data_file) as fd:
             self.filtered = json.load(fd)
@@ -431,14 +432,13 @@ class SlideParser(object):
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
 
-    def __init__(self, split, vocab, annotation_dir='/annotations', limit=None):
+    def __init__(self, split, len_idiom_vocab, annotation_dir='/annotations', limit=None):
         self.split = split
-        self.vocab = vocab
+        self.vocab, _, self.mapping = idioms_process(len_idiom_vocab=len_idiom_vocab,
+                                                     annotation_dir='/annotations')
         self.annotation_dir = annotation_dir
         with open(self.data_file) as fd:
             self.filtered = json.load(fd)
-        with open(self.mapping_file) as fd:
-            self.mapping = json.load(fd)
         with open(self.unlabelled_file) as fd:
             self.unlabelled = json.load(fd)
         self.limit = limit
@@ -522,37 +522,32 @@ class SlideParser(object):
 def process(opts, db, tokenizer):
     source, split = opts.annotation.split('_')
 
-    if source.startswith('slide'):
-        vocab, _ = idioms_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
-    else:
-        vocab = chengyu_process(len_idiom_vocab=opts.len_idiom_vocab, annotation_dir='/annotations')
-
     if source == 'official':
         assert split in ['train', 'dev', 'test', 'ran', 'sim', 'out']
-        parser = ChidOfficialParser(split, vocab)
+        parser = ChidOfficialParser(split, opts.len_idiom_vocab)
     elif source == 'external':
         assert split in ['pretrain', 'cct7', 'cct4']
-        parser = ChidExternalParser(split, vocab)
+        parser = ChidExternalParser(split, opts.len_idiom_vocab)
     elif source == 'balanced':
         assert split in ['train', 'val']
-        parser = ChidBalancedParser(split, vocab)
+        parser = ChidBalancedParser(split, opts.len_idiom_vocab)
     elif source == 'balancedfix':
         assert split in ['train', 'val']
-        parser = ChidBalancedFixParser(split, vocab)
+        parser = ChidBalancedFixParser(split, opts.len_idiom_vocab)
     elif source == 'competition':
         assert split in ['train', 'dev', 'test', 'out']
-        parser = ChidCompetitionParser(split, vocab)
+        parser = ChidCompetitionParser(split, opts.len_idiom_vocab)
     elif source.startswith('affection'):
         assert split in ['train', 'dev', 'test']
         # We only use train split of ChID for affection
         if source != 'affection':
             limit = int(source.replace('affection', ''))
-        parser = ChidAffectionParser(split, vocab, limit=limit)
+        parser = ChidAffectionParser(split, opts.len_idiom_vocab, limit=limit)
     elif source.startswith('slide'):
         assert split in ['train', 'dev', 'test']
         if source != 'slide':
             limit = int(source.replace('slide', ''))
-        parser = SlideParser(split, vocab, limit=limit)
+        parser = SlideParser(split, opts.len_idiom_vocab, limit=limit)
     else:
         raise ValueError("No such source!")
 
@@ -601,9 +596,9 @@ def process(opts, db, tokenizer):
 
     if source.startswith('slide'):
         with open(f'{opts.output}/{split}.json', 'w') as f:
-            json.dump([parser.vocab[v] for v in parser.filtered], f)
+            json.dump([parser.get_idiom_id(v) for v in parser.filtered], f)
         with open(f'{opts.output}/unlabelled.json', 'w') as f:
-            json.dump([parser.vocab[v] for v in parser.unlabelled], f)
+            json.dump([parser.get_idiom_id(v) for v in parser.unlabelled], f)
         with open(f'{opts.output}/span_idiom_mapping.json', 'w') as f:
             json.dump(span_texts, f)
 

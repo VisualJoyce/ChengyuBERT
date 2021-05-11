@@ -289,7 +289,7 @@ def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
         sentiment = getattr(item, 'label')
         idiom = idiom_span_mapping[item.Idiom]
         sentiment_vocab[idioms_vocab[idiom]] = calo_mapping['sentiment'][sentiment]
-    return idioms_vocab, sentiment_vocab
+    return idioms_vocab, sentiment_vocab, idiom_span_mapping
 
 
 class IdiomsLmdb(object):
