@@ -157,7 +157,7 @@ class ChengyuSlideComposeOnlyDataset(ChengyuSlideDataset):
         input_ids = torch.tensor(input_ids)
         token_type_ids = torch.tensor(token_type_ids)
         attention_mask = torch.tensor(attention_mask)
-        return input_ids, token_type_ids, attention_mask, position, idiom_len, options, target, self.use_context
+        return input_ids, token_type_ids, attention_mask, position, idiom_len, options, target
 
     @staticmethod
     def collate_fn(inputs):
