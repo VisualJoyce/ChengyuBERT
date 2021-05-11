@@ -301,8 +301,8 @@ class IdiomsLmdb(object):
 
         self.id2len = json.load(open(f'{self.db_dir}/id2len.json'))
         self.db = TxtLmdb(self.db_dir, readonly=True)
-        self.vocab, self.sentiments = idioms_process(len_idiom_vocab=opts.len_idiom_vocab,
-                                                     annotation_dir='/annotations')
+        self.vocab, self.sentiments, self.mapping = idioms_process(len_idiom_vocab=opts.len_idiom_vocab,
+                                                                   annotation_dir='/annotations')
 
         self.id2idiom = {v: k for k, v in self.vocab.items()}
         self.idiom_ids = list(range(opts.len_idiom_vocab))
