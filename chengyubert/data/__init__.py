@@ -271,6 +271,15 @@ def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
             'end': len(idioms_vocab)
         }
 
+    idiom_span_mapping = {}
+    for _, idms in idioms_forms.items():
+        for idm in idms:
+            if idm in idioms_vocab:
+                key = idm
+                break
+        for idm in idms:
+            idiom_span_mapping[idm] = key
+
     idioms_vocab = {k: v for k, v in idioms_vocab.items() if v < len_idiom_vocab}
     print(idioms_ids_range)
     print("Total idioms: {}".format(len(idioms_vocab)))
@@ -278,7 +287,8 @@ def idioms_process(len_idiom_vocab=sys.maxsize, annotation_dir='/annotations'):
     sentiment_vocab = {}
     for item in df_sentiment.itertuples():
         sentiment = getattr(item, 'label')
-        sentiment_vocab[idioms_vocab[item.Idiom]] = calo_mapping['sentiment'][sentiment]
+        idiom = idiom_span_mapping[item.Idiom]
+        sentiment_vocab[idioms_vocab[idiom]] = calo_mapping['sentiment'][sentiment]
     return idioms_vocab, sentiment_vocab
 
 
