@@ -454,11 +454,13 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
         self.idiom_compose = LatentComposition(config.hidden_size)
         # self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
         emotion_hidden_size = config.hidden_size
-        self.compose_linear = nn.Sequential(nn.Linear(3 * config.hidden_size, config.hidden_size),
-                                            nn.SELU(),
-                                            nn.Dropout(p=0.1),
-                                            nn.Linear(config.hidden_size, emotion_hidden_size),
-                                            nn.SELU())
+        # self.compose_linear = nn.Sequential(nn.Linear(3 * config.hidden_size, config.hidden_size),
+        #                                     nn.SELU(),
+        #                                     nn.Dropout(p=0.1),
+        #                                     nn.Linear(config.hidden_size, emotion_hidden_size),
+        #                                     nn.SELU())
+
+        self.idiomacity_gate = GatedTanh(3 * config.hidden_size, config.hidden_size)
 
         # Idiom Predictor
         # Sentiment Predictor
@@ -491,7 +493,8 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
         # composed_states_masked, _, select_masks_masked = self.idiom_compose(idiom_states_masked, idiom_length)
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
-        emotion_state = self.compose_linear(torch.cat([composed_states, composed_states_masked], dim=-1))
+        # emotion_state = self.compose_linear(torch.cat([composed_states, composed_states_masked], dim=-1))
+        emotion_state = self.idiomacity_gate(torch.cat([composed_states, composed_states_masked], dim=-1))
 
         # slide prediction
         sentiment_logits = self.sentiment_classifier(emotion_state)
