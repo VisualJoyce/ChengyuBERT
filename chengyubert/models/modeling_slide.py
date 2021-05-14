@@ -740,7 +740,8 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
 
         # composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
-        # composed_states_masked, _ = idiom_states_masked.max(dim=1)
+        composed_states_masked, _ = idiom_states_masked.max(dim=1)
+        over_logits, idiom_attn_state = self.vocab(composed_states_masked)
 
         D = idiom_states
         Q = idiom_states_masked
@@ -757,8 +758,6 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
         # col max
         A_D_ = torch.softmax(L.max(dim=2)[0], dim=1)  # B x n + 1 x m + 1
         C_D = torch.einsum('bn,bnd->bd', [A_D_, Q])
-
-        over_logits, idiom_attn_state = self.vocab(C_D)
 
         # slide prediction
         emotion_state = self.compose_linear(torch.cat([C_Q, C_D,
