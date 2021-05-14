@@ -379,7 +379,7 @@ class ChengyuBertSlideMaxPooling(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         # self.idiom_compose = LatentComposition(config.hidden_size)
-        self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.compose_linear = nn.Linear(config.hidden_size, config.hidden_size)
         emotion_hidden_size = config.hidden_size
 
         # Sentiment Predictor
