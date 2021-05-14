@@ -743,24 +743,24 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
         over_logits, idiom_attn_state = self.vocab(composed_states_masked)
 
-        D = idiom_states
-        Q = idiom_states_masked
-        QU = self.affinity_linear(Q)
+        L = idiom_states
+        I = idiom_states_masked
+        AI = self.affinity_linear(I)
 
         # co attention
-        D_t = torch.transpose(D, 1, 2)  # B x l x m + 1
-        L = torch.bmm(QU, D_t)  # L = B x n + 1 x m + 1
-
-        # row max
-        A_Q_ = torch.softmax(L.max(dim=1)[0], dim=1)  # B x n + 1 x m + 1
-        C_Q = torch.einsum('bn,bnd->bd', [A_Q_, D])
+        L = torch.transpose(L, 1, 2)  # B x l x m + 1
+        Z = torch.bmm(AI, L)  # L = B x n + 1 x m + 1
 
         # col max
-        A_D_ = torch.softmax(L.max(dim=2)[0], dim=1)  # B x n + 1 x m + 1
-        C_D = torch.einsum('bn,bnd->bd', [A_D_, Q])
+        A_I_ = torch.softmax(Z.max(dim=1)[0], dim=1)  # B x n + 1 x m + 1
+        C_I = torch.einsum('bn,bnd->bd', [A_I_, I])
+
+        # row max
+        A_L_ = torch.softmax(Z.max(dim=2)[0], dim=1)  # B x n + 1 x m + 1
+        C_L = torch.einsum('bn,bnd->bd', [A_L_, L])
 
         # slide prediction
-        emotion_state = self.compose_linear(torch.cat([C_Q, C_D,
+        emotion_state = self.compose_linear(torch.cat([C_L, C_I,
                                                        idiom_attn_state], dim=-1)).tanh()
 
         sentiment_logits = self.sentiment_classifier(emotion_state)
