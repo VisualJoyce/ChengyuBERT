@@ -1173,7 +1173,7 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
         # affection prediction
         emotion_state = self.compose_linear(torch.cat([composed_states,
                                                        idiom_attn_state,
-                                                       composed_states_masked], dim=-1))
+                                                       composed_states_masked], dim=-1)).tanh()
 
         fine_emotion_logits = self.fine_emotion_classifier(emotion_state)
         # coarse_emotion_logits = self.coarse_emotion_classifier(emotion_state)
@@ -1382,7 +1382,7 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
         # affection prediction
         emotion_state = self.compose_linear(torch.cat([composed_states,
                                                        idiom_attn_state,
-                                                       composed_states_masked], dim=-1))
+                                                       composed_states_masked], dim=-1)).tanh()
 
         fine_emotion_logits = self.fine_emotion_classifier(emotion_state)
         # coarse_emotion_logits = self.coarse_emotion_classifier(emotion_state)
