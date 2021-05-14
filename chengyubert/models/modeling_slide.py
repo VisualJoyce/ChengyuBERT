@@ -748,8 +748,8 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
         AI = self.affinity_linear(I)
 
         # co attention
-        L = torch.transpose(L, 1, 2)  # B x l x m + 1
-        Z = torch.bmm(AI, L)  # L = B x n + 1 x m + 1
+        L_T = torch.transpose(L, 1, 2)  # B x l x m + 1
+        Z = torch.bmm(AI, L_T)  # L = B x n + 1 x m + 1
 
         # col max
         A_I_ = torch.softmax(Z.max(dim=1)[0], dim=1)  # B x n + 1 x m + 1
