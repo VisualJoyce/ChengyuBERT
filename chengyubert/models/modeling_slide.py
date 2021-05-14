@@ -365,7 +365,7 @@ class WeightNormClassifier(nn.Module):
 
 
 @register_model('chengyubert-slide-max-pooling')
-class ChengyuBertSlideComposeOnly(BertPreTrainedModel):
+class ChengyuBertSlideMaxPooling(BertPreTrainedModel):
 
     def __init__(self, config, len_idiom_vocab, model_name, **kwargs):
         super().__init__(config)
@@ -809,7 +809,7 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
 
 
 @register_model('chengyubert-slide-compose-latent-idiom-masked')
-class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
+class ChengyuBertSlideComposeLatentIdiomMasked(BertPreTrainedModel):
 
     def __init__(self, config, len_idiom_vocab, model_name, enlarged_candidates=None):
         super().__init__(config)
