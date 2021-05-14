@@ -601,12 +601,12 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
 
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
 
-        # self.compose_linear = nn.Linear(config.hidden_size * 3, emb_hidden_size)
-        self.compose_linear = nn.Sequential(nn.Linear(3 * config.hidden_size, config.hidden_size),
-                                            nn.SELU(),
-                                            nn.Dropout(p=0.1),
-                                            nn.Linear(config.hidden_size, config.hidden_size),
-                                            nn.SELU())
+        self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
+        # self.compose_linear = nn.Sequential(nn.Linear(3 * config.hidden_size, config.hidden_size),
+        #                                     nn.SELU(),
+        #                                     nn.Dropout(p=0.1),
+        #                                     nn.Linear(config.hidden_size, config.hidden_size),
+        #                                     nn.SELU())
 
         # Idiom Predictor
         # Sentiment Predictor
@@ -794,12 +794,12 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
 
         self.idiom_compose = LatentComposition(config.hidden_size)
-        # self.compose_linear = nn.Linear(config.hidden_size * 3, emb_hidden_size)
-        self.compose_linear = nn.Sequential(nn.Linear(4 * config.hidden_size, config.hidden_size),
-                                            nn.SELU(),
-                                            nn.Dropout(p=0.1),
-                                            nn.Linear(config.hidden_size, config.hidden_size),
-                                            nn.SELU())
+        self.compose_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
+        # self.compose_linear = nn.Sequential(nn.Linear(4 * config.hidden_size, config.hidden_size),
+        #                                     nn.SELU(),
+        #                                     nn.Dropout(p=0.1),
+        #                                     nn.Linear(config.hidden_size, config.hidden_size),
+        #                                     nn.SELU())
 
         # Idiom Predictor
         # Sentiment Predictor
