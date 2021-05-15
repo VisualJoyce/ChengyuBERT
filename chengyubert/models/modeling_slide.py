@@ -389,7 +389,7 @@ class ChengyuBertSlideMaxPooling(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
-        if self.use_focal:
+        if opts.use_focal:
             self.loss_fct = FocalLoss()
         else:
             self.loss_fct = nn.CrossEntropyLoss(reduction='none')
@@ -446,7 +446,7 @@ class ChengyuBertSlideComposeOnly(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
-        if self.use_focal:
+        if opts.use_focal:
             self.loss_fct = FocalLoss()
         else:
             self.loss_fct = nn.CrossEntropyLoss(reduction='none')
@@ -510,7 +510,7 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
-        if self.use_focal:
+        if opts.use_focal:
             self.loss_fct = FocalLoss()
         else:
             self.loss_fct = nn.CrossEntropyLoss(reduction='none')
@@ -585,7 +585,7 @@ class ChengyuBertSlideLatentEmotionMasked(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
-        if self.use_focal:
+        if opts.use_focal:
             self.loss_fct = FocalLoss()
         else:
             self.loss_fct = nn.CrossEntropyLoss(reduction='none')
@@ -659,7 +659,7 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 
-        if self.use_focal:
+        if opts.use_focal:
             self.loss_fct = FocalLoss()
         else:
             self.loss_fct = nn.CrossEntropyLoss(reduction='none')
@@ -751,7 +751,7 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 
-        if self.use_focal:
+        if opts.use_focal:
             self.loss_fct = FocalLoss()
         else:
             self.loss_fct = nn.CrossEntropyLoss(reduction='none')
@@ -861,7 +861,7 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttentionFull(BertPreTrainedModel):
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 
-        if self.use_focal:
+        if opts.use_focal:
             self.loss_fct = FocalLoss()
         else:
             self.loss_fct = nn.CrossEntropyLoss(reduction='none')
@@ -970,7 +970,7 @@ class ChengyuBertSlideComposeLatentIdiomMasked(BertPreTrainedModel):
                                                          3,
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
-        if self.use_focal:
+        if opts.use_focal:
             self.loss_fct = FocalLoss()
         else:
             self.loss_fct = nn.CrossEntropyLoss(reduction='none')
