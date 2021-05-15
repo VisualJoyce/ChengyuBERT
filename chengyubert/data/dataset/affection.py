@@ -24,7 +24,7 @@ class ChengyuCALODataset(ChengyuLmdb):
         with open(f'{self.db_dir}/unlabelled.json') as f:
             self.unlabeled = json.load(f)
         self.calo_vocab = calo_process(self.chengyu_vocab, self.config.calo_file)
-        self.allowed = self.get_allowed_examples(split, opts)
+        self.allowed, self.reverse_index = self.get_allowed_examples(split, opts)
 
         self.idiom_input_ids = self.tokenize_idioms()
         self.lens, self.ids, self.st_ed, fine_emotion_counter, sentiment_counter = self.get_ids_and_lens()
@@ -131,7 +131,7 @@ class ChengyuCALOComposeOnlyDataset(ChengyuCALODataset):
 
         allowed = set()
         [allowed.update(v) for _, v in reverse_index.items()]
-        return allowed
+        return allowed, reverse_index
 
     def __getitem__(self, i):
         id_ = self.ids[i]
