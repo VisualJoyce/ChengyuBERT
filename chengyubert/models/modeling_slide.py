@@ -490,7 +490,7 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.idiom_compose = LatentComposition(config.hidden_size)
-        # self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
+        self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
         emotion_hidden_size = config.hidden_size
         # self.compose_linear = nn.Sequential(nn.Linear(3 * config.hidden_size, config.hidden_size),
         #                                     nn.SELU(),
@@ -813,7 +813,7 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
 
 
 @register_model('chengyubert-slide-latent-idiom-masked-coattention-full')
-class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
+class ChengyuBertSlideLatentIdiomMaskedCoAttentionFull(BertPreTrainedModel):
 
     def __init__(self, config, len_idiom_vocab, model_name, enlarged_candidates=None):
         super().__init__(config)
