@@ -460,14 +460,14 @@ def main(opts):
     opts.evaluate_embedding = False
     splits, dataloaders = create_dataloaders(DatasetCls, EvalDatasetCls, opts)
 
-    if opts.weight:
+    if opts.weight is not None:
         opts.weight = torch.tensor(opts.weight)
 
     # Prepare model
     model = build_model(opts)
     model.to(device)
 
-    if opts.weight:
+    if opts.weight is not None:
         opts.weight = opts.weight.tolist()
 
     if opts.mode == 'train':
