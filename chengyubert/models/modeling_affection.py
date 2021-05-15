@@ -4,6 +4,7 @@ from torch.nn.utils import weight_norm
 from transformers import BertModel, BertPreTrainedModel
 
 from chengyubert.models import register_model
+from chengyubert.optim.loss import FocalLoss
 
 
 def convert_to_one_hot(indices, num_classes):
@@ -753,6 +754,10 @@ class ChengyuBertAffectionMaxPooling(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
@@ -773,17 +778,15 @@ class ChengyuBertAffectionMaxPooling(BertPreTrainedModel):
 
         # affection prediction
         fine_emotion_logits = self.fine_emotion_classifier(emotion_state)
-        coarse_emotion_logits = self.coarse_emotion_classifier(emotion_state)
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
-            return None, None, None, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
+            # coarse_emotion_loss = self.loss_fct(coarse_emotion_logits, targets[:, 1])
+            fine_emotion_loss = self.loss_fct(fine_emotion_logits, targets[:, 2])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 3])
+            return None, None, None, fine_emotion_loss, sentiment_emotion_loss
         else:
-            return None, None, None, coarse_emotion_logits, fine_emotion_logits, sentiment_logits
+            return None, None, None, fine_emotion_logits, sentiment_logits
 
 
 # @register_model('chengyubert-affection-max-pooling-masked')
@@ -886,6 +889,10 @@ class ChengyuBertAffectionComposeOnly(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
@@ -910,10 +917,8 @@ class ChengyuBertAffectionComposeOnly(BertPreTrainedModel):
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            fine_emotion_loss = self.loss_fct(fine_emotion_logits, targets[:, 2])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 3])
             return None, None, select_masks, fine_emotion_loss, sentiment_emotion_loss
         else:
             return None, None, select_masks, fine_emotion_logits, sentiment_logits
@@ -955,6 +960,10 @@ class ChengyuBertAffectionComposeOnlyMasked(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
@@ -982,10 +991,8 @@ class ChengyuBertAffectionComposeOnlyMasked(BertPreTrainedModel):
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            fine_emotion_loss = self.loss_fct(fine_emotion_logits, targets[:, 2])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 3])
             return None, None, select_masks, fine_emotion_loss, sentiment_emotion_loss
         else:
             return None, None, select_masks, fine_emotion_logits, sentiment_logits
@@ -1025,6 +1032,10 @@ class ChengyuBertAffectionLatentEmotionMasked(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def emotion(self, blank_states):
@@ -1056,22 +1067,16 @@ class ChengyuBertAffectionLatentEmotionMasked(BertPreTrainedModel):
         fine_emotion_logits, _ = self.emotion(emotion_state)
 
         # affection prediction
-        coarse_emotion_logits = self.coarse_emotion_classifier(emotion_state)
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # loss = loss_fct(logits, targets[:, 0])
-            # target = torch.gather(option_ids, dim=1, index=targets[:, 0].unsqueeze(1))
-            # over_loss = loss_fct(over_logits, target.squeeze(1))
-            coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            fine_emotion_loss = self.loss_fct(fine_emotion_logits, targets[:, 2])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 3])
             return (None, None, select_masks,
-                    coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss)
+                    fine_emotion_loss, sentiment_emotion_loss)
         else:
             return (None, None, select_masks,
-                    coarse_emotion_logits, fine_emotion_logits, sentiment_logits)
+                    fine_emotion_logits, sentiment_logits)
 
 
 @register_model('chengyubert-affection-latent-idiom-masked')
@@ -1106,6 +1111,10 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -1146,12 +1155,10 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # loss = loss_fct(logits, targets[:, 0])
-            # target = torch.gather(option_ids, dim=1, index=targets[:, 0].unsqueeze(1))
             over_loss = loss_fct(over_logits, targets[:, 0])
             # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            fine_emotion_loss = self.loss_fct(fine_emotion_logits, targets[:, 2])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 3])
             return (None, over_loss, None,
                     fine_emotion_loss, sentiment_emotion_loss)
         else:
@@ -1191,6 +1198,10 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -1245,12 +1256,10 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # loss = loss_fct(logits, targets[:, 0])
-            # target = torch.gather(option_ids, dim=1, index=targets[:, 0].unsqueeze(1))
             over_loss = loss_fct(over_logits, targets[:, 0])
             # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            fine_emotion_loss = self.loss_fct(fine_emotion_logits, targets[:, 2])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 3])
             return (None, over_loss, None,
                     fine_emotion_loss, sentiment_emotion_loss)
         else:
@@ -1301,6 +1310,10 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -1340,12 +1353,10 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # loss = loss_fct(logits, targets[:, 0])
-            # target = torch.gather(option_ids, dim=1, index=targets[:, 0].unsqueeze(1))
             over_loss = loss_fct(over_logits, targets[:, 0])
             # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            fine_emotion_loss = self.loss_fct(fine_emotion_logits, targets[:, 2])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 3])
             return (None, over_loss, select_masks,
                     fine_emotion_loss, sentiment_emotion_loss)
         else:
