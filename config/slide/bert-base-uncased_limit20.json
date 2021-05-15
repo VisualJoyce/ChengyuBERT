@@ -8,6 +8,7 @@
     "eval_dataset_cls": "chengyu-slide-compose-only-eval",
     "output_dir": "/storage",
     "use_context": false,
+    "use_focal": false,
     "len_idiom_vocab": 33237,
     "max_txt_len": 128,
     "train_batch_size": 8000,

@@ -4,6 +4,7 @@ from torch.nn.utils import weight_norm
 from transformers import BertModel, BertPreTrainedModel
 
 from chengyubert.models import register_model
+from chengyubert.optim.loss import FocalLoss
 
 
 def convert_to_one_hot(indices, num_classes):
@@ -388,6 +389,10 @@ class ChengyuBertSlideMaxPooling(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
@@ -411,10 +416,7 @@ class ChengyuBertSlideMaxPooling(BertPreTrainedModel):
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            # fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
             return None, None, None, sentiment_emotion_loss
         else:
             return None, None, None, sentiment_logits
@@ -444,6 +446,10 @@ class ChengyuBertSlideComposeOnly(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
@@ -466,10 +472,7 @@ class ChengyuBertSlideComposeOnly(BertPreTrainedModel):
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            # fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
             return None, None, select_masks, sentiment_emotion_loss
         else:
             return None, None, select_masks, sentiment_logits
@@ -507,6 +510,10 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
@@ -538,9 +545,7 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            # coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
             return None, None, select_masks, sentiment_emotion_loss
         else:
             return None, None, select_masks, sentiment_logits
@@ -580,6 +585,10 @@ class ChengyuBertSlideLatentEmotionMasked(BertPreTrainedModel):
                                                          emotion_hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def emotion(self, blank_states):
@@ -612,13 +621,10 @@ class ChengyuBertSlideLatentEmotionMasked(BertPreTrainedModel):
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
-            return (None, None, select_masks,
-                    sentiment_emotion_loss)
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
+            return (None, None, select_masks, sentiment_emotion_loss)
         else:
-            return (None, None, select_masks,
-                    sentiment_logits)
+            return (None, None, select_masks, sentiment_logits)
 
 
 @register_model('chengyubert-slide-latent-idiom-masked')
@@ -653,6 +659,10 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -696,12 +706,10 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             over_loss = loss_fct(over_logits, targets[:, 0])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
-            return (None, over_loss, None,
-                    sentiment_emotion_loss)
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
+            return (None, over_loss, None, sentiment_emotion_loss)
         else:
-            return (None, over_logits, None,
-                    sentiment_logits)
+            return (None, over_logits, None, sentiment_logits)
 
 
 @register_model('chengyubert-slide-latent-idiom-masked-coattention')
@@ -743,6 +751,10 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -804,12 +816,10 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             over_loss = loss_fct(over_logits, targets[:, 0])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
-            return (None, over_loss, None,
-                    sentiment_emotion_loss)
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
+            return (None, over_loss, None, sentiment_emotion_loss)
         else:
-            return (None, over_logits, None,
-                    sentiment_logits)
+            return (None, over_logits, None, sentiment_logits)
 
 
 @register_model('chengyubert-slide-latent-idiom-masked-coattention-full')
@@ -851,6 +861,10 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttentionFull(BertPreTrainedModel):
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
 
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -913,12 +927,10 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttentionFull(BertPreTrainedModel):
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             over_loss = loss_fct(over_logits, targets[:, 0])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
-            return (None, over_loss, None,
-                    sentiment_emotion_loss)
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
+            return (None, over_loss, None, sentiment_emotion_loss)
         else:
-            return (None, over_logits, None,
-                    sentiment_logits)
+            return (None, over_logits, None, sentiment_logits)
 
 
 @register_model('chengyubert-slide-compose-latent-idiom-masked')
@@ -958,7 +970,10 @@ class ChengyuBertSlideComposeLatentIdiomMasked(BertPreTrainedModel):
                                                          3,
                                                          config.hidden_size,
                                                          config.hidden_dropout_prob)
-
+        if self.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(reduction='none')
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -1002,9 +1017,7 @@ class ChengyuBertSlideComposeLatentIdiomMasked(BertPreTrainedModel):
         if compute_loss:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             over_loss = loss_fct(over_logits, targets[:, 0])
-            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 1])
-            return (None, over_loss, select_masks,
-                    sentiment_emotion_loss)
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
+            return (None, over_loss, select_masks, sentiment_emotion_loss)
         else:
-            return (None, over_logits, select_masks,
-                    sentiment_logits)
+            return (None, over_logits, select_masks, sentiment_logits)

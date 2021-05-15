@@ -577,7 +577,7 @@ if __name__ == "__main__":
 
     base_dir = f'slide_{args.n_gpu * args.gradient_accumulation_steps}_{args.num_train_steps}_{args.learning_rate}_{args.dropout}'
     args.output_dir = os.path.join(args.output_dir,
-                                   f'{args.model}_context-{args.use_context}',
+                                   f'{args.model}_context-{args.use_context}_focal-{args.use_focal}',
                                    os.path.basename(args.pretrained_model_name_or_path),
                                    os.path.basename(args.config),
                                    base_dir)
