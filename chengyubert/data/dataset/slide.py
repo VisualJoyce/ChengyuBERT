@@ -121,13 +121,11 @@ class ChengyuSlideComposeOnlyDataset(ChengyuSlideDataset):
             if idiom not in options:
                 options[-1] = idiom
             random.shuffle(options)
-        #     target = options.index(idiom)
 
         context_ids = example['input_ids'][st: ed]
         idiom_start = context_ids.index(self.tokenizer.mask_token_id)
         idiom_input_ids = self.idiom_input_ids[id_]
         idiom_len = len(idiom_input_ids)
-        # target = idiom
 
         idx = -100 if idiom not in self.enlarged_candidates else self.enlarged_candidates.index(idiom)
         target = self._decide_target(idiom, idx)
@@ -139,17 +137,14 @@ class ChengyuSlideComposeOnlyDataset(ChengyuSlideDataset):
                 idiom_input_ids,
                 context_ids[idiom_start + 1:],
                 [self.tokenizer.sep_token_id]])
+            position = idiom_start + 1
         else:
             input_ids = reduce(operator.add, [
                 [self.tokenizer.cls_token_id],
                 idiom_input_ids,
                 [self.tokenizer.sep_token_id]])
-        assert len(input_ids) <= self.max_txt_len + idiom_len
-
-        if self.use_context:
-            position = idiom_start + 1
-        else:
             position = 1
+        assert len(input_ids) <= self.max_txt_len + idiom_len
 
         token_type_ids = [0] * len(input_ids)
         attention_mask = [1] * len(input_ids)
