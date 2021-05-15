@@ -37,13 +37,13 @@ class ChengyuBertForClozeChid(BertPreTrainedModel):
             Outputs the classification logits of shape [batch_size, num_labels].
     """
 
-    def __init__(self, config, len_idiom_vocab, model_name='bertchid'):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size, 1)
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -119,9 +119,9 @@ class BertForClozeChoice(BertPreTrainedModel):
 
     """
 
-    def __init__(self, config, args):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.use_kld = args.use_kld
+        self.use_kld = opts.use_kld
 
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)

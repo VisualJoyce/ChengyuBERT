@@ -726,14 +726,14 @@ class WeightNormClassifier(nn.Module):
 @register_model('chengyubert-affection-max-pooling')
 class ChengyuBertAffectionMaxPooling(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name, **kwargs):
+    def __init__(self, config, opts):
         super().__init__(config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
         self.bidirectional = True
 
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -859,14 +859,14 @@ class ChengyuBertAffectionMaxPooling(BertPreTrainedModel):
 @register_model('chengyubert-affection-compose-only')
 class ChengyuBertAffectionComposeOnly(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name, **kwargs):
+    def __init__(self, config, opts):
         super().__init__(config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
         self.bidirectional = True
 
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -922,14 +922,14 @@ class ChengyuBertAffectionComposeOnly(BertPreTrainedModel):
 @register_model('chengyubert-affection-compose-only-masked')
 class ChengyuBertAffectionComposeOnlyMasked(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name, **kwargs):
+    def __init__(self, config, opts):
         super().__init__(config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
         self.bidirectional = True
 
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -994,14 +994,14 @@ class ChengyuBertAffectionComposeOnlyMasked(BertPreTrainedModel):
 @register_model('chengyubert-affection-latent-emotion-masked')
 class ChengyuBertAffectionLatentEmotionMasked(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name, **kwargs):
+    def __init__(self, config, opts):
         super().__init__(config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
         self.bidirectional = True
 
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -1077,20 +1077,20 @@ class ChengyuBertAffectionLatentEmotionMasked(BertPreTrainedModel):
 @register_model('chengyubert-affection-latent-idiom-masked')
 class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name, enlarged_candidates=None):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        if enlarged_candidates is not None:
-            self.register_buffer('enlarged_candidates', torch.tensor(enlarged_candidates, dtype=torch.long))
+        if opts.enlarged_candidates is not None:
+            self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
         else:
-            self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+            self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
 
         print(self.enlarged_candidates.size())
 
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
 
         self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
 
@@ -1162,20 +1162,20 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 @register_model('chengyubert-affection-latent-idiom-masked-coattention')
 class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name, enlarged_candidates=None):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        if enlarged_candidates is not None:
-            self.register_buffer('enlarged_candidates', torch.tensor(enlarged_candidates, dtype=torch.long))
+        if opts.enlarged_candidates is not None:
+            self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
         else:
-            self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+            self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
 
         print(self.enlarged_candidates.size())
 
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
 
         self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
 
@@ -1261,25 +1261,25 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 @register_model('chengyubert-affection-compose-latent-idiom-masked')
 class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name, enlarged_candidates=None):
+    def __init__(self, config, opts):
         super().__init__(config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
         self.bidirectional = True
 
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        if enlarged_candidates is not None:
-            self.register_buffer('enlarged_candidates', torch.tensor(enlarged_candidates, dtype=torch.long))
+        if opts.enlarged_candidates is not None:
+            self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
         else:
-            self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+            self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
 
         print(self.enlarged_candidates.size())
 
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
 
         self.idiom_compose = LatentComposition(config.hidden_size)
         self.compose_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)

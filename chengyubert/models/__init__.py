@@ -4,7 +4,7 @@ import os
 MODEL_REGISTRY = {}
 
 
-def build_model(opts, **kwargs):
+def build_model(opts):
     if opts.model.startswith('chengyubert-emb'):
         ModelCls = MODEL_REGISTRY['chengyubert-emb']
         opts.evaluate_embedding = True
@@ -20,9 +20,7 @@ def build_model(opts, **kwargs):
         ModelCls = MODEL_REGISTRY['chengyubert-2stage-stage2-mask-window']
     else:
         ModelCls = MODEL_REGISTRY[opts.model]
-    return ModelCls.from_pretrained(opts.pretrained_model_name_or_path,
-                                    len_idiom_vocab=opts.len_idiom_vocab,
-                                    model_name=opts.model, **kwargs)
+    return ModelCls.from_pretrained(opts.pretrained_model_name_or_path, opts=opts)
 
 
 def register_model(name):

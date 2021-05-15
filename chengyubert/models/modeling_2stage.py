@@ -9,15 +9,15 @@ from chengyubert.models import register_model
 
 @register_model('chengyubert-2stage-stage1')
 class ChengyuBertTwoStagePretrain(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name='chengyubert-2stage'):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.over_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -53,14 +53,14 @@ class ChengyuBertTwoStagePretrain(BertPreTrainedModel):
 
 @register_model('chengyubert-2stage-stage1-mask')
 class ChengyuBertTwoStageMaskPretrain(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -90,15 +90,15 @@ class ChengyuBertTwoStageMaskPretrain(BertPreTrainedModel):
 
 @register_model('chengyubert-2stage-stage1-cls')
 class ChengyuBertTwoStageCLSPretrain(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name='chengyubert-2stage'):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.over_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -132,16 +132,16 @@ class ChengyuBertTwoStageCLSPretrain(BertPreTrainedModel):
 
 @register_model('chengyubert-layernorm-2stage-stage1')
 class ChengyuBertLayerNormTwoStagePretrain(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name='chengyubert-2stage'):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.over_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -177,15 +177,15 @@ class ChengyuBertLayerNormTwoStagePretrain(BertPreTrainedModel):
 
 @register_model('chengyubert-layernorm-2stage-stage1-mask')
 class ChengyuBertLayerNormTwoStageMaskPretrain(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -215,16 +215,16 @@ class ChengyuBertLayerNormTwoStageMaskPretrain(BertPreTrainedModel):
 
 @register_model('chengyubert-layernorm-2stage-stage1-cls')
 class ChengyuBertLayerNormTwoStageCLSPretrain(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name='chengyubert-2stage'):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.over_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -259,15 +259,15 @@ class ChengyuBertLayerNormTwoStageCLSPretrain(BertPreTrainedModel):
 @register_model('chengyubert-2stage-stage2')
 class ChengyuBertTwoStageFinetune(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.over_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -316,14 +316,14 @@ class ChengyuBertTwoStageFinetune(BertPreTrainedModel):
 @register_model('chengyubert-2stage-stage2-mask')
 class ChengyuBertTwoStageMaskFinetune(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -367,15 +367,15 @@ class ChengyuBertTwoStageMaskFinetune(BertPreTrainedModel):
 @register_model('chengyubert-2stage-stage2-cls')
 class ChengyuBertTwoStageCLSFinetune(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.over_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -452,16 +452,16 @@ class ChengyuBertTwoStageWindow(BertPreTrainedModel):
 
     """
 
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.window_size = int(self.model_name.split('-')[-1])
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.over_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
         self.init_weights()
 
     def vocab(self, over_states):
@@ -560,15 +560,15 @@ class ChengyuBertTwoStageMaskWindow(BertPreTrainedModel):
 
     """
 
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.window_size = int(self.model_name.split('-')[-1])
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
         self.init_weights()
 
     def vocab(self, over_states):

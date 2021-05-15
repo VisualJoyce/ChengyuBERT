@@ -10,19 +10,19 @@ from chengyubert.optim.loss import ContrastiveLoss
 
 @register_model('chengyubert-contrastive')
 class ChengyuBertContrastive(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name='bertsingle'):
+    def __init__(self, config, opts):
         super().__init__(config)
-        assert model_name.startswith(('chengyubert-contrastive-mask', 'chengyubert-contrastive-cls'))
-        self.model_name = model_name
-        chengyu_emb_dim = int(model_name.split('-')[-2])
-        contrastive_dim = int(model_name.split('-')[-1])
+        assert opts.model.startswith(('chengyubert-contrastive-mask', 'chengyubert-contrastive-cls'))
+        self.model_name = opts.model
+        chengyu_emb_dim = int(self.model_name.split('-')[-2])
+        contrastive_dim = int(self.model_name.split('-')[-1])
 
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, chengyu_emb_dim)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, chengyu_emb_dim)
         self.LayerNorm = nn.LayerNorm(chengyu_emb_dim, eps=config.layer_norm_eps)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
 
         # projection MLP
         if self.model_name.startswith('chengyubert-mask-contrastive'):

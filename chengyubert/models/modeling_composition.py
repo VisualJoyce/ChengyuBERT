@@ -177,14 +177,14 @@ class GatedTanh(nn.Module):
 @register_model('chengyubert-composition')
 class ChengyuBertComposition(BertPreTrainedModel):
 
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         super().__init__(config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
         self.bidirectional = True
 
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -213,8 +213,8 @@ class ChengyuBertComposition(BertPreTrainedModel):
         self.over_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         emb_hidden_size = config.hidden_size
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, emb_hidden_size)
         self.LayerNorm = nn.LayerNorm(emb_hidden_size, eps=config.layer_norm_eps)
 
         self.init_weights()
@@ -447,14 +447,14 @@ class CompositionGate(nn.Module):
 @register_model('chengyubert-composition-paired')
 class ChengyuBertCompositionPaired(ChengyuBertComposition):
 
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         BertPreTrainedModel.__init__(self, config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
         self.bidirectional = True
 
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -483,8 +483,8 @@ class ChengyuBertCompositionPaired(ChengyuBertComposition):
         self.over_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         emb_hidden_size = config.hidden_size
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, emb_hidden_size)
         self.LayerNorm = nn.LayerNorm(emb_hidden_size, eps=config.layer_norm_eps)
 
         self.context_pool = AttentionPool(config.hidden_size, config.hidden_dropout_prob)
@@ -553,14 +553,14 @@ class ChengyuBertCompositionPaired(ChengyuBertComposition):
 @register_model('chengyubert-composition-dual')
 class ChengyuBertCompositionDual(ChengyuBertComposition):
 
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         BertPreTrainedModel.__init__(self, config)
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
         self.bidirectional = True
 
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -589,9 +589,9 @@ class ChengyuBertCompositionDual(ChengyuBertComposition):
         self.v_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         emb_hidden_size = config.hidden_size
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_embedding_u = nn.Embedding(len_idiom_vocab, emb_hidden_size)
-        self.idiom_embedding_v = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_embedding_u = nn.Embedding(opts.len_idiom_vocab, emb_hidden_size)
+        self.idiom_embedding_v = nn.Embedding(opts.len_idiom_vocab, emb_hidden_size)
         self.LayerNorm_u = nn.LayerNorm(emb_hidden_size, eps=config.layer_norm_eps)
         self.LayerNorm_v = nn.LayerNorm(emb_hidden_size, eps=config.layer_norm_eps)
 

@@ -9,16 +9,16 @@ from chengyubert.models import register_model
 
 @register_model('chengyubert-emb')
 class ChengyuBertEmb(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name='chengyubert-emb-300'):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
-        chengyu_emb_dim = int(model_name.split('-')[-1])
+        self.model_name = opts.model
+        chengyu_emb_dim = int(self.model_name.split('-')[-1])
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, chengyu_emb_dim)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, chengyu_emb_dim)
         self.project_linear = nn.Linear(config.hidden_size, chengyu_emb_dim)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
         self.init_weights()
 
     def vocab(self, over_states):
@@ -48,19 +48,19 @@ class ChengyuBertEmb(BertPreTrainedModel):
 
 @register_model('chengyubert-ns')
 class ChengyuBertSGNS(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name):
+    def __init__(self, config, opts):
         super().__init__(config)
-        assert model_name.startswith(('chengyubert-ns-mask',
+        assert opts.model.startswith(('chengyubert-ns-mask',
                                       'chengyubert-ns-cls-mask',
                                       'chengyubert-ns-element-wise',
                                       ))
-        self.model_name = model_name
-        chengyu_emb_dim = int(model_name.split('-')[-1])
+        self.model_name = opts.model
+        chengyu_emb_dim = int(self.model_name.split('-')[-1])
 
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, chengyu_emb_dim)
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, chengyu_emb_dim)
         self.LayerNorm = nn.LayerNorm(chengyu_emb_dim, eps=config.layer_norm_eps)
         if self.model_name.startswith('chengyubert-ns-mask'):
             self.project_linear = nn.Linear(config.hidden_size, chengyu_emb_dim)
@@ -68,7 +68,7 @@ class ChengyuBertSGNS(BertPreTrainedModel):
             self.project_linear = nn.Linear(config.hidden_size * 2, chengyu_emb_dim)
         else:
             self.project_linear = nn.Linear(config.hidden_size * 4, chengyu_emb_dim)
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
         self.init_weights()
 
     def project(self, cls_states, blank_states):

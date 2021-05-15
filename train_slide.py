@@ -461,7 +461,7 @@ def main(opts):
     splits, dataloaders = create_dataloaders(DatasetCls, EvalDatasetCls, opts)
 
     # Prepare model
-    model = build_model(opts, enlarged_candidates=opts.enlarged_candidates)
+    model = build_model(opts)
     model.to(device)
 
     if opts.mode == 'train':

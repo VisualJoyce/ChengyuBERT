@@ -9,15 +9,15 @@ from chengyubert.models import register_model
 
 @register_model('chengyubert-single')
 class ChengyuBertSingle(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name='bertsingle'):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         emb_hidden_size = config.hidden_size
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, emb_hidden_size)
 
         self.init_weights()
 
@@ -64,16 +64,16 @@ class ChengyuBertSingle(BertPreTrainedModel):
 
 @register_model('chengyubert-dual')
 class ChengyuBertDual(BertPreTrainedModel):
-    def __init__(self, config, len_idiom_vocab, model_name='bertdual'):
+    def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = model_name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         emb_hidden_size = config.hidden_size
-        self.register_buffer('enlarged_candidates', torch.arange(len_idiom_vocab))
-        self.idiom_facial_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
-        self.idiom_meaning_embedding = nn.Embedding(len_idiom_vocab, emb_hidden_size)
+        self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+        self.idiom_facial_embedding = nn.Embedding(opts.len_idiom_vocab, emb_hidden_size)
+        self.idiom_meaning_embedding = nn.Embedding(opts.len_idiom_vocab, emb_hidden_size)
 
         self.init_weights()
 
