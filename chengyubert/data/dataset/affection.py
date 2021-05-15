@@ -531,8 +531,8 @@ class ChengyuCALOComposeOnlyEvalDataset(ChengyuCALOComposeOnlyDataset):
 @register_dataset('chengyu-affection-compose-only-masked')
 class ChengyuCALOComposeOnlyMaskedDataset(ChengyuCALODataset):
     def __init__(self, split, max_txt_len, opts):
-        super().__init__(split, max_txt_len, opts)
         self.use_unlabelled = opts.use_unlabelled
+        super().__init__(split, max_txt_len, opts)
         if split == 'train':
             if not self.use_unlabeled:
                 self.enlarged_candidates = [i for i in range(opts.len_idiom_vocab) if i in self.filtered]
