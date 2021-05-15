@@ -28,8 +28,8 @@ class ChengyuCALODataset(ChengyuLmdb):
 
         self.idiom_input_ids = self.tokenize_idioms()
         self.lens, self.ids, self.st_ed, fine_emotion_counter, sentiment_counter = self.get_ids_and_lens()
-        LOGGER.info("Fine emotion counter: " + fine_emotion_counter)
-        LOGGER.info("Sentiment counter: " + sentiment_counter)
+        LOGGER.info("Fine emotion counter: " + str(fine_emotion_counter))
+        LOGGER.info("Sentiment counter: " + str(sentiment_counter))
         if split == 'train':
             self.fine_emotion_weights = self.get_label_weights(fine_emotion_counter, num_classes=21)
             self.sentiment_weights = self.get_label_weights(sentiment_counter, num_classes=4)
