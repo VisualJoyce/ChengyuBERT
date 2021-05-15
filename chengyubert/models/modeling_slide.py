@@ -417,7 +417,7 @@ class ChengyuBertSlideMaxPooling(BertPreTrainedModel):
 
         if compute_loss:
             sentiment_emotion_loss = self.loss_fct(sentiment_logits,
-                                                   nn.functional.one_hot(targets[:, 1], num_classes=3))
+                                                   nn.functional.one_hot(targets[:, 1], num_classes=3).float())
             return None, None, None, sentiment_emotion_loss
         else:
             return None, None, None, sentiment_logits
@@ -474,7 +474,7 @@ class ChengyuBertSlideComposeOnly(BertPreTrainedModel):
 
         if compute_loss:
             sentiment_emotion_loss = self.loss_fct(sentiment_logits,
-                                                   nn.functional.one_hot(targets[:, 1], num_classes=3))
+                                                   nn.functional.one_hot(targets[:, 1], num_classes=3).float())
             return None, None, select_masks, sentiment_emotion_loss
         else:
             return None, None, select_masks, sentiment_logits
@@ -548,7 +548,7 @@ class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
 
         if compute_loss:
             sentiment_emotion_loss = self.loss_fct(sentiment_logits,
-                                                   nn.functional.one_hot(targets[:, 1], num_classes=3))
+                                                   nn.functional.one_hot(targets[:, 1], num_classes=3).float())
             return None, None, select_masks, sentiment_emotion_loss
         else:
             return None, None, select_masks, sentiment_logits
@@ -625,7 +625,7 @@ class ChengyuBertSlideLatentEmotionMasked(BertPreTrainedModel):
 
         if compute_loss:
             sentiment_emotion_loss = self.loss_fct(sentiment_logits,
-                                                   nn.functional.one_hot(targets[:, 1], num_classes=3))
+                                                   nn.functional.one_hot(targets[:, 1], num_classes=3).float())
             return (None, None, select_masks, sentiment_emotion_loss)
         else:
             return (None, None, select_masks, sentiment_logits)
@@ -711,7 +711,7 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             over_loss = loss_fct(over_logits, targets[:, 0])
             sentiment_emotion_loss = self.loss_fct(sentiment_logits,
-                                                   nn.functional.one_hot(targets[:, 1], num_classes=3))
+                                                   nn.functional.one_hot(targets[:, 1], num_classes=3).float())
             return (None, over_loss, None, sentiment_emotion_loss)
         else:
             return (None, over_logits, None, sentiment_logits)
@@ -822,7 +822,7 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             over_loss = loss_fct(over_logits, targets[:, 0])
             sentiment_emotion_loss = self.loss_fct(sentiment_logits,
-                                                   nn.functional.one_hot(targets[:, 1], num_classes=3))
+                                                   nn.functional.one_hot(targets[:, 1], num_classes=3).float())
             return (None, over_loss, None, sentiment_emotion_loss)
         else:
             return (None, over_logits, None, sentiment_logits)
@@ -934,7 +934,7 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttentionFull(BertPreTrainedModel):
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             over_loss = loss_fct(over_logits, targets[:, 0])
             sentiment_emotion_loss = self.loss_fct(sentiment_logits,
-                                                   nn.functional.one_hot(targets[:, 1], num_classes=3))
+                                                   nn.functional.one_hot(targets[:, 1], num_classes=3).float())
             return (None, over_loss, None, sentiment_emotion_loss)
         else:
             return (None, over_logits, None, sentiment_logits)
@@ -1025,7 +1025,7 @@ class ChengyuBertSlideComposeLatentIdiomMasked(BertPreTrainedModel):
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             over_loss = loss_fct(over_logits, targets[:, 0])
             sentiment_emotion_loss = self.loss_fct(sentiment_logits,
-                                                   nn.functional.one_hot(targets[:, 1], num_classes=3))
+                                                   nn.functional.one_hot(targets[:, 1], num_classes=3).float())
             return (None, over_loss, select_masks, sentiment_emotion_loss)
         else:
             return (None, over_logits, select_masks, sentiment_logits)
