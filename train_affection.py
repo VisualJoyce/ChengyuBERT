@@ -488,8 +488,8 @@ def main(opts):
     opts.evaluate_embedding = False
     splits, dataloaders = create_dataloaders(DatasetCls, EvalDatasetCls, opts)
 
-    setattr(opts, 'fine_emotion_weights', dataloaders['train'].fine_emotion_weights)
-    setattr(opts, 'sentiment_weights', dataloaders['train'].sentiment_weights)
+    setattr(opts, 'fine_emotion_weights', dataloaders['train'].dataset.fine_emotion_weights)
+    setattr(opts, 'sentiment_weights', dataloaders['train'].dataset.sentiment_weights)
 
     # Prepare model
     model = build_model(opts)
