@@ -569,7 +569,6 @@ class ChengyuCALOComposeOnlyMaskedDataset(ChengyuCALODataset):
         [allowed.update(v) for _, v in reverse_index.items()]
         return allowed, reverse_index
 
-
     def __getitem__(self, i):
         id_ = self.ids[i]
         st, ed = self.st_ed[i]
@@ -630,7 +629,7 @@ class ChengyuCALOComposeOnlyMaskedDataset(ChengyuCALODataset):
         token_type_ids = torch.tensor(token_type_ids)
         return (input_ids, input_masked_ids), token_type_ids, \
                (torch.tensor(attention_mask_literal),
-                torch.tensor(attention_mask_idiomatic)),\
+                torch.tensor(attention_mask_idiomatic)), \
                position, idiom_len, options, target
 
     @staticmethod
