@@ -761,6 +761,7 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
 
         gather_index, gather_index_masked = gather_index
+        idiom_length = (gather_index > 0).sum(1)
 
         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
@@ -778,7 +779,6 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
         I = idiom_states_masked
         # I = encoded_context_masked
 
-        idiom_length = (gather_index > 0).sum(1)
         idiom_mask = sequence_mask(idiom_length)
 
         AI = self.affinity_linear(I)
@@ -869,6 +869,7 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
 
         gather_index, gather_index_masked = gather_index
+        idiom_length = (gather_index > 0).sum(1)
 
         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
@@ -886,7 +887,6 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
         I = encoded_context_masked
         # I = encoded_context_masked
 
-        idiom_length = (gather_index > 0).sum(1)
         idiom_mask = sequence_mask(idiom_length)
 
         AI = self.affinity_linear(I)
