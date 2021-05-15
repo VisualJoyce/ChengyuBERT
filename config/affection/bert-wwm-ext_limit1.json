@@ -8,6 +8,7 @@
     "dataset_cls": "chengyu-affection-compose-only",
     "eval_dataset_cls": "chengyu-affection-compose-only-eval",
     "output_dir": "/storage",
+    "use_context": false,
     "len_idiom_vocab": 33237,
     "max_txt_len": 128,
     "train_batch_size": 8000,
