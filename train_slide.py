@@ -460,6 +460,9 @@ def main(opts):
     opts.evaluate_embedding = False
     splits, dataloaders = create_dataloaders(DatasetCls, EvalDatasetCls, opts)
 
+    if opts.weight:
+        opts.weight = torch.tensor(opts.weight)
+
     # Prepare model
     model = build_model(opts)
     model.to(device)
@@ -581,7 +584,6 @@ if __name__ == "__main__":
                                    os.path.basename(args.pretrained_model_name_or_path),
                                    os.path.basename(args.config),
                                    base_dir)
-
     if exists(args.output_dir) and os.listdir(f'{args.output_dir}/ckpt'):
         if args.mode == 'train':
             raise ValueError("Output directory ({}) already exists and is not "

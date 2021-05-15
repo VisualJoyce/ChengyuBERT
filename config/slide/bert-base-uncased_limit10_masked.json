@@ -27,6 +27,7 @@
     "dropout": 0.1,
     "weight_decay": 0.01,
     "grad_norm": 1.0,
+    "weight": [0.6, 0.2, 0.2],
     "warmup_steps": 800,
     "seed": 77,
     "fp16": true,
