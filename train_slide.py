@@ -467,6 +467,9 @@ def main(opts):
     model = build_model(opts)
     model.to(device)
 
+    if opts.weight:
+        opts.weight = opts.weight.tolist()
+
     if opts.mode == 'train':
         best_ckpt = train(model, dataloaders, opts)
     else:
