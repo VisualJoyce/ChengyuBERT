@@ -488,9 +488,15 @@ def main(opts):
     opts.evaluate_embedding = False
     splits, dataloaders = create_dataloaders(DatasetCls, EvalDatasetCls, opts)
 
+    setattr(opts, 'fine_emotion_weights', dataloaders['train'].fine_emotion_weights)
+    setattr(opts, 'sentiment_weights', dataloaders['train'].sentiment_weights)
+
     # Prepare model
     model = build_model(opts)
     model.to(device)
+
+    opts.fine_emotion_weights = opts.fine_emotion_weights.tolist()
+    opts.sentiment_weights = opts.sentiment_weights.tolist()
 
     if opts.mode == 'train':
         best_ckpt = train(model, dataloaders, opts)
