@@ -294,7 +294,7 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
             input_ids_len = len(input_ids)
             input_ids = input_ids + [self.tokenizer.pad_token_id] * (len(input_masked_ids) - input_ids_len)
             position = (1, idiom_start + 1)
-            attention_mask_literal= [1] * len(input_ids) + [0] * (len(input_masked_ids) - input_ids_len)
+            attention_mask_literal = [1] * len(input_ids) + [0] * (len(input_masked_ids) - input_ids_len)
 
         assert len(input_ids) <= self.max_txt_len + idiom_len
         attention_mask_idiomatic = [1] * len(input_ids)
@@ -306,7 +306,8 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
         token_type_ids = torch.tensor(token_type_ids)
         # attention_mask = torch.tensor(attention_mask)
         return (input_ids, input_masked_ids), token_type_ids, \
-               (attention_mask_literal, attention_mask_idiomatic),\
+               (torch.tensor(attention_mask_literal),
+                torch.tensor(attention_mask_idiomatic)), \
                position, idiom_len, options, target
 
     @staticmethod
