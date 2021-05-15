@@ -157,14 +157,11 @@ def train(model, dataloaders, opts):
                             best_ckpt = global_step
                             best_eval = log['val/acc']
                             pbar.set_description(f'{opts.model}: {n_epoch}-{best_ckpt} best_acc-{best_eval * 100:.2f}')
-                            last_valid = global_step // opts.valid_steps
-                        else:
-                            if global_step // opts.valid_steps - last_valid > 30:
-                                break
+                            last_valid = global_step
                     model_saver.save(model, global_step)
             if global_step >= opts.num_train_steps:
                 break
-        if global_step >= opts.num_train_steps or global_step // opts.valid_steps - last_valid > 30:
+        if global_step >= opts.num_train_steps or global_step - last_valid > 0.1 * opts.num_train_steps:
             break
         n_epoch += 1
         LOGGER.info(f"Step {global_step}: finished {n_epoch} epochs")
