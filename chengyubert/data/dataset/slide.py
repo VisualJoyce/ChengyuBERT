@@ -284,28 +284,30 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
                 idiom_input_ids,
                 context_ids[idiom_start + 1:],
                 [self.tokenizer.sep_token_id]])
+            position = (idiom_start + 1, idiom_start + 1)
+            attention_mask_literal = [1] * len(input_ids)
         else:
             input_ids = reduce(operator.add, [
                 [self.tokenizer.cls_token_id],
                 idiom_input_ids,
                 [self.tokenizer.sep_token_id]])
-            input_ids = input_ids + [self.tokenizer.pad_token_id] * (len(input_masked_ids) - len(input_ids))
+            input_ids_len = len(input_ids)
+            input_ids = input_ids + [self.tokenizer.pad_token_id] * (len(input_masked_ids) - input_ids_len)
+            position = (1, idiom_start + 1)
+            attention_mask_literal= [1] * len(input_ids) + [0] * (len(input_masked_ids) - input_ids_len)
 
         assert len(input_ids) <= self.max_txt_len + idiom_len
-
-        if self.use_context:
-            position = (idiom_start + 1, idiom_start + 1)
-        else:
-            position = (1, idiom_start + 1)
+        attention_mask_idiomatic = [1] * len(input_ids)
 
         token_type_ids = [0] * len(input_ids)
-        attention_mask = [1] * len(input_ids)
 
         input_ids = torch.tensor(input_ids)
         input_masked_ids = torch.tensor(input_masked_ids)
         token_type_ids = torch.tensor(token_type_ids)
-        attention_mask = torch.tensor(attention_mask)
-        return (input_ids, input_masked_ids), token_type_ids, attention_mask, position, idiom_len, options, target
+        # attention_mask = torch.tensor(attention_mask)
+        return (input_ids, input_masked_ids), token_type_ids, \
+               (attention_mask_literal, attention_mask_idiomatic),\
+               position, idiom_len, options, target
 
     @staticmethod
     def collate_fn(inputs):
@@ -315,7 +317,8 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
         input_ids = pad_sequence([item[0] for item in input_ids_tuple], batch_first=True, padding_value=0)
         input_masked_ids = pad_sequence([item[1] for item in input_ids_tuple], batch_first=True, padding_value=0)
         token_type_ids = pad_sequence(token_type_ids, batch_first=True, padding_value=0)
-        attn_masks = pad_sequence(attention_mask, batch_first=True, padding_value=0)
+        attn_masks_literal = pad_sequence([item[0] for item in attention_mask], batch_first=True, padding_value=0)
+        attn_masks_idiomatic = pad_sequence([item[1] for item in attention_mask], batch_first=True, padding_value=0)
 
         width_max = max(widths)
         gather_index = torch.arange(0, width_max, dtype=torch.long).unsqueeze(0).repeat(len(inputs), 1).clone()
@@ -328,7 +331,7 @@ class ChengyuSlideComposeOnlyMaskedDataset(ChengyuSlideDataset):
 
         batch = {'input_ids': torch.stack([input_ids, input_masked_ids]),
                  'token_type_ids': torch.stack([token_type_ids, token_type_ids]),
-                 'attention_mask': torch.stack([attn_masks, attn_masks]),
+                 'attention_mask': torch.stack([attn_masks_literal, attn_masks_idiomatic]),
                  'gather_index': (gather_index, gather_index_masked),
                  'positions': torch.tensor(positions).long(),
                  'option_ids': torch.tensor(options).long(),

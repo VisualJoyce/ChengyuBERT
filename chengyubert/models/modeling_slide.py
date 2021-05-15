@@ -869,10 +869,9 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttentionFull(BertPreTrainedModel):
         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
 
         gather_index, gather_index_masked = gather_index
-        idiom_length = (gather_index > 0).sum(1)
 
-        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
+        gather_index_unsqueezed = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index_unsqueezed)
 
         gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
             input_ids)
@@ -887,7 +886,8 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttentionFull(BertPreTrainedModel):
         I = encoded_context_masked
         # I = encoded_context_masked
 
-        idiom_mask = sequence_mask(idiom_length)
+        # idiom_length = (gather_index > 0).sum(1)
+        # idiom_mask = sequence_mask(idiom_length)
 
         AI = self.affinity_linear(I)
 
@@ -896,11 +896,12 @@ class ChengyuBertSlideLatentIdiomMaskedCoAttentionFull(BertPreTrainedModel):
         Z = torch.bmm(AI, L_T)  # L = B x n + 1 x m + 1
 
         # col max
-        A_I_ = masked_softmax(Z.max(dim=2)[0], mask=attention_mask)  # B x n + 1 x m + 1
+        A_I_ = masked_softmax(Z.max(dim=2)[0], mask=attention_mask[1])  # B x n + 1 x m + 1
         C_I = torch.einsum('bn,bnd->bd', [A_I_, I])
 
         # row max
-        A_L_ = masked_softmax(Z.max(dim=1)[0], mask=idiom_mask)  # B x n + 1 x m + 1
+        A_L_ = masked_softmax(Z.max(dim=1)[0], mask=torch.gather(attention_mask[0], dim=1,
+                                                                 index=gather_index))  # B x n + 1 x m + 1
         C_L = torch.einsum('bn,bnd->bd', [A_L_, L])
 
         # slide prediction
