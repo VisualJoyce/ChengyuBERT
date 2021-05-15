@@ -248,6 +248,7 @@ class FocalLoss(nn.Module):
 
     def forward(self, inputs, targets):
         p = torch.sigmoid(inputs)
+        targets = F.one_hot(targets)
         ce_loss = F.binary_cross_entropy_with_logits(
             inputs, targets, reduction="none"
         )
