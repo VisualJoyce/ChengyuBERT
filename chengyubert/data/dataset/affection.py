@@ -343,6 +343,8 @@ class ChengyuCALODataset(ChengyuLmdb):
         # load labelled idioms for the split
         with open(f'{self.db_dir}/{"dev" if split == "val" else split}.json') as f:
             self.filtered = json.load(f)
+        with open(f'{self.db_dir}/unlabelled.json') as f:
+            self.unlabeled = json.load(f)
         self.calo_vocab = calo_process(self.chengyu_vocab, self.config.calo_file)
         self.allowed = self.get_allowed_examples(split, opts)
 
