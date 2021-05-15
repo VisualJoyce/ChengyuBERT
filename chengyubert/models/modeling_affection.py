@@ -723,74 +723,69 @@ class WeightNormClassifier(nn.Module):
 #                     coarse_emotion_logits, fine_emotion_logits, sentiment_logits)
 
 
-# @register_model('chengyubert-affection-max-pooling')
-# class ChengyuBertAffectionMaxPooling(BertPreTrainedModel):
-#
-#     def __init__(self, config, len_idiom_vocab, model_name, **kwargs):
-#         super().__init__(config)
-#         self.use_leaf_rnn = True
-#         self.intra_attention = False
-#         self.gumbel_temperature = 1
-#         self.bidirectional = True
-#
-#         self.model_name = model_name
-#         self.bert = BertModel(config)
-#         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-#
-#         self.compose_linear = nn.Linear(config.hidden_size, config.hidden_size)
-#
-#         # Idiom Predictor
-#         emotion_hidden_size = config.hidden_size
-#         # Emotion-7 Predictor
-#         self.fine_emotion_classifier = WeightNormClassifier(emotion_hidden_size,
-#                                                             21,
-#                                                             emotion_hidden_size,
-#                                                             config.hidden_dropout_prob)
-#
-#         # Emotion-7 Predictor
-#         self.coarse_emotion_classifier = WeightNormClassifier(emotion_hidden_size,
-#                                                               7,
-#                                                               emotion_hidden_size,
-#                                                               config.hidden_dropout_prob)
-#         # Sentiment Predictor
-#         self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
-#                                                          4,
-#                                                          emotion_hidden_size,
-#                                                          config.hidden_dropout_prob)
-#
-#         self.init_weights()
-#
-#     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
-#                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-#         # n, batch_size, seq_len = input_ids.size()
-#         encoded_outputs = self.bert(input_ids,
-#                                     token_type_ids=token_type_ids,
-#                                     attention_mask=attention_mask)
-#         encoded_context = encoded_outputs[0]
-#
-#         # idiom_length = (gather_index > 0).sum(1)
-#         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-#         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-#
-#         composed_states, _ = idiom_states.max(dim=1)
-#
-#         emotion_state = self.compose_linear(composed_states)
-#
-#         # affection prediction
-#         fine_emotion_logits = self.fine_emotion_classifier(emotion_state)
-#         coarse_emotion_logits = self.coarse_emotion_classifier(emotion_state)
-#         sentiment_logits = self.sentiment_classifier(emotion_state)
-#
-#         if compute_loss:
-#             loss_fct = nn.CrossEntropyLoss(reduction='none')
-#             coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
-#             fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
-#             sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
-#             return None, None, None, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
-#         else:
-#             return None, None, None, coarse_emotion_logits, fine_emotion_logits, sentiment_logits
-#
-#
+@register_model('chengyubert-affection-max-pooling')
+class ChengyuBertAffectionMaxPooling(BertPreTrainedModel):
+
+    def __init__(self, config, len_idiom_vocab, model_name, **kwargs):
+        super().__init__(config)
+        self.use_leaf_rnn = True
+        self.intra_attention = False
+        self.gumbel_temperature = 1
+        self.bidirectional = True
+
+        self.model_name = model_name
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        self.compose_linear = nn.Linear(config.hidden_size, config.hidden_size)
+
+        # Idiom Predictor
+        emotion_hidden_size = config.hidden_size
+        # Emotion-7 Predictor
+        self.fine_emotion_classifier = WeightNormClassifier(emotion_hidden_size,
+                                                            21,
+                                                            emotion_hidden_size,
+                                                            config.hidden_dropout_prob)
+
+        # Sentiment Predictor
+        self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
+                                                         4,
+                                                         emotion_hidden_size,
+                                                         config.hidden_dropout_prob)
+
+        self.init_weights()
+
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
+        # n, batch_size, seq_len = input_ids.size()
+        encoded_outputs = self.bert(input_ids,
+                                    token_type_ids=token_type_ids,
+                                    attention_mask=attention_mask)
+        encoded_context = encoded_outputs[0]
+
+        # idiom_length = (gather_index > 0).sum(1)
+        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
+
+        composed_states, _ = idiom_states.max(dim=1)
+
+        emotion_state = self.compose_linear(composed_states).tanh()
+
+        # affection prediction
+        fine_emotion_logits = self.fine_emotion_classifier(emotion_state)
+        coarse_emotion_logits = self.coarse_emotion_classifier(emotion_state)
+        sentiment_logits = self.sentiment_classifier(emotion_state)
+
+        if compute_loss:
+            loss_fct = nn.CrossEntropyLoss(reduction='none')
+            coarse_emotion_loss = loss_fct(coarse_emotion_logits, targets[:, 1])
+            fine_emotion_loss = loss_fct(fine_emotion_logits, targets[:, 2])
+            sentiment_emotion_loss = loss_fct(sentiment_logits, targets[:, 3])
+            return None, None, None, coarse_emotion_loss, fine_emotion_loss, sentiment_emotion_loss
+        else:
+            return None, None, None, coarse_emotion_logits, fine_emotion_logits, sentiment_logits
+
+
 # @register_model('chengyubert-affection-max-pooling-masked')
 # class ChengyuBertAffectionMaxPoolingMasked(BertPreTrainedModel):
 #
@@ -876,13 +871,8 @@ class ChengyuBertAffectionComposeOnly(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.idiom_compose = LatentComposition(config.hidden_size)
-        # self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
         emotion_hidden_size = config.hidden_size
-        self.compose_linear = nn.Sequential(nn.Linear(2 * config.hidden_size, config.hidden_size),
-                                            nn.SELU(),
-                                            nn.Dropout(p=0.1),
-                                            nn.Linear(config.hidden_size, emotion_hidden_size),
-                                            nn.SELU())
 
         # Emotion-7 Predictor
         self.fine_emotion_classifier = WeightNormClassifier(emotion_hidden_size,
@@ -890,11 +880,6 @@ class ChengyuBertAffectionComposeOnly(BertPreTrainedModel):
                                                             emotion_hidden_size,
                                                             config.hidden_dropout_prob)
 
-        # Emotion-7 Predictor
-        # self.coarse_emotion_classifier = WeightNormClassifier(emotion_hidden_size,
-        #                                                       7,
-        #                                                       emotion_hidden_size,
-        #                                                       config.hidden_dropout_prob)
         # Sentiment Predictor
         self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
                                                          4,
@@ -917,7 +902,7 @@ class ChengyuBertAffectionComposeOnly(BertPreTrainedModel):
 
         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
 
-        emotion_state = self.compose_linear(composed_states)
+        emotion_state = self.compose_linear(composed_states).tanh()
 
         # affection prediction
         fine_emotion_logits = self.fine_emotion_classifier(emotion_state)
@@ -949,13 +934,8 @@ class ChengyuBertAffectionComposeOnlyMasked(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.idiom_compose = LatentComposition(config.hidden_size)
-        # self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
+        self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
         emotion_hidden_size = config.hidden_size
-        self.compose_linear = nn.Sequential(nn.Linear(3 * config.hidden_size, config.hidden_size),
-                                            nn.SELU(),
-                                            nn.Dropout(p=0.1),
-                                            nn.Linear(config.hidden_size, emotion_hidden_size),
-                                            nn.SELU())
 
         # Idiom Predictor
         # Emotion-7 Predictor
@@ -994,7 +974,7 @@ class ChengyuBertAffectionComposeOnlyMasked(BertPreTrainedModel):
         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
         # composed_states_masked, _, select_masks_masked = self.idiom_compose(idiom_states_masked, idiom_length)
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
-        emotion_state = self.compose_linear(torch.cat([composed_states, composed_states_masked], dim=-1))
+        emotion_state = self.compose_linear(torch.cat([composed_states, composed_states_masked], dim=-1)).tanh()
 
         # affection prediction
         fine_emotion_logits = self.fine_emotion_classifier(emotion_state)
@@ -1032,11 +1012,6 @@ class ChengyuBertAffectionLatentEmotionMasked(BertPreTrainedModel):
 
         self.idiom_compose = LatentComposition(config.hidden_size)
         self.compose_linear = nn.Linear(config.hidden_size * 3, emotion_hidden_size)
-        # self.compose_linear = nn.Sequential(nn.Linear(3 * config.hidden_size, config.hidden_size),
-        #                                      nn.SELU(),
-        #                                      nn.Dropout(p=0.1),
-        #                                      nn.Linear(config.hidden_size, emotion_hidden_size),
-        #                                      nn.SELU())
 
         # Idiom Predictor
         # Emotion-7 Predictor
@@ -1076,7 +1051,7 @@ class ChengyuBertAffectionLatentEmotionMasked(BertPreTrainedModel):
 
         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
-        emotion_state = self.compose_linear(torch.cat([composed_states, composed_states_masked], dim=-1))
+        emotion_state = self.compose_linear(torch.cat([composed_states, composed_states_masked], dim=-1)).tanh()
 
         fine_emotion_logits, _ = self.emotion(emotion_state)
 
@@ -1118,11 +1093,6 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
 
         self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
-        # self.compose_linear = nn.Sequential(nn.Linear(4 * config.hidden_size, config.hidden_size),
-        #                                     nn.SELU(),
-        #                                     nn.Dropout(p=0.1),
-        #                                     nn.Linear(config.hidden_size, config.hidden_size),
-        #                                     nn.SELU())
 
         # Idiom Predictor
         # Emotion-7 Predictor
@@ -1130,11 +1100,6 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
                                                             21,
                                                             config.hidden_size,
                                                             config.hidden_dropout_prob)
-        # Emotion-7 Predictor
-        # self.coarse_emotion_classifier = WeightNormClassifier(config.hidden_size,
-        #                                                       7,
-        #                                                       config.hidden_size,
-        #                                                       config.hidden_dropout_prob)
         # Sentiment Predictor
         self.sentiment_classifier = WeightNormClassifier(config.hidden_size,
                                                          4,
@@ -1213,11 +1178,6 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
         self.idiom_embedding = nn.Embedding(len_idiom_vocab, config.hidden_size)
 
         self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
-        # self.compose_linear = nn.Sequential(nn.Linear(4 * config.hidden_size, config.hidden_size),
-        #                                     nn.SELU(),
-        #                                     nn.Dropout(p=0.1),
-        #                                     nn.Linear(config.hidden_size, config.hidden_size),
-        #                                     nn.SELU())
 
         # Idiom Predictor
         # Emotion-7 Predictor
@@ -1225,11 +1185,6 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
                                                             21,
                                                             config.hidden_size,
                                                             config.hidden_dropout_prob)
-        # Emotion-7 Predictor
-        # self.coarse_emotion_classifier = WeightNormClassifier(config.hidden_size,
-        #                                                       7,
-        #                                                       config.hidden_size,
-        #                                                       config.hidden_dropout_prob)
         # Sentiment Predictor
         self.sentiment_classifier = WeightNormClassifier(config.hidden_size,
                                                          4,
@@ -1328,11 +1283,6 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
         self.idiom_compose = LatentComposition(config.hidden_size)
         self.compose_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
-        # self.compose_linear = nn.Sequential(nn.Linear(4 * config.hidden_size, config.hidden_size),
-        #                                     nn.SELU(),
-        #                                     nn.Dropout(p=0.1),
-        #                                     nn.Linear(config.hidden_size, config.hidden_size),
-        #                                     nn.SELU())
 
         # Idiom Predictor
         # Emotion-7 Predictor
