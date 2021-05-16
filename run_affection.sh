@@ -4,7 +4,8 @@ BERT_TYPE=$2
 DEVICE=$3
 K=$4
 DROPOUT=$5
-MORE_OPTS=$6
+WEIGHT_DECAY=$6
+MORE_OPTS=$7
 USE_CONTEXT=False
 STEPS=$(expr $K \* 5)
 TRAIN_STEPS=$(expr $K \* 500)
@@ -82,6 +83,6 @@ for ((i = 0; i < ${#models[*]}; ++i)); do
   opt="${opts[$i]}"
   config="${configs[$i]}"
   echo "$model $opt"
-  log_txt=data/output/${model}_context-${USE_CONTEXT}/${BERT_TYPE}/${config}/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}_*/log/log.txt
+  log_txt=data/output/${model}_context-${USE_CONTEXT}/${BERT_TYPE}/${config}/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}_${WEIGHT_DECAY}/log/log.txt
   cat ${log_txt} | grep "on test split" -A12 | python -c "$py_script"
 done
