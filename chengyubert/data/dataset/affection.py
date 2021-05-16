@@ -351,7 +351,7 @@ class ChengyuCALOComposeOnlyMaskedDataset(ChengyuCALODataset):
         batch = {'input_ids': torch.stack([input_ids, input_masked_ids]),
                  'token_type_ids': torch.stack([token_type_ids, token_type_ids]),
                  'attention_mask': torch.stack([attn_masks_literal, attn_masks_idiomatic]),
-                 'gather_index': gather_index,
+                 'gather_index': (gather_index, gather_index_masked),
                  'positions': torch.tensor(positions).long(),
                  'option_ids': torch.tensor(options).long(),
                  'targets': torch.tensor(targets).long()}
