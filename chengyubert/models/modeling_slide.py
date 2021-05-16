@@ -632,7 +632,7 @@ class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
-        self.model_name = opts.name
+        self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
