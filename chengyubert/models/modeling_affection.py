@@ -755,6 +755,7 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
         self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
 
+        self.affinity_linear = nn.Linear(config.hidden_size, config.hidden_size)
         self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
 
         # Idiom Predictor
