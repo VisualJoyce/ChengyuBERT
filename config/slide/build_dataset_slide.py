@@ -96,9 +96,9 @@ def common_idioms(idioms_0, idioms_1):
     return s
 
 
-def parse_data(idiom_span_mapping):
+def parse_data(all_idioms, idiom_span_mapping):
     data = {}
-    all_idioms = list(idiom_span_mapping.keys())
+    # all_idioms = list(idiom_span_mapping.keys())
     for idiom in tqdm(all_idioms):
         dump_files = [
             f'{annotation_dir}/bnc_dumped/{idiom}.jsonl',
@@ -169,9 +169,11 @@ if __name__ == '__main__':
     idioms_forms = {}
 
     idioms_ids_range = {}
+    all_idioms = set({})
     for dataset, idioms in [('slide', df_sentiment.Idiom.tolist()),
                             ('idioment', idioment),
                             ('idioms2432', idioms_extra)]:
+        all_idioms.update(idioms)
         start = len(idioms_vocab)
         for idiom in idioms:
             idx = idioms_vocab.get(idiom)
@@ -230,7 +232,8 @@ if __name__ == '__main__':
     with open(f'{annotation_dir}/unlabelled.json', mode='w') as f:
         json.dump(list(unlabelled), f, ensure_ascii=False, indent=2)
 
-    data, idiom_span_mapping = parse_data(idiom_span_mapping)
+    all_idioms.update([idiom_span_mapping[idiom] for idiom in all_idioms])
+    data, idiom_span_mapping = parse_data(all_idioms, idiom_span_mapping)
     with open(f'{annotation_dir}/data.json', mode='w') as fp:
         json.dump(data, fp, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/idiom_span_mapping.json', mode='w') as f:
