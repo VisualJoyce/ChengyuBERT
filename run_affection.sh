@@ -1,4 +1,4 @@
-set -x
+#set -x
 PROJECT=$1
 BERT_TYPE=$2
 DEVICE=$3
@@ -20,13 +20,13 @@ declare -a models=(
 )
 
 declare -a configs=(
-  ${PROJECT}/${BERT_TYPE}_limit${K}.json
-  ${PROJECT}/${BERT_TYPE}_limit${K}.json
-  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
-  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
-  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
-  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
-  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}.json
+  ${BERT_TYPE}_limit${K}.json
+  ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
 )
 
 declare -a opts=(
@@ -44,23 +44,44 @@ for ((i = 0; i < ${#models[*]}; ++i)); do
   model="${models[$i]}"
   opt="${opts[$i]}"
   config="${configs[$i]}"
-  CUDA_VISIBLE_DEVICES=${DEVICE} CONFIG_FILE=${config} \
+  CUDA_VISIBLE_DEVICES=${DEVICE} CONFIG_FILE=${PROJECT}/${config} \
     bash docker_train.sh ${PROJECT} \
     "NUM_TRAIN_STEPS=${TRAIN_STEPS} VALID_STEPS=${STEPS} GRADIENT_ACCUMULATION_STEPS=8 \
        MODEL=${model} ${opt}"
 done
 
-echo "-------------------------------------------------"
-tail -n 20 data/output/chengyubert-${PROJECT}-max-pooling_context-${USE_CONTEXT}/${BERT_TYPE}/${BERT_TYPE}_limit${K}.json/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}/log/log.txt
-echo "-------------------------------------------------"
-tail -n 20 data/output/chengyubert-${PROJECT}-compose-only_context-${USE_CONTEXT}/${BERT_TYPE}/${BERT_TYPE}_limit${K}.json/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}/log/log.txt
-echo "-------------------------------------------------"
-tail -n 20 data/output/chengyubert-${PROJECT}-compose-only-masked_context-${USE_CONTEXT}/${BERT_TYPE}/${BERT_TYPE}_limit${K}_masked.json/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}/log/log.txt
-echo "-------------------------------------------------"
-tail -n 20 data/output/chengyubert-${PROJECT}-latent-idiom-masked_context-${USE_CONTEXT}/${BERT_TYPE}/${BERT_TYPE}_limit${K}_masked.json/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}/log/log.txt
-echo "-------------------------------------------------"
-tail -n 20 data/output/chengyubert-${PROJECT}-compose-latent-idiom-masked_context-${USE_CONTEXT}/${BERT_TYPE}/${BERT_TYPE}_limit${K}_masked.json/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}/log/log.txt
-echo "-------------------------------------------------"
-tail -n 20 data/output/chengyubert-${PROJECT}-latent-idiom-masked-coattention_context-${USE_CONTEXT}/${BERT_TYPE}/${BERT_TYPE}_limit${K}_masked.json/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}/log/log.txt
-echo "-------------------------------------------------"
-tail -n 20 data/output/chengyubert-${PROJECT}-latent-idiom-masked-coattention-full_context-${USE_CONTEXT}/${BERT_TYPE}/${BERT_TYPE}_limit${K}_masked.json/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}/log/log.txt
+py_script="
+import sys
+import pandas as pda
+
+data = {}
+for l in sys.stdin:
+    if f'validation on test split' in l:
+        data.setdefault('test', {})
+        split = 'test'
+    elif f'validation on val split' in l:
+        data.setdefault('val', {})
+        split = 'val'
+    else:
+        if 'score:' in l:
+            name, value = l.split(':', 1)
+            value, _ = value.rsplit(',', 1)
+            value = eval(value)
+            if isinstance(value, dict):
+                for k in value:
+                    data[split][f'idiom-wise_{k}'] = value[k]
+            else:
+                data[split][name] = value
+print(data)
+print(pda.DataFrame.from_records(data))
+"
+
+for ((i = 0; i < ${#models[*]}; ++i)); do
+  echo "-------------------------------------------------"
+  model="${models[$i]}"
+  opt="${opts[$i]}"
+  config="${configs[$i]}"
+  echo "$model"
+  log_txt=data/output/${model}_context-${USE_CONTEXT}/${BERT_TYPE}/${config}/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}/log/log.txt
+  cat ${log_txt} | grep "on test split" -A12 | python -c "$py_script"
+done
