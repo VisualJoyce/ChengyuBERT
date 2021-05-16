@@ -581,7 +581,12 @@ if __name__ == "__main__":
     n_gpu = hvd.size()
     args.n_gpu = n_gpu
 
-    base_dir = f'slide_{args.n_gpu * args.gradient_accumulation_steps}_{args.num_train_steps}_{args.learning_rate}_{args.dropout}'
+    base_dir = '_'.join(['slide',
+                         f'{args.n_gpu * args.gradient_accumulation_steps}',
+                         f'{args.num_train_steps}',
+                         f'{args.learning_rate}',
+                         f'{args.dropout}',
+                         f'{args.weight_decay}'])
     args.output_dir = os.path.join(args.output_dir,
                                    f'{args.model}_context-{args.use_context}',
                                    os.path.basename(args.pretrained_model_name_or_path),
