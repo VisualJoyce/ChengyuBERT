@@ -187,10 +187,16 @@ class ChengyuBertAffectionComposeOnlyMasked(BertPreTrainedModel):
         encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
 
+        gather_index, gather_index_masked = gather_index
         idiom_length = (gather_index > 0).sum(1)
-        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index)
+
+        gather_index_unsqueezed = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index_unsqueezed)
+
+        gather_index_masked_unsqueezed = gather_index_masked.unsqueeze(-1).expand(-1, -1,
+                                                                                  self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked_unsqueezed)
 
         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
         # composed_states_masked, _, select_masks_masked = self.idiom_compose(idiom_states_masked, idiom_length)
@@ -208,88 +214,6 @@ class ChengyuBertAffectionComposeOnlyMasked(BertPreTrainedModel):
             return None, None, select_masks, fine_emotion_loss, sentiment_emotion_loss
         else:
             return None, None, select_masks, fine_emotion_logits, sentiment_logits
-
-
-@register_model('chengyubert-affection-latent-emotion-masked')
-class ChengyuBertAffectionLatentEmotionMasked(BertPreTrainedModel):
-
-    def __init__(self, config, opts):
-        super().__init__(config)
-        self.use_leaf_rnn = True
-        self.intra_attention = False
-        self.gumbel_temperature = 1
-        self.bidirectional = True
-
-        self.model_name = opts.model
-        self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-
-        emotion_hidden_size = config.hidden_size
-        self.register_buffer('fine_emotions', torch.arange(21))
-        self.emotion_embedding = nn.Embedding(21, emotion_hidden_size)
-        # self.emotion_layernorm = nn.LayerNorm(emotion_hidden_size, eps=config.layer_norm_eps)
-
-        self.idiom_compose = LatentComposition(config.hidden_size)
-        self.compose_linear = nn.Linear(config.hidden_size * 3, emotion_hidden_size)
-
-        # Idiom Predictor
-        # Emotion-7 Predictor
-        self.coarse_emotion_classifier = WeightNormClassifier(emotion_hidden_size,
-                                                              7,
-                                                              emotion_hidden_size,
-                                                              config.hidden_dropout_prob)
-        # Sentiment Predictor
-        self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
-                                                         4,
-                                                         emotion_hidden_size,
-                                                         config.hidden_dropout_prob)
-
-        if opts.use_focal:
-            self.loss_fct = FocalLoss()
-        else:
-            self.fine_emotion_loss_fct = nn.CrossEntropyLoss(weight=opts.fine_emotion_weights, reduction='none')
-            self.sentiment_loss_fct = nn.CrossEntropyLoss(weight=opts.sentiment_weights, reduction='none')
-        self.init_weights()
-
-    def emotion(self, blank_states):
-        # emotion_embeddings = self.emotion_layernorm(self.emotion_embedding(self.fine_emotions))
-        emotion_embeddings = self.emotion_embedding(self.fine_emotions)
-        logits = torch.einsum('bd,nd->bn', [blank_states, emotion_embeddings])  # (b, 256, 10)
-        state = torch.einsum('bn,nd->bd', [logits.softmax(dim=-1), emotion_embeddings])  # (b, 256, 10)
-        return logits, state
-
-    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
-                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-        n, batch_size, seq_len = input_ids.size()
-        encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
-                                    token_type_ids=token_type_ids.view(n * batch_size, seq_len),
-                                    attention_mask=attention_mask.view(n * batch_size, seq_len))
-        encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
-        encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
-
-        idiom_length = (gather_index > 0).sum(1)
-        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index)
-        # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
-
-        composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
-        composed_states_masked, _ = idiom_states_masked.max(dim=1)
-        emotion_state = self.compose_linear(torch.cat([composed_states, composed_states_masked], dim=-1)).tanh()
-
-        fine_emotion_logits, _ = self.emotion(emotion_state)
-
-        # affection prediction
-        sentiment_logits = self.sentiment_classifier(emotion_state)
-
-        if compute_loss:
-            fine_emotion_loss = self.fine_emotion_loss_fct(fine_emotion_logits, targets[:, 2])
-            sentiment_emotion_loss = self.sentiment_loss_fct(sentiment_logits, targets[:, 3])
-            return (None, None, select_masks,
-                    fine_emotion_loss, sentiment_emotion_loss)
-        else:
-            return (None, None, select_masks,
-                    fine_emotion_logits, sentiment_logits)
 
 
 @register_model('chengyubert-affection-latent-idiom-masked')
@@ -346,13 +270,14 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
         encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
 
-        idiom_length = (gather_index > 0).sum(1)
+        gather_index, gather_index_masked = gather_index
         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index)
-        # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+        gather_index_masked_unsqueezed = gather_index_masked.unsqueeze(-1).expand(-1, -1,
+                                                                                  self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked_unsqueezed)
 
-        # composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
         composed_states, _ = idiom_states.max(dim=1)
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
 
@@ -439,10 +364,13 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
         gather_index, gather_index_masked = gather_index
         idiom_length = (gather_index > 0).sum(1)
 
-        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index)
-        # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+        gather_index_unsqueezed = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index_unsqueezed)
+
+        gather_index_masked_unsqueezed = gather_index_masked.unsqueeze(-1).expand(-1, -1,
+                                                                                  self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked_unsqueezed)
 
         # composed_states, _ = idiom_states.max(dim=1)
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
@@ -536,8 +464,11 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
         gather_index_unsqueezed = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index_unsqueezed)
-        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_unsqueezed)
-        # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+
+        gather_index_masked_unsqueezed = gather_index_masked.unsqueeze(-1).expand(-1, -1,
+                                                                                  self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked_unsqueezed)
 
         # composed_states, _ = idiom_states.max(dim=1)
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
@@ -641,10 +572,13 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
         idiom_length = (gather_index > 0).sum(1)
 
-        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index)
-        # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+        gather_index_unsqueezed = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index_unsqueezed)
+
+        gather_index_masked_unsqueezed = gather_index_masked.unsqueeze(-1).expand(-1, -1,
+                                                                                  self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked_unsqueezed)
 
         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
         composed_states_masked, _ = idiom_states_masked.max(dim=1)
