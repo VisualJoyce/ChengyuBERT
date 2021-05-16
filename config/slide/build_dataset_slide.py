@@ -203,9 +203,6 @@ if __name__ == '__main__':
         idiom_span_mapping[idm]] <= idioms_ids_range['slide']['end']]
     intersections = [idm for idm in df_sentiment.Idiom.tolist() if idiom_span_mapping[idm] in intersections]
 
-    unlabelled = [idiom_span_mapping[idm] for idm in idioms_extra if idioms_vocab[
-        idiom_span_mapping[idm]] >= idioms_ids_range['idioms2432']['start']]
-
     total = df_sentiment.shape[0]
     df_sentiment_no_intersection = df_sentiment[~df_sentiment.Idiom.isin(intersections)]
     X_train, X_test, y_train, y_test = train_test_split(df_sentiment_no_intersection.Idiom.map(idiom_span_mapping),
@@ -229,8 +226,6 @@ if __name__ == '__main__':
         json.dump(dev, f, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/test.json', mode='w') as f:
         json.dump(test, f, ensure_ascii=False, indent=2)
-    with open(f'{annotation_dir}/unlabelled.json', mode='w') as f:
-        json.dump(list(unlabelled), f, ensure_ascii=False, indent=2)
 
     all_idioms.update([idiom_span_mapping[idiom] for idiom in all_idioms])
     data, idiom_span_mapping = parse_data(all_idioms, idiom_span_mapping)
@@ -238,3 +233,9 @@ if __name__ == '__main__':
         json.dump(data, fp, ensure_ascii=False, indent=2)
     with open(f'{annotation_dir}/idiom_span_mapping.json', mode='w') as f:
         json.dump(idiom_span_mapping, f, ensure_ascii=False, indent=2)
+
+    unlabelled = [idiom_span_mapping[idm] for idm in idioms_extra if idioms_vocab[
+        idiom_span_mapping[idm]] >= idioms_ids_range['idioms2432']['start'] and idiom_span_mapping[idm] in data]
+
+    with open(f'{annotation_dir}/unlabelled.json', mode='w') as f:
+        json.dump(list(unlabelled), f, ensure_ascii=False, indent=2)
