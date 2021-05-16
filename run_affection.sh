@@ -19,6 +19,16 @@ declare -a models=(
   chengyubert-${PROJECT}-latent-idiom-masked-coattention-full
 )
 
+declare -a configs=(
+  ${PROJECT}/${BERT_TYPE}_limit${K}.json
+  ${PROJECT}/${BERT_TYPE}_limit${K}.json
+  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
+  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
+  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
+  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
+  ${PROJECT}/${BERT_TYPE}_limit${K}_masked.json
+)
+
 declare -a opts=(
   "DROPOUT=${DROPOUT} ${MORE_OPTS}"
   "DROPOUT=${DROPOUT} ${MORE_OPTS}"
@@ -33,7 +43,8 @@ echo "$K $STEPS"
 for ((i = 0; i < ${#models[*]}; ++i)); do
   model="${models[$i]}"
   opt="${opts[$i]}"
-  CUDA_VISIBLE_DEVICES=${DEVICE} CONFIG_FILE=${PROJECT}/${BERT_TYPE}_limit${K}_masked.json \
+  config="${configs[$i]}"
+  CUDA_VISIBLE_DEVICES=${DEVICE} CONFIG_FILE=${config} \
     bash docker_train.sh ${PROJECT} \
     "NUM_TRAIN_STEPS=${TRAIN_STEPS} VALID_STEPS=${STEPS} GRADIENT_ACCUMULATION_STEPS=8 \
        MODEL=${model} ${opt}"

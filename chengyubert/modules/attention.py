@@ -47,6 +47,7 @@ class Attention(nn.Module):
 class ContrastiveCoAttention(nn.Module):
 
     def __init__(self, hidden_size):
+        super().__init__()
         self.affinity_linear = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, L, I, mask_L, mask_I):
