@@ -11,10 +11,10 @@ STEPS=$(expr $K \* 5)
 TRAIN_STEPS=$(expr $K \* 500)
 
 declare -a models=(
-  chengyubert-${PROJECT}-max-pooling
-  chengyubert-${PROJECT}-max-pooling-masked
-  chengyubert-${PROJECT}-max-pooling-masked-latent-idiom
-  chengyubert-${PROJECT}-max-pooling-masked-latent-idiom-with-gate
+  ${PROJECT}-max-pooling
+  ${PROJECT}-max-pooling-masked
+  ${PROJECT}-max-pooling-masked-latent-idiom
+  ${PROJECT}-max-pooling-masked-latent-idiom-with-gate
 #  chengyubert-${PROJECT}-compose-only
 #  chengyubert-${PROJECT}-compose-only-masked
 #  chengyubert-${PROJECT}-latent-idiom-masked
