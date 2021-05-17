@@ -260,10 +260,12 @@ class AffectionMaxPoolingMaskedLatentIdiomWithGate(BertPreTrainedModel):
 
         self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
 
-        self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.channel1_linear = nn.Linear(config.hidden_size, config.hidden_size)
+        self.channel2_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.compose_linear = nn.Linear(config.hidden_size, config.hidden_size)
 
         self.register_parameter(name='g',
-                                param=torch.nn.Parameter(torch.ones(config.hidden_size * 2) / (config.hidden_size * 2)))
+                                param=torch.nn.Parameter(torch.ones(config.hidden_size) / config.hidden_size))
 
         # Idiom Predictor
         # Emotion-7 Predictor
@@ -312,8 +314,11 @@ class AffectionMaxPoolingMaskedLatentIdiomWithGate(BertPreTrainedModel):
 
         over_logits, idiom_attn_state = self.vocab(composed_states_masked)
 
-        gate = torch.sigmoid(self.g * composed_states)
-        s = gate * composed_states + (1 - gate) * torch.cat([composed_states_masked, idiom_attn_state], dim=-1)
+        channel1 = self.channel1_linear(composed_states).tanh()
+        channel2 = self.channel2_linear(torch.cat([composed_states_masked, idiom_attn_state], dim=-1)).tanh()
+
+        gate = torch.sigmoid(self.g * channel1)
+        s = gate * channel1 + (1 - gate) * channel2
 
         # affection prediction
         emotion_state = self.compose_linear(s).tanh()
