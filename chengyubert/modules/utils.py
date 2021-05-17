@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 from torch.nn.utils import weight_norm
@@ -147,6 +148,163 @@ class BinaryTreeLSTMLayer(nn.Module):
 
 
 class LatentComposition(nn.Module):
+
+    def __init__(self, hidden_size):
+        super().__init__()
+        self.gumbel_temperature = 1
+        self.hidden_size = hidden_size
+
+        word_dim = hidden_size
+        hidden_dim = hidden_size
+        self.leaf_rnn_cell = nn.LSTMCell(input_size=word_dim, hidden_size=hidden_dim)
+        self.leaf_rnn_cell_bw = nn.LSTMCell(input_size=word_dim, hidden_size=hidden_dim)
+        self.treelstm_layer = BinaryTreeLSTMLayer(2 * hidden_dim)
+        self.comp_query_linear = nn.Linear(hidden_dim * 2, 1, bias=False)
+
+    @staticmethod
+    def update_state(old_state, new_state, done_mask):
+        old_h, old_c = old_state
+        new_h, new_c = new_state
+        done_mask = done_mask.type_as(old_h).unsqueeze(1).unsqueeze(2)
+        h = done_mask * new_h + (1 - done_mask) * old_h[:, :-1, :]
+        c = done_mask * new_c + (1 - done_mask) * old_c[:, :-1, :]
+        return h, c
+
+    def select_composition(self, old_state, new_state, mask):
+        new_h, new_c = new_state
+        old_h, old_c = old_state
+        old_h_left, old_h_right = old_h[:, :-1, :], old_h[:, 1:, :]
+        old_c_left, old_c_right = old_c[:, :-1, :], old_c[:, 1:, :]
+        comp_weights = self.comp_query_linear(new_h).sum(-1).squeeze(dim=-1) / math.sqrt(self.hidden_size)
+        if self.training:
+            select_mask = torch.nn.functional.gumbel_softmax(logits=comp_weights,
+                                                             tau=self.gumbel_temperature,
+                                                             hard=True)
+        else:
+            select_mask = greedy_select(logits=comp_weights, mask=mask)
+
+        select_mask = select_mask.type_as(old_h)
+        select_mask_expand = select_mask.unsqueeze(2).expand_as(new_h)
+        select_mask_cumsum = select_mask.cumsum(1)
+
+        left_mask = 1 - select_mask_cumsum
+        left_mask_expand = left_mask.unsqueeze(2).expand_as(old_h_left)
+        right_mask = select_mask_cumsum - select_mask
+        right_mask_expand = right_mask.unsqueeze(2).expand_as(old_h_right)
+
+        new_h = (select_mask_expand * new_h
+                 + left_mask_expand * old_h_left
+                 + right_mask_expand * old_h_right)
+        new_c = (select_mask_expand * new_c
+                 + left_mask_expand * old_c_left
+                 + right_mask_expand * old_c_right)
+
+        selected_h = (select_mask_expand * new_h).sum(1)
+        return new_h, new_c, select_mask, selected_h
+
+    def forward(self, idiom_hidden, idiom_length):
+        max_depth = idiom_hidden.size(1)
+        length_mask = sequence_mask(sequence_length=idiom_length,
+                                    max_length=max_depth)
+        select_masks = []
+
+        hs = []
+        cs = []
+        batch_size, max_length, _ = idiom_hidden.size()
+        h_prev, c_prev = idiom_hidden.data.new_zeros(2 * batch_size, self.hidden_size).chunk(chunks=2, dim=0)
+        for i in range(max_length):
+            h, c = self.leaf_rnn_cell(input=idiom_hidden[:, i, :], hx=(h_prev, c_prev))
+            hs.append(h)
+            cs.append(c)
+            h_prev = h
+            c_prev = c
+        hs = torch.stack(hs, dim=1)
+        cs = torch.stack(cs, dim=1)
+
+        hs_bw = []
+        cs_bw = []
+        h_bw_prev, c_bw_prev = idiom_hidden.data.new_zeros(2 * batch_size, self.hidden_size).chunk(chunks=2, dim=0)
+        input_bw = reverse_padded_sequence(inputs=idiom_hidden, lengths=idiom_length, batch_first=True)
+        for i in range(max_length):
+            h_bw, c_bw = self.leaf_rnn_cell_bw(input=input_bw[:, i, :], hx=(h_bw_prev, c_bw_prev))
+            hs_bw.append(h_bw)
+            cs_bw.append(c_bw)
+            h_bw_prev = h_bw
+            c_bw_prev = c_bw
+        hs_bw = torch.stack(hs_bw, dim=1)
+        cs_bw = torch.stack(cs_bw, dim=1)
+
+        hs_bw = reverse_padded_sequence(inputs=hs_bw, lengths=idiom_length, batch_first=True)
+        cs_bw = reverse_padded_sequence(inputs=cs_bw, lengths=idiom_length, batch_first=True)
+
+        hs = torch.cat([hs, hs_bw], dim=2)
+        cs = torch.cat([cs, cs_bw], dim=2)
+        state = (hs, cs)
+
+        for i in range(max_depth - 1):
+            h, c = state
+            l = (h[:, :-1, :], c[:, :-1, :])
+            r = (h[:, 1:, :], c[:, 1:, :])
+            new_state = self.treelstm_layer(l=l, r=r)
+            if i < max_depth - 2:
+                # We don't need to greedily select the composition in the
+                # last iteration, since it has only one option left.
+                new_h, new_c, select_mask, selected_h = self.select_composition(
+                    old_state=state, new_state=new_state,
+                    mask=length_mask[:, i + 1:])
+                new_state = (new_h, new_c)
+                select_masks.append(select_mask)
+            done_mask = length_mask[:, i + 1]
+            state = self.update_state(old_state=state, new_state=new_state, done_mask=done_mask)
+
+        h, c = state
+        assert h.size(1) == 1 and c.size(1) == 1
+        return h.squeeze(1), c.squeeze(1), select_masks
+
+
+class GatedTanh(nn.Module):
+    """
+    From: https://arxiv.org/pdf/1707.07998.pdf
+    nonlinear_layer (f_a) : x\in R^m => y \in R^n
+    \tilda{y} = tanh(Wx + b)
+    g = sigmoid(W'x + b')
+    y = \tilda(y) \circ g
+    input: (N, *, in_dim)
+    output: (N, *, out_dim)
+    """
+
+    def __init__(self, in_dim, out_dim):
+        super(GatedTanh, self).__init__()
+        self.fc = nn.Linear(in_dim, out_dim)
+        self.gate_fc = nn.Linear(in_dim, out_dim)
+
+    def forward(self, x):
+        y_tilda = torch.tanh(self.fc(x))
+        gated = torch.sigmoid(self.gate_fc(x))
+
+        # Element wise multiplication
+        y = y_tilda * gated
+
+        return y
+
+
+class WeightNormClassifier(nn.Module):
+    def __init__(self, in_dim, out_dim, hidden_dim, dropout):
+        super(WeightNormClassifier, self).__init__()
+        layers = [
+            weight_norm(nn.Linear(in_dim, hidden_dim), dim=None),
+            nn.ReLU(),
+            nn.Dropout(dropout, inplace=True),
+            weight_norm(nn.Linear(hidden_dim, out_dim), dim=None),
+        ]
+        self.main = nn.Sequential(*layers)
+
+    def forward(self, x):
+        logits = self.main(x)
+        return logits
+
+
+class TreeComposition(nn.Module):
 
     def __init__(self, hidden_size):
         super().__init__()
