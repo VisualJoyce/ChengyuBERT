@@ -598,7 +598,7 @@ class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
 
 
 @register_model('chengyubert-affection-compose-latent-idiom-masked-with-gate')
-class ChengyuBertAffectionLatentIdiomMasked(BertPreTrainedModel):
+class ChengyuBertAffectionLatentIdiomMaskedWithGate(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
