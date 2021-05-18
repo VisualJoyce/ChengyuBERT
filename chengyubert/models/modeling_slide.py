@@ -207,6 +207,7 @@ class SlideMaxPoolingMaskedLatentIdiom(BertPreTrainedModel):
             over_loss = loss_fct(over_logits,
                                  nn.functional.one_hot(targets[:, 0],
                                                        num_classes=self.enlarged_candidates.size(0)).type_as(over_logits))
+            over_loss = over_loss.sum(dim=-1)
             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
             return (None, over_loss, None, sentiment_emotion_loss)
         else:
@@ -297,6 +298,7 @@ class SlideMaxPoolingMaskedLatentIdiomWithGate(BertPreTrainedModel):
             over_loss = loss_fct(over_logits,
                                  nn.functional.one_hot(targets[:, 0],
                                                        num_classes=self.enlarged_candidates.size(0)).type_as(over_logits))
+            over_loss = over_loss.sum(dim=-1)
             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
             return (None, over_loss, None, sentiment_emotion_loss)
         else:
@@ -503,6 +505,7 @@ class SlideComposeMaskedLatentIdiom(BertPreTrainedModel):
             over_loss = loss_fct(over_logits,
                                  nn.functional.one_hot(targets[:, 0],
                                                        num_classes=self.enlarged_candidates.size(0)).type_as(over_logits))
+            over_loss = over_loss.sum(dim=-1)
             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
             return (None, over_loss, select_masks, sentiment_emotion_loss)
         else:
@@ -602,6 +605,7 @@ class SlideComposeMaskedLatentIdiomWithGate(BertPreTrainedModel):
             over_loss = loss_fct(over_logits,
                                  nn.functional.one_hot(targets[:, 0],
                                                        num_classes=self.enlarged_candidates.size(0)).type_as(over_logits))
+            over_loss = over_loss.sum(dim=-1)
             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
             return (None, over_loss, select_masks, sentiment_emotion_loss)
         else:
