@@ -65,7 +65,7 @@ class CaloLoss(nn.Module):
             self.fine_emotion_loss_fct = nn.CrossEntropyLoss(weight=fine_emotion_weights, reduction='none')
             self.sentiment_loss_fct = nn.CrossEntropyLoss(weight=sentiment_weights, reduction='none')
 
-    def forward(self, logits, targets) -> Tuple[Optional[Any], Any, Any]:
+    def forward(self, logits, targets) -> Tuple[Optional[Any], Tuple[Any, Any]]:
         over_logits, (fine_emotion_logits, sentiment_logits) = logits
         if over_logits is not None:
             loss_fct = nn.CrossEntropyLoss(reduction='none')

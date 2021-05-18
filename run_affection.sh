@@ -81,6 +81,7 @@ for l in sys.stdin:
     else:
         if 'score:' in l:
             name, value = l.split(':', 1)
+            name = name.replace(' ', '_')
             value, _ = value.rsplit(',', 1)
             value = eval(value)
             if isinstance(value, dict):
@@ -89,7 +90,7 @@ for l in sys.stdin:
             else:
                 data[split][name] = value
 print(data)
-print(pda.DataFrame.from_records(data))
+print(pda.DataFrame.from_records(data)).transpose()
 "
 
 for ((i = 0; i < ${#models[*]}; ++i)); do
