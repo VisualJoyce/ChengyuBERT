@@ -4,6 +4,7 @@
     "test_txt_db": "affection1_test.db",
     "calo_file": "/annotations/情感词汇本体/情感词汇本体.xlsx",
     "pretrained_model_name_or_path": "hfl/chinese-bert-wwm-ext",
+    "project": "calo",
     "model": "chengyubert-affection-compose-only",
     "dataset_cls": "chengyu-affection-compose-only",
     "eval_dataset_cls": "chengyu-affection-compose-only-eval",

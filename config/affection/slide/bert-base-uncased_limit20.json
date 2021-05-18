@@ -1,8 +1,9 @@
 {
-    "train_txt_db": "slide1_train.db",
-    "val_txt_db": "slide1_dev.db",
-    "test_txt_db": "slide1_test.db",
+    "train_txt_db": "slide20_train.db",
+    "val_txt_db": "slide20_dev.db",
+    "test_txt_db": "slide20_test.db",
     "pretrained_model_name_or_path": "bert-base-uncased",
+    "project": "slide",
     "model": "chengyubert-slide-compose-only",
     "dataset_cls": "chengyu-slide-compose-only",
     "eval_dataset_cls": "chengyu-slide-compose-only-eval",

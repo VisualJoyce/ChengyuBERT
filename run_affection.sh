@@ -11,17 +11,25 @@ STEPS=$(expr $K \* 5)
 TRAIN_STEPS=$(expr $K \* 500)
 
 declare -a models=(
-  ${PROJECT}-max-pooling
-  ${PROJECT}-max-pooling-masked
-  ${PROJECT}-max-pooling-masked-latent-idiom
-  ${PROJECT}-max-pooling-masked-latent-idiom-with-gate
-  ${PROJECT}-max-pooling-masked-latent-idiom-with-gate
-  ${PROJECT}-coattention-masked
-  ${PROJECT}-coattention-masked-latent-idiom
-  ${PROJECT}-coattention-masked-latent-idiom-with-gate
+  affection-max-pooling
+  affection-max-pooling-masked
+  affection-max-pooling-masked-latent-idiom
+  affection-max-pooling-masked-latent-idiom-with-gate
+  affection-compose
+  affection-compose-masked
+  affection-compose-masked-latent-idiom
+  affection-compose-masked-latent-idiom-with-gate
+  affection-coattention-masked
+  affection-coattention-masked-latent-idiom
+  affection-coattention-masked-latent-idiom-with-gate
+  affection-coattention-masked-full-latent-idiom
 )
 
 declare -a configs=(
+  ${BERT_TYPE}_limit${K}.json
+  ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
   ${BERT_TYPE}_limit${K}.json
   ${BERT_TYPE}_limit${K}_masked.json
   ${BERT_TYPE}_limit${K}_masked.json
@@ -37,6 +45,10 @@ declare -a opts=(
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
+  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS}"
+  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
+  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
+  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
@@ -48,9 +60,9 @@ for ((i = 0; i < ${#models[*]}; ++i)); do
   model="${models[$i]}"
   opt="${opts[$i]}"
   config="${configs[$i]}"
-  CUDA_VISIBLE_DEVICES=${DEVICE} CONFIG_FILE=${PROJECT}/${config} \
-    bash docker_train.sh ${PROJECT} \
-    "NUM_TRAIN_STEPS=${TRAIN_STEPS} VALID_STEPS=${STEPS} GRADIENT_ACCUMULATION_STEPS=8 \
+  CUDA_VISIBLE_DEVICES=${DEVICE} CONFIG_FILE=affection/${PROJECT}/${config} \
+    bash docker_train.sh affection \
+    "NUM_TRAIN_STEPS=${TRAIN_STEPS} VALID_STEPS=${STEPS} GRADIENT_ACCUMULATION_STEPS=1 \
        MODEL=${model} ${opt}"
 done
 
@@ -86,6 +98,6 @@ for ((i = 0; i < ${#models[*]}; ++i)); do
   opt="${opts[$i]}"
   config="${configs[$i]}"
   echo "$model $opt"
-  log_txt=data/output/${model}_context-${USE_CONTEXT}/${BERT_TYPE}/${config}/${PROJECT}_8_${TRAIN_STEPS}_5e-05_${DROPOUT}_${WEIGHT_DECAY}/log/log.txt
+  log_txt=data/output/${model}_context-${USE_CONTEXT}/${BERT_TYPE}/${config}/${PROJECT}_1_${TRAIN_STEPS}_5e-05_${DROPOUT}_${WEIGHT_DECAY}/log/log.txt
   cat ${log_txt} | grep "on test split" -A12 | python -c "$py_script"
 done
