@@ -171,7 +171,7 @@ def train(model, dataloaders, opts):
                     model_saver.save(model, global_step)
             if global_step >= opts.num_train_steps:
                 break
-        if global_step >= opts.num_train_steps or global_step - best_ckpt > 0.1 * opts.num_train_steps:
+        if global_step >= opts.num_train_steps or global_step - best_ckpt > 0.3 * opts.num_train_steps:
             break
         n_epoch += 1
         LOGGER.info(f"Step {global_step}: finished {n_epoch} epochs")
