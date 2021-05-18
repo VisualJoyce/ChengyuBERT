@@ -31,7 +31,7 @@ class ChengyuSlideDataset(IdiomsLmdb):
         self.lens, self.ids, self.st_ed, sentiment_counter = self.get_ids_and_lens()
         LOGGER.info("Sentiment counter: " + str(sentiment_counter))
         if split == 'train':
-            self.sentiment_weights = self.get_label_weights(sentiment_counter, num_classes=4)
+            self.sentiment_weights = self.get_label_weights(sentiment_counter, num_classes=3)
 
     @staticmethod
     def get_label_weights(counter, num_classes):
