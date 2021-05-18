@@ -34,7 +34,8 @@ class ChengyuCALODataset(ChengyuLmdb):
             self.fine_emotion_weights = self.get_label_weights(fine_emotion_counter, num_classes=21)
             self.sentiment_weights = self.get_label_weights(sentiment_counter, num_classes=4)
 
-    def get_label_weights(self, counter, num_classes):
+    @staticmethod
+    def get_label_weights(counter, num_classes):
         _, max_num = counter.most_common(1)[0]
         return torch.tensor([counter[i] / max_num for i in range(num_classes)])
 

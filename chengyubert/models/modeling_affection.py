@@ -116,11 +116,7 @@ class AffectionMaxPooling(BertPreTrainedModel):
         self.channel1_linear = nn.Linear(config.hidden_size, config.hidden_size)
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
@@ -164,11 +160,7 @@ class AffectionMaxPoolingMasked(BertPreTrainedModel):
         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
 
         self.init_weights()
 
@@ -235,11 +227,7 @@ class AffectionMaxPoolingMaskedLatentIdiom(BertPreTrainedModel):
         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -317,11 +305,7 @@ class AffectionMaxPoolingMaskedLatentIdiomWithGate(BertPreTrainedModel):
                                 param=torch.nn.Parameter(torch.ones(config.hidden_size) / config.hidden_size))
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -385,11 +369,7 @@ class AffectionCompose(BertPreTrainedModel):
         self.channel1_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
@@ -435,11 +415,7 @@ class AffectionComposeMasked(BertPreTrainedModel):
         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
@@ -506,11 +482,7 @@ class AffectionComposeMaskedLatentIdiom(BertPreTrainedModel):
         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -593,11 +565,7 @@ class AffectionComposeMaskedLatentIdiomWithGate(BertPreTrainedModel):
                                 param=torch.nn.Parameter(torch.ones(config.hidden_size) / config.hidden_size))
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -674,11 +642,7 @@ class AffectionCoAttentionMasked(BertPreTrainedModel):
         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def forward(self, input_ids, token_type_ids, attention_mask, positions, gather_index, option_ids=None,
@@ -752,11 +716,7 @@ class AffectionCoAttentionMaskedLatentIdiom(BertPreTrainedModel):
         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -841,11 +801,7 @@ class AffectionCoAttentionMaskedLatentIdiomWithGate(BertPreTrainedModel):
                                 param=torch.nn.Parameter(torch.ones(config.hidden_size) / config.hidden_size))
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def vocab(self, blank_states):
@@ -931,11 +887,7 @@ class AffectionCoAttentionMaskedFullLatentIdiom(BertPreTrainedModel):
         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
 
         self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
-        if self.project == 'calo':
-            self.loss_fct = loss_calculators['calo'](opts.use_focal, (opts.fine_emotion_weights,
-                                                                      opts.sentiment_weights))
-        else:
-            self.loss_fct = loss_calculators['slide'](opts.use_focal, opts.weights)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
         self.init_weights()
 
     def vocab(self, blank_states):

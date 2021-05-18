@@ -715,20 +715,20 @@ def main(opts):
     splits, dataloaders = create_dataloaders(DatasetCls, EvalDatasetCls, opts)
 
     if opts.project == 'calo':
-        setattr(opts, 'fine_emotion_weights', dataloaders['train'].dataset.fine_emotion_weights)
-        setattr(opts, 'sentiment_weights', dataloaders['train'].dataset.sentiment_weights)
+        setattr(opts, 'weights', (dataloaders['train'].dataset.sentiment_weights,
+                                  dataloaders['train'].dataset.fine_emotion_weights))
     else:
-        opts.weight = torch.tensor(opts.weight)
+        setattr(opts, 'weights', dataloaders['train'].dataset.sentiment_weights)
 
     # Prepare model
     model = build_model(opts)
     model.to(device)
 
     if opts.project == 'calo':
-        opts.fine_emotion_weights = opts.fine_emotion_weights.tolist()
-        opts.sentiment_weights = opts.sentiment_weights.tolist()
+        w1, w2 = opts.weights
+        opts.weights = (w1.tolist(), w2.tolist())
     else:
-        opts.weight = opts.weight.tolist()
+        opts.weights = opts.weights.tolist()
 
     if opts.mode == 'train':
         best_ckpt = train(model, dataloaders, opts)

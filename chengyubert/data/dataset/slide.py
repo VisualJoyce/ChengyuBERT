@@ -2,6 +2,7 @@ import json
 import operator
 import random
 from abc import abstractmethod
+from collections import Counter
 from functools import reduce
 
 import torch
@@ -10,6 +11,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 from chengyubert.data import IdiomsLmdb
 from chengyubert.data.dataset import register_dataset
+from chengyubert.utils.logger import LOGGER
 
 
 class ChengyuSlideDataset(IdiomsLmdb):
@@ -26,7 +28,15 @@ class ChengyuSlideDataset(IdiomsLmdb):
         self.allowed, self.reverse_index = self.get_allowed_examples(split, opts)
 
         self.idiom_input_ids = self.tokenize_idioms()
-        self.lens, self.ids, self.st_ed = self.get_ids_and_lens()
+        self.lens, self.ids, self.st_ed, sentiment_counter = self.get_ids_and_lens()
+        LOGGER.info("Sentiment counter: " + str(sentiment_counter))
+        if split == 'train':
+            self.sentiment_weights = self.get_label_weights(sentiment_counter, num_classes=4)
+
+    @staticmethod
+    def get_label_weights(counter, num_classes):
+        _, max_num = counter.most_common(1)[0]
+        return torch.tensor([counter[i] / max_num for i in range(num_classes)])
 
     @abstractmethod
     def get_allowed_examples(self, split, opts):
@@ -48,11 +58,16 @@ class ChengyuSlideDataset(IdiomsLmdb):
         lens = []
         ids = []
         st_ed = []
+        sentiment_counter = Counter()
         for id_, len_ in self.id2len.items():
             if id_ not in self.allowed:
                 continue
 
             example = self.db[id_]
+            idiom = example['idiom']
+            if idiom in self.sentiments and idiom in self.filtered:
+                sentiment = self.sentiments[idiom]
+                sentiment_counter.update([sentiment])
             position = example['position']
             input_ids = example['input_ids']
             half_length = self.max_txt_len // 2
@@ -70,7 +85,7 @@ class ChengyuSlideDataset(IdiomsLmdb):
             st_ed.append((st, ed))
             lens.append(ed - st + 1)
             ids.append(id_)
-        return lens, ids, st_ed
+        return lens, ids, st_ed, sentiment_counter
 
     def _decide_target(self, idiom, idx):
         target = [idx, -100]
