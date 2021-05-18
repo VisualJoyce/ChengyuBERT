@@ -258,28 +258,29 @@ def validate(opts, model, val_loader, split, global_step):
                     affection_results.append(
                         [idiom] + sentiment_logits[j].cpu().numpy().tolist()
                     )
-                    if i % 1000 == 0 and select_masks is not None:
+                    if i % 1000 == 0:
                         g = over_logits[j].cpu().numpy()
                         top_k = np.argsort(-g)[:5]
                         print(qid,
                               [options[k] for k in top_k],
                               idiom)
                         # print(len(select_masks), atts.size())
-                        s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
-                        # s_att = atts[j].cpu().numpy().tolist()
+                        if select_masks is not None:
+                            s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
+                            # s_att = atts[j].cpu().numpy().tolist()
 
-                        # tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(inp)
-                        # start = tokens.index(val_loader.dataset.tokenizer.mask_token)
-                        # tokens[position:position + len(idiom)] = list(idiom)
-                        tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(
-                            val_loader.dataset.idiom_input_ids[qid])
-                        # print(tokens, s_masks, s_att, composition_gates[j].sum())
-                        print(tokens, s_masks)
-                        try:
-                            tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
-                            print(TreePrettyPrinter(tree).text(unicodelines=True))
-                        except:
-                            pass
+                            # tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(inp)
+                            # start = tokens.index(val_loader.dataset.tokenizer.mask_token)
+                            # tokens[position:position + len(idiom)] = list(idiom)
+                            tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(
+                                val_loader.dataset.idiom_input_ids[qid])
+                            # print(tokens, s_masks, s_att, composition_gates[j].sum())
+                            print(tokens, s_masks)
+                            try:
+                                tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
+                                print(TreePrettyPrinter(tree).text(unicodelines=True))
+                            except:
+                                pass
 
                         predictions = {
                             # "coarse emotion": {
@@ -309,19 +310,20 @@ def validate(opts, model, val_loader, split, global_step):
                     affection_results.append(
                         [idiom] + sentiment_logits[j].cpu().numpy().tolist()
                     )
-                    if i % 1000 == 0 and select_masks is not None:
+                    if i % 1000 == 0:
                         print(qid,
                               idiom)
-                        s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
-                        tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(
-                            val_loader.dataset.idiom_input_ids[qid])
-                        # print(tokens, s_masks, s_att, composition_gates[j].sum())
-                        print(tokens, s_masks)
-                        try:
-                            tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
-                            print(TreePrettyPrinter(tree).text(unicodelines=True))
-                        except:
-                            pass
+                        if select_masks is not None:
+                            s_masks = [select_mask[j].long().cpu().numpy().tolist() for select_mask in select_masks]
+                            tokens = val_loader.dataset.tokenizer.convert_ids_to_tokens(
+                                val_loader.dataset.idiom_input_ids[qid])
+                            # print(tokens, s_masks, s_att, composition_gates[j].sum())
+                            print(tokens, s_masks)
+                            try:
+                                tree = Tree(' '.join(tokens), idiom2tree(tokens, s_masks))
+                                print(TreePrettyPrinter(tree).text(unicodelines=True))
+                            except:
+                                pass
 
                         predictions = {
                             "sentiment": {
