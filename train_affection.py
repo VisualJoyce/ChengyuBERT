@@ -715,8 +715,8 @@ def main(opts):
     splits, dataloaders = create_dataloaders(DatasetCls, EvalDatasetCls, opts)
 
     if opts.project == 'calo':
-        setattr(opts, 'weights', (dataloaders['train'].dataset.sentiment_weights,
-                                  dataloaders['train'].dataset.fine_emotion_weights))
+        setattr(opts, 'weights', (dataloaders['train'].dataset.fine_emotion_weights,
+                                  dataloaders['train'].dataset.sentiment_weights))
     else:
         setattr(opts, 'weights', dataloaders['train'].dataset.sentiment_weights)
 
