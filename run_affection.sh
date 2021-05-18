@@ -15,6 +15,9 @@ declare -a models=(
   ${PROJECT}-max-pooling-masked
   ${PROJECT}-max-pooling-masked-latent-idiom
   ${PROJECT}-max-pooling-masked-latent-idiom-with-gate
+  ${PROJECT}-max-pooling-masked-latent-idiom-with-gate
+  ${PROJECT}-coattention-masked
+  ${PROJECT}-coattention-masked-latent-idiom
 #  chengyubert-${PROJECT}-compose-only
 #  chengyubert-${PROJECT}-compose-only-masked
 #  chengyubert-${PROJECT}-latent-idiom-masked
@@ -30,9 +33,9 @@ declare -a configs=(
   ${BERT_TYPE}_limit${K}_masked.json
   ${BERT_TYPE}_limit${K}_masked.json
   ${BERT_TYPE}_limit${K}_masked.json
-#  ${BERT_TYPE}_limit${K}_masked.json
-#  ${BERT_TYPE}_limit${K}_masked.json
-#  ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
 #  ${BERT_TYPE}_limit${K}_masked.json
 )
 
@@ -41,9 +44,9 @@ declare -a opts=(
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
-#  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
-#  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
-#  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
+  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
+  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
+  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
 #  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
 )
 
