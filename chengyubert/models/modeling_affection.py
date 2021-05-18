@@ -26,7 +26,7 @@ class CaloClassifier(nn.Module):
                                                          hidden_size,
                                                          hidden_dropout_prob)
 
-    def _forward_unimplemented(self, emotion_state) -> Tuple[Any, Any]:
+    def forward(self, emotion_state) -> Tuple[Any, Any]:
         # affection prediction
         fine_emotion_logits = self.fine_emotion_classifier(emotion_state)
         # coarse_emotion_logits = self.coarse_emotion_classifier(emotion_state)
@@ -43,7 +43,7 @@ class SlideClassifier(nn.Module):
                                                          hidden_size,
                                                          hidden_dropout_prob)
 
-    def _forward_unimplemented(self, emotion_state) -> None:
+    def forward(self, emotion_state) -> None:
         # slide prediction
         return self.sentiment_classifier(emotion_state)
 
@@ -65,7 +65,7 @@ class CaloLoss(nn.Module):
             self.fine_emotion_loss_fct = nn.CrossEntropyLoss(weight=fine_emotion_weights, reduction='none')
             self.sentiment_loss_fct = nn.CrossEntropyLoss(weight=sentiment_weights, reduction='none')
 
-    def _forward_unimplemented(self, logits, targets) -> Tuple[Optional[Any], Any, Any]:
+    def forward(self, logits, targets) -> Tuple[Optional[Any], Any, Any]:
         over_logits, (fine_emotion_logits, sentiment_logits) = logits
         if over_logits is not None:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
@@ -86,7 +86,7 @@ class SlideLoss(nn.Module):
         else:
             self.loss_fct = nn.CrossEntropyLoss(weight=weights, reduction='none')
 
-    def _forward_unimplemented(self, logits, targets) -> Tuple[Any, Any]:
+    def forward(self, logits, targets) -> Tuple[Any, Any]:
         over_logits, sentiment_logits = logits
         if over_logits is not None:
             loss_fct = nn.CrossEntropyLoss(reduction='none')
