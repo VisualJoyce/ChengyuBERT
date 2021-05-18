@@ -154,6 +154,7 @@ class AffectionMaxPoolingMasked(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -215,6 +216,7 @@ class AffectionMaxPoolingMaskedLatentIdiom(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -293,6 +295,7 @@ class AffectionMaxPoolingMaskedLatentIdiomWithGate(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -373,6 +376,7 @@ class AffectionCompose(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -419,6 +423,7 @@ class AffectionComposeMasked(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -480,6 +485,7 @@ class AffectionComposeMaskedLatentIdiom(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -558,6 +564,7 @@ class AffectionComposeMaskedLatentIdiomWithGate(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.use_leaf_rnn = True
         self.intra_attention = False
         self.gumbel_temperature = 1
@@ -648,6 +655,7 @@ class AffectionCoAttentionMasked(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -723,6 +731,7 @@ class AffectionCoAttentionMaskedLatentIdiom(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -808,6 +817,7 @@ class AffectionCoAttentionMaskedLatentIdiomWithGate(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -899,6 +909,7 @@ class AffectionCoAttentionMaskedFullLatentIdiom(BertPreTrainedModel):
 
     def __init__(self, config, opts):
         super().__init__(config)
+        self.project = opts.project
         self.model_name = opts.model
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
