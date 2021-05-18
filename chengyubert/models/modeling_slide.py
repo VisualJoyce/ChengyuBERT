@@ -3,7 +3,7 @@ from torch import nn
 from transformers import BertModel, BertPreTrainedModel
 
 from chengyubert.models import register_model
-from chengyubert.modules.utils import WeightNormClassifier
+from chengyubert.modules.utils import WeightNormClassifier, LatentComposition
 from chengyubert.optim.loss import FocalLoss
 
 
@@ -201,8 +201,12 @@ class SlideMaxPoolingMaskedLatentIdiom(BertPreTrainedModel):
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            over_loss = loss_fct(over_logits, targets[:, 0])
+            # loss_fct = nn.CrossEntropyLoss(reduction='none')
+            # over_loss = loss_fct(over_logits, targets[:, 0])
+            loss_fct = nn.BCEWithLogitsLoss(reduction='none')
+            over_loss = loss_fct(over_logits,
+                                 nn.functional.one_hot(targets[:, 0],
+                                                       num_classes=self.enlarged_candidates.size(0)).type_as(over_logits))
             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
             return (None, over_loss, None, sentiment_emotion_loss)
         else:
@@ -287,310 +291,322 @@ class SlideMaxPoolingMaskedLatentIdiomWithGate(BertPreTrainedModel):
         sentiment_logits = self.sentiment_classifier(emotion_state)
 
         if compute_loss:
-            loss_fct = nn.CrossEntropyLoss(reduction='none')
-            over_loss = loss_fct(over_logits, targets[:, 0])
+            # loss_fct = nn.CrossEntropyLoss(reduction='none')
+            # over_loss = loss_fct(over_logits, targets[:, 0])
+            loss_fct = nn.BCEWithLogitsLoss(reduction='none')
+            over_loss = loss_fct(over_logits,
+                                 nn.functional.one_hot(targets[:, 0],
+                                                       num_classes=self.enlarged_candidates.size(0)).type_as(over_logits))
             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
             return (None, over_loss, None, sentiment_emotion_loss)
         else:
             return (None, over_logits, None, sentiment_logits)
 
-# @register_model('chengyubert-slide-compose-only')
-# class ChengyuBertSlideComposeOnly(BertPreTrainedModel):
-#
-#     def __init__(self, config, opts):
-#         super().__init__(config)
-#         self.use_leaf_rnn = True
-#         self.intra_attention = False
-#         self.gumbel_temperature = 1
-#         self.bidirectional = True
-#
-#         self.model_name = opts.model
-#         self.bert = BertModel(config)
-#         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-#
-#         self.idiom_compose = LatentComposition(config.hidden_size)
-#         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
-#         emotion_hidden_size = config.hidden_size
-#
-#         # Sentiment Predictor
-#         self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
-#                                                          3,
-#                                                          emotion_hidden_size,
-#                                                          config.hidden_dropout_prob)
-#
-#         if opts.use_focal:
-#             self.loss_fct = FocalLoss()
-#         else:
-#             self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
-#         self.init_weights()
-#
-#     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
-#                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-#         # n, batch_size, seq_len = input_ids.size()
-#         encoded_outputs = self.bert(input_ids,
-#                                     token_type_ids=token_type_ids,
-#                                     attention_mask=attention_mask)
-#         encoded_context = encoded_outputs[0]
-#
-#         idiom_length = (gather_index > 0).sum(1)
-#         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-#         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-#
-#         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
-#
-#         emotion_state = self.compose_linear(composed_states).tanh()
-#
-#         # slide prediction
-#         sentiment_logits = self.sentiment_classifier(emotion_state)
-#
-#         if compute_loss:
-#             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
-#             return None, None, select_masks, sentiment_emotion_loss
-#         else:
-#             return None, None, select_masks, sentiment_logits
-#
-#
-# @register_model('chengyubert-slide-compose-only-masked')
-# class ChengyuBertSlideComposeOnlyMasked(BertPreTrainedModel):
-#
-#     def __init__(self, config, opts):
-#         super().__init__(config)
-#         self.use_leaf_rnn = True
-#         self.intra_attention = False
-#         self.gumbel_temperature = 1
-#         self.bidirectional = True
-#
-#         self.model_name = opts.model
-#         self.bert = BertModel(config)
-#         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-#
-#         self.idiom_compose = LatentComposition(config.hidden_size)
-#         self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
-#         emotion_hidden_size = config.hidden_size
-#         # self.compose_linear = nn.Sequential(nn.Linear(3 * config.hidden_size, config.hidden_size),
-#         #                                     nn.SELU(),
-#         #                                     nn.Dropout(p=0.1),
-#         #                                     nn.Linear(config.hidden_size, emotion_hidden_size),
-#         #                                     nn.SELU())
-#
-#         # self.idiomacity_gate = GatedTanh(3 * config.hidden_size, config.hidden_size)
-#
-#         # Idiom Predictor
-#         # Sentiment Predictor
-#         self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
-#                                                          3,
-#                                                          emotion_hidden_size,
-#                                                          config.hidden_dropout_prob)
-#
-#         if opts.use_focal:
-#             self.loss_fct = FocalLoss()
-#         else:
-#             self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
-#         self.init_weights()
-#
-#     def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
-#                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-#         n, batch_size, seq_len = input_ids.size()
-#         encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
-#                                     token_type_ids=token_type_ids.view(n * batch_size, seq_len),
-#                                     attention_mask=attention_mask.view(n * batch_size, seq_len))
-#         encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
-#         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
-#
-#         gather_index, gather_index_masked = gather_index
-#         idiom_length = (gather_index > 0).sum(1)
-#
-#         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-#         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-#
-#         gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
-#             input_ids)
-#         idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
-#
-#         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
-#         # composed_states_masked, _, select_masks_masked = self.idiom_compose(idiom_states_masked, idiom_length)
-#         composed_states_masked, _ = idiom_states_masked.max(dim=1)
-#         emotion_state = self.compose_linear(torch.cat([composed_states, composed_states_masked], dim=-1)).tanh()
-#         # emotion_state = self.idiomacity_gate(torch.cat([composed_states, composed_states_masked], dim=-1))
-#
-#         # slide prediction
-#         sentiment_logits = self.sentiment_classifier(emotion_state)
-#
-#         if compute_loss:
-#             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
-#             return None, None, select_masks, sentiment_emotion_loss
-#         else:
-#             return None, None, select_masks, sentiment_logits
-#
-#
-# @register_model('chengyubert-slide-latent-idiom-masked')
-# class ChengyuBertSlideLatentIdiomMasked(BertPreTrainedModel):
-#
-#     def __init__(self, config, opts):
-#         super().__init__(config)
-#         self.model_name = opts.model
-#         self.bert = BertModel(config)
-#         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-#
-#         if opts.enlarged_candidates is not None:
-#             self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
-#         else:
-#             self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
-#
-#         print(self.enlarged_candidates.size())
-#
-#         self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
-#
-#         self.compose_linear = nn.Linear(config.hidden_size * 3, config.hidden_size)
-#         # self.compose_linear = nn.Sequential(nn.Linear(3 * config.hidden_size, config.hidden_size),
-#         #                                     nn.SELU(),
-#         #                                     nn.Dropout(p=0.1),
-#         #                                     nn.Linear(config.hidden_size, config.hidden_size),
-#         #                                     nn.SELU())
-#
-#         # Idiom Predictor
-#         # Sentiment Predictor
-#         self.sentiment_classifier = WeightNormClassifier(config.hidden_size,
-#                                                          3,
-#                                                          config.hidden_size,
-#                                                          config.hidden_dropout_prob)
-#
-#         if opts.use_focal:
-#             self.loss_fct = FocalLoss()
-#         else:
-#             self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
-#         self.init_weights()
-#
-#     def vocab(self, blank_states):
-#         idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
-#         logits = torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
-#         state = torch.einsum('bn,nd->bd', [logits.softmax(dim=-1), idiom_embeddings])  # (b, 256, 10)
-#         return logits, state
-#
-#     def forward(self, input_ids, token_type_ids, attention_mask, positions, gather_index, option_ids=None,
-#                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-#         n, batch_size, seq_len = input_ids.size()
-#         encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
-#                                     token_type_ids=token_type_ids.view(n * batch_size, seq_len),
-#                                     attention_mask=attention_mask.view(n * batch_size, seq_len))
-#         encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
-#         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
-#
-#         gather_index, gather_index_masked = gather_index
-#         idiom_length = (gather_index > 0).sum(1)
-#
-#         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-#         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-#
-#         gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
-#             input_ids)
-#         idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
-#         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
-#
-#         composed_states, _ = idiom_states.max(dim=1)
-#         composed_states_masked, _ = idiom_states_masked.max(dim=1)
-#
-#         over_logits, idiom_attn_state = self.vocab(composed_states_masked)
-#
-#         # slide prediction
-#         emotion_state = self.compose_linear(torch.cat([composed_states,
-#                                                        idiom_attn_state,
-#                                                        composed_states_masked], dim=-1)).tanh()
-#
-#         sentiment_logits = self.sentiment_classifier(emotion_state)
-#
-#         if compute_loss:
-#             loss_fct = nn.CrossEntropyLoss(reduction='none')
-#             over_loss = loss_fct(over_logits, targets[:, 0])
-#             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
-#             return (None, over_loss, None, sentiment_emotion_loss)
-#         else:
-#             return (None, over_logits, None, sentiment_logits)
-#
-#
-# @register_model('chengyubert-slide-latent-idiom-masked-with-gate')
-# class ChengyuBertSlideLatentIdiomMaskedWithGate(BertPreTrainedModel):
-#
-#     def __init__(self, config, opts):
-#         super().__init__(config)
-#         self.model_name = opts.model
-#         self.bert = BertModel(config)
-#         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-#
-#         if opts.enlarged_candidates is not None:
-#             self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
-#         else:
-#             self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
-#
-#         print(self.enlarged_candidates.size())
-#
-#         self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
-#
-#         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
-#
-#         self.register_parameter(name='g',
-#                                 param=torch.nn.Parameter(torch.ones(config.hidden_size * 2) / (config.hidden_size * 2)))
-#
-#         # Idiom Predictor
-#         # Sentiment Predictor
-#         self.sentiment_classifier = WeightNormClassifier(config.hidden_size,
-#                                                          3,
-#                                                          config.hidden_size,
-#                                                          config.hidden_dropout_prob)
-#
-#         if opts.use_focal:
-#             self.loss_fct = FocalLoss()
-#         else:
-#             self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
-#         self.init_weights()
-#
-#     def vocab(self, blank_states):
-#         idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
-#         logits = torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
-#         state = torch.einsum('bn,nd->bd', [logits.softmax(dim=-1), idiom_embeddings])  # (b, 256, 10)
-#         return logits, state
-#
-#     def forward(self, input_ids, token_type_ids, attention_mask, positions, gather_index, option_ids=None,
-#                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-#         n, batch_size, seq_len = input_ids.size()
-#         encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
-#                                     token_type_ids=token_type_ids.view(n * batch_size, seq_len),
-#                                     attention_mask=attention_mask.view(n * batch_size, seq_len))
-#         encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
-#         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
-#
-#         gather_index, gather_index_masked = gather_index
-#         idiom_length = (gather_index > 0).sum(1)
-#
-#         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-#         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-#
-#         gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
-#             input_ids)
-#         idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
-#         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
-#
-#         composed_states, _ = idiom_states.max(dim=1)
-#         composed_states_masked, _ = idiom_states_masked.max(dim=1)
-#
-#         over_logits, idiom_attn_state = self.vocab(composed_states_masked)
-#
-#         gate = torch.sigmoid(self.g * composed_states)
-#         s = gate * composed_states + (1 - gate) * torch.cat([composed_states_masked, idiom_attn_state], dim=-1)
-#
-#         # affection prediction
-#         emotion_state = self.compose_linear(s).tanh()
-#         sentiment_logits = self.sentiment_classifier(emotion_state)
-#
-#         if compute_loss:
-#             loss_fct = nn.CrossEntropyLoss(reduction='none')
-#             over_loss = loss_fct(over_logits, targets[:, 0])
-#             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
-#             return (None, over_loss, None, sentiment_emotion_loss)
-#         else:
-#             return (None, over_logits, None, sentiment_logits)
-#
-#
+
+@register_model('slide-compose')
+class SlideCompose(BertPreTrainedModel):
+
+    def __init__(self, config, opts):
+        super().__init__(config)
+        self.model_name = opts.model
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        self.idiom_compose = LatentComposition(config.hidden_size)
+        self.channel1_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+
+        emotion_hidden_size = config.hidden_size
+
+        # Sentiment Predictor
+        self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
+                                                         3,
+                                                         emotion_hidden_size,
+                                                         config.hidden_dropout_prob)
+
+        if opts.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
+        self.init_weights()
+
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
+        # n, batch_size, seq_len = input_ids.size()
+        encoded_outputs = self.bert(input_ids,
+                                    token_type_ids=token_type_ids,
+                                    attention_mask=attention_mask)
+        encoded_context = encoded_outputs[0]
+
+        idiom_length = (gather_index > 0).sum(1)
+        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
+
+        composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
+
+        emotion_state = self.channel1_linear(composed_states).tanh()
+
+        # slide prediction
+        sentiment_logits = self.sentiment_classifier(emotion_state)
+
+        if compute_loss:
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
+            return None, None, select_masks, sentiment_emotion_loss
+        else:
+            return None, None, select_masks, sentiment_logits
+
+
+@register_model('slide-compose-masked')
+class SlideComposeMasked(BertPreTrainedModel):
+
+    def __init__(self, config, opts):
+        super().__init__(config)
+        self.model_name = opts.model
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        self.idiom_compose = LatentComposition(config.hidden_size)
+
+        self.channel1_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.channel2_linear = nn.Linear(config.hidden_size, config.hidden_size)
+        self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+
+        emotion_hidden_size = config.hidden_size
+
+        # Sentiment Predictor
+        self.sentiment_classifier = WeightNormClassifier(emotion_hidden_size,
+                                                         3,
+                                                         emotion_hidden_size,
+                                                         config.hidden_dropout_prob)
+
+        if opts.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
+        self.init_weights()
+
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, option_ids, gather_index,
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
+        n, batch_size, seq_len = input_ids.size()
+        encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
+                                    token_type_ids=token_type_ids.view(n * batch_size, seq_len),
+                                    attention_mask=attention_mask.view(n * batch_size, seq_len))
+        encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
+        encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
+
+        gather_index, gather_index_masked = gather_index
+        idiom_length = (gather_index > 0).sum(1)
+
+        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
+
+        gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
+
+        composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
+        # composed_states_masked, _, select_masks_masked = self.idiom_compose(idiom_states_masked, idiom_length)
+        composed_states_masked, _ = idiom_states_masked.max(dim=1)
+
+        channel1 = self.channel1_linear(composed_states).tanh()
+        channel2 = self.channel2_linear(composed_states_masked).tanh()
+
+        emotion_state = self.compose_linear(torch.cat([channel1, channel2], dim=-1)).tanh()
+
+        # slide prediction
+        sentiment_logits = self.sentiment_classifier(emotion_state)
+
+        if compute_loss:
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
+            return None, None, select_masks, sentiment_emotion_loss
+        else:
+            return None, None, select_masks, sentiment_logits
+
+
+@register_model('slide-compose-masked-latent-idiom')
+class SlideComposeMaskedLatentIdiom(BertPreTrainedModel):
+
+    def __init__(self, config, opts):
+        super().__init__(config)
+        self.model_name = opts.model
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        if opts.enlarged_candidates is not None:
+            self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
+        else:
+            self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+
+        print(self.enlarged_candidates.size())
+
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
+
+        self.idiom_compose = LatentComposition(config.hidden_size)
+
+        self.channel1_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.channel2_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+
+        # Idiom Predictor
+        # Sentiment Predictor
+        self.sentiment_classifier = WeightNormClassifier(config.hidden_size,
+                                                         3,
+                                                         config.hidden_size,
+                                                         config.hidden_dropout_prob)
+        if opts.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
+        self.init_weights()
+
+    def vocab(self, blank_states):
+        idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        logits = torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
+        state = torch.einsum('bn,nd->bd', [logits.softmax(dim=-1), idiom_embeddings])  # (b, 256, 10)
+        return logits, state
+
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, gather_index, option_ids=None,
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
+        n, batch_size, seq_len = input_ids.size()
+        encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
+                                    token_type_ids=token_type_ids.view(n * batch_size, seq_len),
+                                    attention_mask=attention_mask.view(n * batch_size, seq_len))
+        encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
+        encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
+
+        gather_index, gather_index_masked = gather_index
+        idiom_length = (gather_index > 0).sum(1)
+
+        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
+
+        gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
+        # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+
+        composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
+        composed_states_masked, _ = idiom_states_masked.max(dim=1)
+
+        over_logits, idiom_attn_state = self.vocab(composed_states_masked)
+
+        channel1 = self.channel1_linear(composed_states).tanh()
+        channel2 = self.channel2_linear(torch.cat([composed_states_masked, idiom_attn_state], dim=-1)).tanh()
+
+        emotion_state = self.compose_linear(torch.cat([channel1, channel2], dim=-1)).tanh()
+
+        sentiment_logits = self.sentiment_classifier(emotion_state)
+
+        if compute_loss:
+            # loss_fct = nn.CrossEntropyLoss(reduction='none')
+            # over_loss = loss_fct(over_logits, targets[:, 0])
+            loss_fct = nn.BCEWithLogitsLoss(reduction='none')
+            over_loss = loss_fct(over_logits,
+                                 nn.functional.one_hot(targets[:, 0],
+                                                       num_classes=self.enlarged_candidates.size(0)).type_as(over_logits))
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
+            return (None, over_loss, select_masks, sentiment_emotion_loss)
+        else:
+            return (None, over_logits, select_masks, sentiment_logits)
+
+
+@register_model('slide-compose-masked-latent-idiom-with-gate')
+class SlideComposeMaskedLatentIdiomWithGate(BertPreTrainedModel):
+
+    def __init__(self, config, opts):
+        super().__init__(config)
+        self.use_leaf_rnn = True
+        self.intra_attention = False
+        self.gumbel_temperature = 1
+        self.bidirectional = True
+
+        self.model_name = opts.model
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        if opts.enlarged_candidates is not None:
+            self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
+        else:
+            self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+
+        print(self.enlarged_candidates.size())
+
+        self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
+
+        self.idiom_compose = LatentComposition(config.hidden_size)
+
+        self.channel1_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.channel2_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.compose_linear = nn.Linear(config.hidden_size, config.hidden_size)
+
+        self.register_parameter(name='g',
+                                param=torch.nn.Parameter(torch.ones(config.hidden_size) / config.hidden_size))
+
+        # Idiom Predictor
+        # Sentiment Predictor
+        self.sentiment_classifier = WeightNormClassifier(config.hidden_size,
+                                                         3,
+                                                         config.hidden_size,
+                                                         config.hidden_dropout_prob)
+        if opts.use_focal:
+            self.loss_fct = FocalLoss()
+        else:
+            self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
+        self.init_weights()
+
+    def vocab(self, blank_states):
+        idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
+        logits = torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
+        state = torch.einsum('bn,nd->bd', [logits.softmax(dim=-1), idiom_embeddings])  # (b, 256, 10)
+        return logits, state
+
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, gather_index, option_ids=None,
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
+        n, batch_size, seq_len = input_ids.size()
+        encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
+                                    token_type_ids=token_type_ids.view(n * batch_size, seq_len),
+                                    attention_mask=attention_mask.view(n * batch_size, seq_len))
+        encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
+        encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
+
+        gather_index, gather_index_masked = gather_index
+        idiom_length = (gather_index > 0).sum(1)
+
+        gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
+
+        gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
+            input_ids)
+        idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
+        # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
+
+        composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
+        composed_states_masked, _ = idiom_states_masked.max(dim=1)
+
+        over_logits, idiom_attn_state = self.vocab(composed_states_masked)
+
+        channel1 = self.channel1_linear(composed_states).tanh()
+        channel2 = self.channel2_linear(torch.cat([composed_states_masked, idiom_attn_state], dim=-1)).tanh()
+
+        gate = torch.sigmoid(self.g * channel1)
+        s = gate * channel1 + (1 - gate) * channel2
+
+        # affection prediction
+        emotion_state = self.compose_linear(s).tanh()
+
+        sentiment_logits = self.sentiment_classifier(emotion_state)
+
+        if compute_loss:
+            # loss_fct = nn.CrossEntropyLoss(reduction='none')
+            # over_loss = loss_fct(over_logits, targets[:, 0])
+            loss_fct = nn.BCEWithLogitsLoss(reduction='none')
+            over_loss = loss_fct(over_logits,
+                                 nn.functional.one_hot(targets[:, 0],
+                                                       num_classes=self.enlarged_candidates.size(0)).type_as(over_logits))
+            sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
+            return (None, over_loss, select_masks, sentiment_emotion_loss)
+        else:
+            return (None, over_logits, select_masks, sentiment_logits)
+
 # @register_model('chengyubert-slide-latent-idiom-masked-coattention')
 # class ChengyuBertSlideLatentIdiomMaskedCoAttention(BertPreTrainedModel):
 #
@@ -775,180 +791,3 @@ class SlideMaxPoolingMaskedLatentIdiomWithGate(BertPreTrainedModel):
 #             return (None, over_logits, None, sentiment_logits)
 #
 #
-# @register_model('chengyubert-slide-compose-latent-idiom-masked')
-# class ChengyuBertSlideComposeLatentIdiomMasked(BertPreTrainedModel):
-#
-#     def __init__(self, config, opts):
-#         super().__init__(config)
-#         self.use_leaf_rnn = True
-#         self.intra_attention = False
-#         self.gumbel_temperature = 1
-#         self.bidirectional = True
-#
-#         self.model_name = opts.model
-#         self.bert = BertModel(config)
-#         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-#
-#         if opts.enlarged_candidates is not None:
-#             self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
-#         else:
-#             self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
-#
-#         print(self.enlarged_candidates.size())
-#
-#         self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
-#
-#         self.idiom_compose = LatentComposition(config.hidden_size)
-#         self.compose_linear = nn.Linear(config.hidden_size * 4, config.hidden_size)
-#         # self.compose_linear = nn.Sequential(nn.Linear(4 * config.hidden_size, config.hidden_size),
-#         #                                     nn.SELU(),
-#         #                                     nn.Dropout(p=0.1),
-#         #                                     nn.Linear(config.hidden_size, config.hidden_size),
-#         #                                     nn.SELU())
-#
-#         # Idiom Predictor
-#         # Sentiment Predictor
-#         self.sentiment_classifier = WeightNormClassifier(config.hidden_size,
-#                                                          3,
-#                                                          config.hidden_size,
-#                                                          config.hidden_dropout_prob)
-#         if opts.use_focal:
-#             self.loss_fct = FocalLoss()
-#         else:
-#             self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
-#         self.init_weights()
-#
-#     def vocab(self, blank_states):
-#         idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
-#         logits = torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
-#         state = torch.einsum('bn,nd->bd', [logits.softmax(dim=-1), idiom_embeddings])  # (b, 256, 10)
-#         return logits, state
-#
-#     def forward(self, input_ids, token_type_ids, attention_mask, positions, gather_index, option_ids=None,
-#                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-#         n, batch_size, seq_len = input_ids.size()
-#         encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
-#                                     token_type_ids=token_type_ids.view(n * batch_size, seq_len),
-#                                     attention_mask=attention_mask.view(n * batch_size, seq_len))
-#         encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
-#         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
-#
-#         gather_index, gather_index_masked = gather_index
-#         idiom_length = (gather_index > 0).sum(1)
-#
-#         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-#         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-#
-#         gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
-#             input_ids)
-#         idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
-#         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
-#
-#         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
-#         composed_states_masked, _ = idiom_states_masked.max(dim=1)
-#
-#         over_logits, idiom_attn_state = self.vocab(composed_states_masked)
-#
-#         # slide prediction
-#         emotion_state = self.compose_linear(torch.cat([composed_states,
-#                                                        idiom_attn_state,
-#                                                        composed_states_masked], dim=-1)).tanh()
-#
-#         sentiment_logits = self.sentiment_classifier(emotion_state)
-#
-#         if compute_loss:
-#             loss_fct = nn.CrossEntropyLoss(reduction='none')
-#             over_loss = loss_fct(over_logits, targets[:, 0])
-#             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
-#             return (None, over_loss, select_masks, sentiment_emotion_loss)
-#         else:
-#             return (None, over_logits, select_masks, sentiment_logits)
-#
-#
-# @register_model('chengyubert-slide-compose-latent-idiom-masked-with-gate')
-# class ChengyuBertSlideComposeLatentIdiomMaskedWithGate(BertPreTrainedModel):
-#
-#     def __init__(self, config, opts):
-#         super().__init__(config)
-#         self.use_leaf_rnn = True
-#         self.intra_attention = False
-#         self.gumbel_temperature = 1
-#         self.bidirectional = True
-#
-#         self.model_name = opts.model
-#         self.bert = BertModel(config)
-#         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-#
-#         if opts.enlarged_candidates is not None:
-#             self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
-#         else:
-#             self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
-#
-#         print(self.enlarged_candidates.size())
-#
-#         self.idiom_embedding = nn.Embedding(opts.len_idiom_vocab, config.hidden_size)
-#
-#         self.idiom_compose = LatentComposition(config.hidden_size)
-#         self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
-#
-#         self.register_parameter(name='g',
-#                                 param=torch.nn.Parameter(torch.ones(config.hidden_size * 2) / (config.hidden_size * 2)))
-#
-#         # Idiom Predictor
-#         # Sentiment Predictor
-#         self.sentiment_classifier = WeightNormClassifier(config.hidden_size,
-#                                                          3,
-#                                                          config.hidden_size,
-#                                                          config.hidden_dropout_prob)
-#         if opts.use_focal:
-#             self.loss_fct = FocalLoss()
-#         else:
-#             self.loss_fct = nn.CrossEntropyLoss(weight=opts.weight, reduction='none')
-#         self.init_weights()
-#
-#     def vocab(self, blank_states):
-#         idiom_embeddings = self.idiom_embedding(self.enlarged_candidates)
-#         logits = torch.einsum('bd,nd->bn', [blank_states, idiom_embeddings])  # (b, 256, 10)
-#         state = torch.einsum('bn,nd->bd', [logits.softmax(dim=-1), idiom_embeddings])  # (b, 256, 10)
-#         return logits, state
-#
-#     def forward(self, input_ids, token_type_ids, attention_mask, positions, gather_index, option_ids=None,
-#                 inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
-#         n, batch_size, seq_len = input_ids.size()
-#         encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
-#                                     token_type_ids=token_type_ids.view(n * batch_size, seq_len),
-#                                     attention_mask=attention_mask.view(n * batch_size, seq_len))
-#         encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
-#         encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
-#
-#         gather_index, gather_index_masked = gather_index
-#         idiom_length = (gather_index > 0).sum(1)
-#
-#         gather_index = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
-#         idiom_states = torch.gather(encoded_context, dim=1, index=gather_index)
-#
-#         gather_index_masked = gather_index_masked.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(
-#             input_ids)
-#         idiom_states_masked = torch.gather(encoded_context_masked, dim=1, index=gather_index_masked)
-#         # idiom_states = encoded_context[[i for i in range(len(positions))], positions]  # [batch, hidden_state]
-#
-#         composed_states, _, select_masks = self.idiom_compose(idiom_states, idiom_length)
-#         composed_states_masked, _ = idiom_states_masked.max(dim=1)
-#
-#         over_logits, idiom_attn_state = self.vocab(composed_states_masked)
-#
-#         gate = torch.sigmoid(self.g * composed_states)
-#         s = gate * composed_states + (1 - gate) * torch.cat([composed_states_masked, idiom_attn_state], dim=-1)
-#
-#         # affection prediction
-#         emotion_state = self.compose_linear(s).tanh()
-#
-#         sentiment_logits = self.sentiment_classifier(emotion_state)
-#
-#         if compute_loss:
-#             loss_fct = nn.CrossEntropyLoss(reduction='none')
-#             over_loss = loss_fct(over_logits, targets[:, 0])
-#             sentiment_emotion_loss = self.loss_fct(sentiment_logits, targets[:, 1])
-#             return (None, over_loss, select_masks, sentiment_emotion_loss)
-#         else:
-#             return (None, over_logits, select_masks, sentiment_logits)
