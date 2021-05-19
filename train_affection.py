@@ -841,7 +841,7 @@ if __name__ == "__main__":
     n_gpu = hvd.size()
     args.n_gpu = n_gpu
 
-    base_dir = '_'.join(['affection',
+    base_dir = '_'.join([args.project,
                          f'{args.n_gpu * args.gradient_accumulation_steps}',
                          f'{args.num_train_steps}',
                          f'{args.learning_rate}',
