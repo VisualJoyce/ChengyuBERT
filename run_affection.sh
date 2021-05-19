@@ -99,6 +99,6 @@ for ((i = 0; i < ${#models[*]}; ++i)); do
   opt="${opts[$i]}"
   config="${configs[$i]}"
   echo "$model $opt"
-  log_txt=data/output/${model}_context-${USE_CONTEXT}/${BERT_TYPE}/${config}/${PROJECT}_1_${TRAIN_STEPS}_5e-05_${DROPOUT}_${WEIGHT_DECAY}/log/log.txt
+  log_txt=data/output/${model}_context-${USE_CONTEXT}/${BERT_TYPE}/${config}/affection_1_${TRAIN_STEPS}_5e-05_${DROPOUT}_${WEIGHT_DECAY}/log/log.txt
   cat ${log_txt} | grep "on test split" -A12 | python -c "$py_script"
 done
