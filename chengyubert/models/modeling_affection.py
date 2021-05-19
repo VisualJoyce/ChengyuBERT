@@ -264,10 +264,6 @@ class AffectionMaxPoolingMaskedLatentIdiom(BertPreTrainedModel):
         # affection prediction
         emotion_state = self.compose_linear(torch.cat([channel1, channel2], dim=-1)).tanh()
 
-        fine_emotion_logits = self.fine_emotion_classifier(emotion_state)
-        # coarse_emotion_logits = self.coarse_emotion_classifier(emotion_state)
-        sentiment_logits = self.sentiment_classifier(emotion_state)
-
         # affection prediction
         logits = self.classifier(emotion_state)
 
