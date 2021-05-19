@@ -22,6 +22,7 @@ declare -a models=(
   affection-coattention-masked
   affection-coattention-masked-latent-idiom
   affection-coattention-masked-latent-idiom-with-gate
+  affection-coattention-masked-full
   affection-coattention-masked-full-latent-idiom
 )
 
@@ -38,6 +39,7 @@ declare -a configs=(
   ${BERT_TYPE}_limit${K}_masked.json
   ${BERT_TYPE}_limit${K}_masked.json
   ${BERT_TYPE}_limit${K}_masked.json
+  ${BERT_TYPE}_limit${K}_masked.json
 )
 
 declare -a opts=(
@@ -46,6 +48,7 @@ declare -a opts=(
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS}"
+  "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"
   "DROPOUT=${DROPOUT} WEIGHT_DECAY=${WEIGHT_DECAY} ${MORE_OPTS} USE_UNLABELED=1"

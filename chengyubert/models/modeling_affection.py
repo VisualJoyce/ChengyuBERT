@@ -856,6 +856,70 @@ class AffectionCoAttentionMaskedLatentIdiomWithGate(BertPreTrainedModel):
             return None, over_logits, None, logits
 
 
+@register_model('affection-coattention-masked-full')
+class AffectionCoAttentionMaskedFull(BertPreTrainedModel):
+
+    def __init__(self, config, opts):
+        super().__init__(config)
+        self.project = opts.project
+        self.model_name = opts.model
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+        if opts.enlarged_candidates is not None:
+            self.register_buffer('enlarged_candidates', torch.tensor(opts.enlarged_candidates, dtype=torch.long))
+        else:
+            self.register_buffer('enlarged_candidates', torch.arange(opts.len_idiom_vocab))
+
+        print(self.enlarged_candidates.size())
+
+        self.coattention = ContrastiveCoAttention(config.hidden_size)
+
+        self.channel1_linear = nn.Linear(config.hidden_size, config.hidden_size)
+        self.channel2_linear = nn.Linear(config.hidden_size, config.hidden_size)
+        self.compose_linear = nn.Linear(config.hidden_size * 2, config.hidden_size)
+
+        self.classifier = classifiers[self.project](config.hidden_size, config.hidden_dropout_prob)
+        self.loss_fct = loss_calculators[self.project](opts.use_focal, opts.weights)
+        self.init_weights()
+
+    def forward(self, input_ids, token_type_ids, attention_mask, positions, gather_index, option_ids=None,
+                inputs_embeds=None, options_embeds=None, compute_loss=False, targets=None):
+        n, batch_size, seq_len = input_ids.size()
+        encoded_outputs = self.bert(input_ids.view(n * batch_size, seq_len),
+                                    token_type_ids=token_type_ids.view(n * batch_size, seq_len),
+                                    attention_mask=attention_mask.view(n * batch_size, seq_len))
+        encoded_context = encoded_outputs[0].view(n, batch_size, seq_len, -1)[0]
+        encoded_context_masked = encoded_outputs[0].view(n, batch_size, seq_len, -1)[1]
+
+        gather_index, gather_index_masked = gather_index
+
+        gather_index_unsqueezed = gather_index.unsqueeze(-1).expand(-1, -1, self.config.hidden_size).type_as(input_ids)
+        idiom_states = torch.gather(encoded_context, dim=1, index=gather_index_unsqueezed)
+
+        L = idiom_states
+        mask_L = torch.gather(attention_mask[0], dim=1, index=gather_index)
+        I = encoded_context_masked
+        mask_I = attention_mask[1]
+
+        C_L, C_I = self.coattention(L, I, mask_L, mask_I)
+
+        channel1 = self.channel1_linear(C_L).tanh()
+        channel2 = self.channel2_linear(C_I).tanh()
+
+        # slide prediction
+        emotion_state = self.compose_linear(torch.cat([channel1, channel2], dim=-1)).tanh()
+
+        # affection prediction
+        logits = self.classifier(emotion_state)
+
+        if compute_loss:
+            _, losses = self.loss_fct([None, logits], targets)
+            return None, None, None, losses
+        else:
+            return None, None, None, logits
+
+
 @register_model('affection-coattention-masked-full-latent-idiom')
 class AffectionCoAttentionMaskedFullLatentIdiom(BertPreTrainedModel):
 
