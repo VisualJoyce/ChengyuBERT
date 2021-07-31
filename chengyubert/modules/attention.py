@@ -72,3 +72,43 @@ class ContrastiveCoAttention(nn.Module):
         A_I_ = masked_softmax(Z.max(dim=2)[0], mask=mask_I)  # B x n + 1 x m + 1
         C_I = torch.einsum('bn,bnd->bd', [A_I_, I])
         return C_L, C_I
+
+
+class BahdanauAttention(nn.Module):
+    def __init__(self, hidden_size):
+        super().__init__()
+        self.linear_encoder = nn.Linear(hidden_size, hidden_size)
+        self.linear_decoder = nn.Linear(hidden_size, hidden_size)
+        self.linear_in = nn.Sequential(nn.Linear(hidden_size, hidden_size), nn.SELU(), nn.Dropout(p=0.1),
+                                       nn.Linear(hidden_size, hidden_size), nn.SELU(), nn.Dropout(p=0.1))
+        self.tanh = nn.Tanh()
+
+    def init_context(self, context):
+        self.context = context.transpose(0, 1)
+
+    def forward(self, graph_output, sequence_output):
+        gamma_encoder = self.linear_in(graph_output)
+        self.context = sequence_output.transpose(1, 2)
+        weights = self.tanh(torch.bmm(gamma_encoder, self.context) / 4)
+
+        return weights
+
+
+class bahdanau_attention_3(nn.Module):
+    def __init__(self, hidden_size):
+        super(bahdanau_attention_3, self).__init__()
+        self.linear_encoder = nn.Linear(hidden_size, hidden_size)
+        self.linear_decoder = nn.Linear(hidden_size, hidden_size)
+        self.linear_in = nn.Sequential(nn.Linear(hidden_size, hidden_size), nn.SELU(), nn.Dropout(p=0.1),
+                                       nn.Linear(hidden_size, hidden_size), nn.SELU(), nn.Dropout(p=0.1))
+        self.tanh = nn.Tanh()
+
+    def init_context(self, context):
+        self.context = context.transpose(0, 1)
+
+    def forward(self, graph_output, sequence_output):
+        gamma_encoder = self.linear_in(graph_output)
+        self.context = sequence_output.transpose(1, 2)
+        weights = self.tanh(torch.bmm(gamma_encoder, self.context) / 4)
+
+        return weights

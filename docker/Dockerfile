@@ -22,7 +22,7 @@ RUN conda install cython
 RUN pip install msgpack msgpack_numpy cytoolz more_itertools matplotlib scipy nltk transformers tensorboard \
     ipdb lz4 lmdb jsonlines gputil opencv-python pandas \
     'git+https://github.com/facebookresearch/detectron2.git' \
-    xlrd scikit-learn git+https://github.com/PetrochukM/PyTorch-NLP.git pkuseg spacy ftfy
+    xlrd scikit-learn git+https://github.com/PetrochukM/PyTorch-NLP.git pkuseg spacy ftfy click==7.1.1
 
 RUN python -m spacy download en_core_web_sm
 RUN python -m spacy download zh_core_web_sm

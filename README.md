@@ -90,8 +90,7 @@ data/pretrained
 ``` bibtex
 @inproceedings{tan-jiang-2020-bert,
     title = "A {BERT}-based Dual Embedding Model for {C}hinese Idiom Prediction",
-    author = "Tan, Minghuan  and
-      Jiang, Jing",
+    author = "Tan, Minghuan  and Jiang, Jing",
     booktitle = "Proceedings of the 28th International Conference on Computational Linguistics",
     month = dec,
     year = "2020",
@@ -213,6 +212,31 @@ bash docker_train.sh official \
 CUDA_VISIBLE_DEVICES=0,1,2,3 CONFIG_FILE="two_stage/stage2-wwm-ext_competition.json" \
 bash docker_train.sh competition \
 "MODEL=chengyubert-2stage-stage2 CANDIDATES=combined LEARNING_RATE=0.00005 NUM_TRAIN_STEPS=5000 GRADIENT_ACCUMULATION_STEPS=5 VALID_STEPS=100 GRAD_NORM=1"
+```
+
+## Learning and Evaluating Chinese Idiom Embeddings
+We study the task of learning and evaluating Chinese idiom embeddings.
+We first construct a new evaluation dataset that contains idiom synonyms and antonyms.
+Observing that existing Chinese word embedding methods may not be suitable for learning idiom embeddings, we further present a BERT-based method that directly learns embedding vectors for individual idioms.
+We empirically compare representative existing methods and our method.
+We find that our method substantially outperforms existing methods on the evaluation dataset we have constructed.
+```bibtex
+@inproceedings{chengyu-evaluation,
+  title= "Learning and Evaluating Chinese Idiom Embeddings",
+  author = "Tan, Minghuan  and Jiang, Jing",
+  booktitle = "RANLP",
+  year = "2021"
+}
+```
+
+### Train Chengyu Embeddings
+```shell
+CUDA_VISIBLE_DEVICES=0,1 CONFIG_FILE="train-embeddings-base-1gpu.json" \
+  bash docker_train.sh embeddings "MODEL=chengyubert-ns-cls-mask-300 TRAIN_BATCH_SIZE=11000 NUM_TRAIN_STEPS=500000 MAX_TXT_LEN=16"
+```
+```shell
+CUDA_VISIBLE_DEVICES=0,1 CONFIG_FILE="train-embeddings-base-1gpu.json" \
+  bash docker_train.sh embeddings "MODEL=chengyubert-ns-cls-mask-300 TRAIN_BATCH_SIZE=11000 NUM_TRAIN_STEPS=500000 MAX_TXT_LEN=32"
 ```
 
 ## Acknowledgement
