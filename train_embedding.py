@@ -312,7 +312,7 @@ def main(opts):
     # data loaders
     DatasetCls = DATA_REGISTRY[opts.dataset_cls]
     EvalDatasetCls = DATA_REGISTRY[opts.eval_dataset_cls]
-    splits, dataloaders = create_dataloaders(LOGGER, DatasetCls, EvalDatasetCls, opts)
+    splits, dataloaders = create_dataloaders(DatasetCls, EvalDatasetCls, opts)
     opts.evaluate_embedding = True
 
     # Prepare model

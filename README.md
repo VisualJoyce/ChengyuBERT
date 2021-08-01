@@ -238,6 +238,10 @@ CUDA_VISIBLE_DEVICES=0,1 CONFIG_FILE="train-embeddings-base-1gpu.json" \
 CUDA_VISIBLE_DEVICES=0,1 CONFIG_FILE="train-embeddings-base-1gpu.json" \
   bash docker_train.sh embeddings "MODEL=chengyubert-ns-cls-mask-300 TRAIN_BATCH_SIZE=11000 NUM_TRAIN_STEPS=500000 MAX_TXT_LEN=32"
 ```
+### Evaluate Chengyu Embeddings
+```shell
+CUDA_VISIBLE_DEVICES=7 python eval_embedding.py --model_path data/output/chengyubert-cls-ns-300/wwm_ext/pretrain_4_500003_5e-05/ckpt/model_step_490000.pt
+```
 
 ## Acknowledgement
 The author of this repo learned a lot from the code of the following repos:
