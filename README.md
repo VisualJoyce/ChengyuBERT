@@ -21,6 +21,10 @@ Table of Contents
          * [Stage One](#stage-one)
          * [Stage Two for Official](#stage-two-for-official)
          * [Stage Two for Competition](#stage-two-for-competition)
+      * [Learning and Evaluating Chinese Idiom Embeddings](#learning-and-evaluating-chinese-idiom-embeddings)
+         * [Train Chengyu Embeddings](#train-chengyu-embeddings)
+         * [Evaluate Chengyu Embeddings](#evaluate-chengyu-embeddings)
+        
       * [Acknowledgement](#acknowledgement)
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
