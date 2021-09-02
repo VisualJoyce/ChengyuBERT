@@ -181,32 +181,32 @@ We collect a large corpus as described in the TALLIP paper, and do a two-stage t
 
 ```bibtex
 @article{10.1145/3453185,
-author = {Tan, Minghuan and Jiang, Jing and Dai, Bing Tian},
-title = {A BERT-Based Two-Stage Model for Chinese Chengyu Recommendation},
-year = {2021},
-issue_date = {November 2021},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-volume = {20},
-number = {6},
-issn = {2375-4699},
-url = {https://doi.org/10.1145/3453185},
-doi = {10.1145/3453185},
-abstract = {In Chinese, Chengyu are fixed phrases consisting of four characters. As a type of
-idioms, their meanings usually cannot be derived from their component characters.
-In this article, we study the task of recommending a Chengyu given a textual context.
-Observing some of the limitations with existing work, we propose a two-stage model,
-where during the first stage we re-train a Chinese BERT model by masking out Chengyu
-from a large Chinese corpus with a wide coverage of Chengyu. During the second stage,
-we fine-tune the re-trained, Chengyu-oriented BERT on a specific Chengyu recommendation
-dataset. We evaluate this method on ChID and CCT datasets and find that it can achieve
-the state of the art on both datasets. Ablation studies show that both stages of training
-are critical for the performance gain.},
-journal = {ACM Trans. Asian Low-Resour. Lang. Inf. Process.},
-month = aug,
-articleno = {92},
-numpages = {18},
-keywords = {Question answering, Chengyu recommendation, idiom understanding}
+  author = {Tan, Minghuan and Jiang, Jing and Dai, Bing Tian},
+  title = {A BERT-Based Two-Stage Model for Chinese Chengyu Recommendation},
+  year = {2021},
+  issue_date = {November 2021},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {20},
+  number = {6},
+  issn = {2375-4699},
+  url = {https://doi.org/10.1145/3453185},
+  doi = {10.1145/3453185},
+  abstract = {In Chinese, Chengyu are fixed phrases consisting of four characters. As a type of
+  idioms, their meanings usually cannot be derived from their component characters.
+  In this article, we study the task of recommending a Chengyu given a textual context.
+  Observing some of the limitations with existing work, we propose a two-stage model,
+  where during the first stage we re-train a Chinese BERT model by masking out Chengyu
+  from a large Chinese corpus with a wide coverage of Chengyu. During the second stage,
+  we fine-tune the re-trained, Chengyu-oriented BERT on a specific Chengyu recommendation
+  dataset. We evaluate this method on ChID and CCT datasets and find that it can achieve
+  the state of the art on both datasets. Ablation studies show that both stages of training
+  are critical for the performance gain.},
+  journal = {ACM Trans. Asian Low-Resour. Lang. Inf. Process.},
+  month = aug,
+  articleno = {92},
+  numpages = {18},
+  keywords = {Question answering, Chengyu recommendation, idiom understanding}
 }
 ```
 
