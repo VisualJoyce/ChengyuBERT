@@ -247,11 +247,18 @@ Observing that existing Chinese word embedding methods may not be suitable for l
 We empirically compare representative existing methods and our method.
 We find that our method substantially outperforms existing methods on the evaluation dataset we have constructed.
 ```bibtex
-@inproceedings{chengyu-evaluation,
-  title= "Learning and Evaluating Chinese Idiom Embeddings",
-  author = "Tan, Minghuan  and Jiang, Jing",
-  booktitle = "RANLP",
-  year = "2021"
+@inproceedings{tan-jiang-2021-learning,
+    title = "Learning and Evaluating {C}hinese Idiom Embeddings",
+    author = "Tan, Minghuan  and
+      Jiang, Jing",
+    booktitle = "Proceedings of the International Conference on Recent Advances in Natural Language Processing (RANLP 2021)",
+    month = sep,
+    year = "2021",
+    address = "Held Online",
+    publisher = "INCOMA Ltd.",
+    url = "https://aclanthology.org/2021.ranlp-main.155",
+    pages = "1387--1396",
+    abstract = "We study the task of learning and evaluating Chinese idiom embeddings. We first construct a new evaluation dataset that contains idiom synonyms and antonyms. Observing that existing Chinese word embedding methods may not be suitable for learning idiom embeddings, we further present a BERT-based method that directly learns embedding vectors for individual idioms. We empirically compare representative existing methods and our method. We find that our method substantially outperforms existing methods on the evaluation dataset we have constructed.",
 }
 ```
 
