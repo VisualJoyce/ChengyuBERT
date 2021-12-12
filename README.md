@@ -4,7 +4,7 @@
 
 A repository for Chinese Idiom/Chengyu Recommendation.
 
-In this repo, we release code for the two papers on Chengyu Recommendation.
+In this repo, we release code for the two papers on Chengyu Recommendation and one paper on Chengyu Embedding Evaluation.
 
 Table of Contents
 =================
