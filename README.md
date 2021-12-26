@@ -210,6 +210,12 @@ We collect a large corpus as described in the TALLIP paper, and do a two-stage t
 }
 ```
 
+This large corpus has been shared over BaiduNetDisk and GoogleDrive:
+* BaiduNetDisk 链接：https://pan.baidu.com/s/1PaLULQ0XQveh1VACXL6AHA 提取码：u68m 
+
+![6D96E4A4A09AA387BB7AA5B0BA81C446](https://user-images.githubusercontent.com/2136700/147412920-0f9d4188-9c4a-4505-8266-26b8fa0b1af4.png)
+* [GoogleDrive](https://drive.google.com/drive/folders/1r2G1KNmITPNsm1jZK0XWtf6jXI7MaZfo?usp=sharing)
+
 ### Preprocessing
 
 For official data, we can reuse the preprocessing above. 
