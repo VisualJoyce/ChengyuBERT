@@ -33,7 +33,9 @@ Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 We used the newly released dataset [ChID](https://github.com/zhengcj1/ChID-Dataset).
 Users of this repo are encouraged to read their paper to get detailed descriptions of each splits.
 
-The data directory has the following structure
+We also contribute a large corpus to do Chengyu-oriented pretraining, see the TALLIP paper below.
+
+Our data is shared via [GoogleDrive](https://drive.google.com/drive/folders/1r2G1KNmITPNsm1jZK0XWtf6jXI7MaZfo?usp=sharing) and the directory has the following structure
 ```shell script
 (base) mhtan@chase ➜  ChengyuBERT git:(master) ✗ tree data/annotations 
 data/annotations
@@ -55,8 +57,8 @@ data/annotations
 │   ├── test_data.txt
 │   ├── test_out_data.txt
 │   └── train_data.txt
-└── pretrain
-    └── train_data.txt
+└── external
+    └── pretrain_data.txt
 
 ```
 
