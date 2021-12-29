@@ -269,6 +269,13 @@ We find that our method substantially outperforms existing methods on the evalua
     abstract = "We study the task of learning and evaluating Chinese idiom embeddings. We first construct a new evaluation dataset that contains idiom synonyms and antonyms. Observing that existing Chinese word embedding methods may not be suitable for learning idiom embeddings, we further present a BERT-based method that directly learns embedding vectors for individual idioms. We empirically compare representative existing methods and our method. We find that our method substantially outperforms existing methods on the evaluation dataset we have constructed.",
 }
 ```
+The dataset we collected is shared via 
+* BaiduNetDisk 链接：https://pan.baidu.com/s/1kLIzwAk-_g8QSGCxYmuw6w 提取码：3b4n 
+
+![B021B29A702CBF8F9C8415FE4BDB8CE6](https://user-images.githubusercontent.com/2136700/147620850-dbe86a68-fb75-4784-a30b-42ef35551db2.png)
+* [GoogleDrive](https://drive.google.com/drive/folders/1r2G1KNmITPNsm1jZK0XWtf6jXI7MaZfo?usp=sharing)
+
+
 
 ### Train Chengyu Embeddings
 ```shell
